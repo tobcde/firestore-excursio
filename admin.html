@@ -1521,7 +1521,7 @@ function _fsDispatch(action, p, ok, err) {
     // ── SOCIOS ────────────────────────────────────────────────────
     case 'addSocio': {
       var c = p.campos || {};
-      var dniNorm = normDoc(c.dni || c.DNI || '');
+      var dniNorm = normDoc(c.dni || c.DNI || c.doc || '');
       if (!dniNorm){ cbErr('DNI requerido'); return; }
       var hoy = new Date().toLocaleDateString('sv');
       var doc = {
