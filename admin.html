@@ -1142,8 +1142,8 @@ var FIREBASE_CONFIG = {
   "messagingSenderId": "729515294858",
   "appId": "1:729515294858:web:5264a67291c5d649956d73"
 };
-var GAS_URL         = 'https://script.google.com/macros/s/AKfycbz4_MRWE5-lfCOxDvmcybQCIvvHmDk7McEvdnKZ-k5A9OeW-lvhqVWHZfd0w5yLV21nTQ/exec';
-var GAS_OCR_KEY     = 'sgd2026';
+var GAS_URL         = '';
+var GAS_OCR_KEY     = '';
 var ADMIN_EMAIL     = 'admin@sgd.app';
 
 firebase.initializeApp(FIREBASE_CONFIG);
@@ -1350,9 +1350,8 @@ function intentarLogin() {
   mostrarLoader('Verificando...');
   auth.signInWithEmailAndPassword(ADMIN_EMAIL, pass)
     .then(function(cred) {
-      TOKEN = pass; // mantener TOKEN para compatibilidad con código existente
+      TOKEN = pass;
       localStorage.setItem('sgd_token', pass);
-      localStorage.setItem('sgd_admin_uid', cred.user.uid);
       inicializar();
     })
     .catch(function(e) {
@@ -4538,16 +4537,7 @@ if(installBtn){ installBtn.addEventListener('click', function(){
 }); }
 
 window.onload = function() {
-  // Cargar branding antes del login (sin auth)
-  db.collection('config').doc('institucion').get()
-    .then(function(doc){
-      if (doc.exists) {
-        INST = doc.data(); DB.institucion = INST;
-        aplicarBranding(); aplicarTerminologia();
-      }
-    }).catch(function(){});
-
-  // Restaurar sesión Firebase
+  // Esperar a que Firebase Auth resuelva el estado antes de hacer cualquier cosa
   auth.onAuthStateChanged(function(user) {
     if (user) {
       var savedToken = localStorage.getItem('sgd_token');
@@ -4555,11 +4545,11 @@ window.onload = function() {
         TOKEN = savedToken;
         inicializar();
       } else {
-        // Auth activo pero sin token en localStorage — pedir contraseña
+        // Autenticado en Firebase pero sin TOKEN local — cerrar sesión
         auth.signOut();
       }
     }
-    // Si no hay user, el login screen ya está visible
+    // Si no hay user autenticado, el login screen ya está visible por defecto
   });
 };
 
