@@ -4588,19 +4588,22 @@ function sgdConfirm(msg, onOk, btnOkLabel) {
 }
 
 window.onload = function() {
-  // Esperar a que Firebase Auth resuelva el estado antes de hacer cualquier cosa
+  // onAuthStateChanged solo se usa para RESTAURAR sesion existente.
+  // El login nuevo lo maneja intentarLogin() directamente.
+  var _restaurandoSesion = true;
+  setTimeout(function(){ _restaurandoSesion = false; }, 3000);
+
   auth.onAuthStateChanged(function(user) {
+    if (!_restaurandoSesion) return; // ya paso la ventana de restauracion
     if (user) {
       var savedToken = localStorage.getItem('sgd_token');
       if (savedToken) {
         TOKEN = savedToken;
         inicializar();
       } else {
-        // Autenticado en Firebase pero sin TOKEN local — cerrar sesión
         auth.signOut();
       }
     }
-    // Si no hay user autenticado, el login screen ya está visible por defecto
   });
 };
 
