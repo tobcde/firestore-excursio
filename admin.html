@@ -345,6 +345,10 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 <!-- TAB ASISTENCIAS -->
 <div id="tab-asistencias" class="tab-content" style="display:none;">
+  <div style="background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 20px;display:flex;align-items:center;justify-content:space-between;">
+    <span style="font-size:11px;color:var(--muted);">Mostrando asistencias del mes actual y anterior</span>
+    <button onclick="cargarMasAsistencias()" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:4px 10px;background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:6px;cursor:pointer;">+ Cargar historial extendido</button>
+  </div>
   <div class="asist-container">
     <div style="display:flex;gap:12px;align-items:flex-end;background:var(--surface2);padding:14px;border-radius:12px;border:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap;">
       <div class="filter-group">
@@ -1161,7 +1165,7 @@ document.body.style.visibility='visible';
 var DB = {jugadores:[], profesores:[], sedes:[], categorias:[], horarios:[], configPagos:[], institucion:{}, actividades:[], inscripciones:[], precios:[]};
 var CUOTAS_DB = {planes:[], cuotas:[]};
 // Flags de carga lazy — evitan recargar datos que ya están en memoria
-var _cargado = {cuotas: false, asistencias: false, inscripciones: false, citaciones: false};
+var _cargado = {cuotas: false, asistencias: false, inscripciones: false, citaciones: false, inactivos: false};
 
 // ── CONTADOR DE LECTURAS ──────────────────────────────────────────
 var _lecturas = parseInt(sessionStorage.getItem('fs_lecturas')||'0');
@@ -1409,7 +1413,7 @@ function inicializar(passReal) {
     db.collection('config_periodos').get(),             // ~12
     db.collection('config_actividades').get(),          // ~2
     db.collection('config_precios').get(),              // ~8
-    db.collection('socios').get()                       // ~107
+    db.collection('socios').where('activo','==',true).get() // solo activos ~90
     // cuotas, asistencias, inscripciones → lazy por tab
   ]).then(function(results) {
     var instDoc    = results[0];
@@ -2213,6 +2217,12 @@ function calcularEstadoTiempoReal(f) {
 // Alias de compatibilidad
 function estadoCuotaV2(f) { return calcularEstadoTiempoReal(f); }// -- RENDER SOCIOS ------------------------------------------------
 function renderPlayers() {
+  // Si el filtro es Inactivos y no están cargados, cargarlos primero
+  var estFil = document.getElementById('fEstado');
+  if(estFil && estFil.value === 'Inactivos' && !_cargado.inactivos) {
+    lazyCargarInactivos(function(){ renderPlayers(); });
+    return;
+  }
   var busq = document.getElementById('busq').value.toLowerCase();
   var genF = document.getElementById('fGen').value, catF = document.getElementById('fCat').value;
   var estF = document.getElementById('fEstado').value, cuotaF = document.getElementById('fCuota').value;
@@ -2334,6 +2344,12 @@ function poblarPeriodos() {
 }
 
 function renderCuotas() {
+  // Si el período cambió y no tenemos sus cuotas en cache, cargar lazy
+  var per = document.getElementById('cPeriodo') ? document.getElementById('cPeriodo').value : '';
+  if (per && !_cargado['cuotas_' + per]) {
+    lazyCargarCuotasEInscripciones(function(){ renderCuotas(); });
+    return;
+  }
   window._cuotasPagina = 0;
   var filt = document.getElementById('cFiltro').value, fcat = document.getElementById('cFiltrocat').value;
   var busq = document.getElementById('cBusq').value.toLowerCase(), per = document.getElementById('cPeriodo').value;
@@ -4476,45 +4492,98 @@ function exportarReporteCSV() {
 // Cada colección se carga UNA SOLA VEZ al abrir su tab por primera vez.
 // Si ya está en memoria, no vuelve a leer Firestore.
 
+
+function lazyCargarInactivos(cb) {
+  if (_cargado.inactivos) { if(cb) cb(); return; }
+  mostrarLoader('Cargando socios inactivos...');
+  db.collection('socios').where('activo','==',false).get()
+    .then(function(snap) {
+      snap.forEach(function(doc){ DB.jugadores.push(socioToRow(doc, doc.id)); });
+      _contarLecturas(snap.size);
+      _cargado.inactivos = true;
+      ocultarLoader();
+      if(cb) cb();
+    }).catch(function(e){ ocultarLoader(); toast('Error: '+e.message,'err'); });
+}
+
 function lazyCargarCuotasEInscripciones(cb) {
-  if (_cargado.cuotas && _cargado.inscripciones) { if(cb) cb(); return; }
-  mostrarLoader('Cargando cuotas...');
+  // Inscripciones: cargar una sola vez (son relativamente pocas ~450)
+  // Cuotas: cargar por período — solo el período visible
+  var periodoEl = document.getElementById('cPeriodo');
+  var periodo = periodoEl ? periodoEl.value : new Date().toISOString().substring(0,7);
+  var cacheKey = 'cuotas_' + periodo;
+
   var promesas = [];
-  if (!_cargado.cuotas)        promesas.push(db.collection('cuotas').get());
   if (!_cargado.inscripciones) promesas.push(db.collection('inscripciones').get());
+
+  // Cuotas: query por períodoDesde del mes seleccionado
+  // Traemos cuotas cuyo periodoDesde empieza en el mismo año-mes
+  var periodoDesdeMin = periodo + '-01'; // ej: 2026-04-01
+  var periodoDesdeMax = periodo + '-31'; // ej: 2026-04-31 (Firestore acepta fechas inexactas en string)
+  if (!_cargado[cacheKey]) {
+    promesas.push(
+      db.collection('cuotas')
+        .where('periodoDesde', '>=', periodoDesdeMin)
+        .where('periodoDesde', '<=', periodoDesdeMax)
+        .get()
+    );
+  }
+
+  if (!promesas.length) { if(cb) cb(); return; }
+  mostrarLoader('Cargando datos...');
+
   Promise.all(promesas).then(function(results) {
     var idx = 0;
-    if (!_cargado.cuotas) {
-      CUOTAS_DB.cuotas = [];
-      results[idx].forEach(function(doc){ CUOTAS_DB.cuotas.push(cuotaToRow(doc.data())); });
-      _contarLecturas(results[idx].size); idx++;
-      _cargado.cuotas = true;
-    }
     if (!_cargado.inscripciones) {
       DB.inscripciones = [];
       results[idx].forEach(function(doc){ DB.inscripciones.push(inscToObj(doc)); });
       _contarLecturas(results[idx].size); idx++;
       _cargado.inscripciones = true;
     }
+    if (!_cargado[cacheKey]) {
+      // Agregar las cuotas del período al cache en memoria (no reemplazar todo)
+      // Primero quitar las del mismo período si ya estaban (re-query)
+      CUOTAS_DB.cuotas = CUOTAS_DB.cuotas.filter(function(c){
+        var mp = (c[3]||'').substring(0,7);
+        return mp !== periodo;
+      });
+      results[idx].forEach(function(doc){ CUOTAS_DB.cuotas.push(cuotaToRow(doc.data())); });
+      _contarLecturas(results[idx].size); idx++;
+      _cargado[cacheKey] = true;
+      _cargado.cuotas = true;
+    }
     ocultarLoader();
     if(cb) cb();
-  }).catch(function(e){ ocultarLoader(); toast('Error cargando cuotas: '+e.message,'err'); });
+  }).catch(function(e){ ocultarLoader(); toast('Error cargando datos: '+e.message,'err'); });
 }
 
-function lazyCargarAsistencias(cb) {
-  if (_cargado.asistencias) { if(cb) cb(); return; }
+function lazyCargarAsistencias(cb, mesesAtras) {
+  mesesAtras = mesesAtras || 1; // por defecto solo el mes actual + el anterior
+  var cacheKey = 'asist_' + mesesAtras;
+  if (_cargado[cacheKey]) { if(cb) cb(); return; }
   mostrarLoader('Cargando asistencias...');
   var ahora = new Date();
-  var corte = new Date(ahora.getFullYear(), ahora.getMonth()-3, 1).toLocaleDateString('sv');
+  var corte = new Date(ahora.getFullYear(), ahora.getMonth() - mesesAtras, 1).toLocaleDateString('sv');
   db.collection('asistencias').where('fecha', '>=', corte).get()
     .then(function(snap) {
       asistencias = [];
       snap.forEach(function(doc){ var d=doc.data(); asistencias.push([d.fecha||'',d.turnoId||'',d.label||'',d.dni||'',d.nombre||'',d.presente===true]); });
       _contarLecturas(snap.size);
+      _cargado[cacheKey] = true;
       _cargado.asistencias = true;
       ocultarLoader();
       if(cb) cb();
     }).catch(function(e){ ocultarLoader(); toast('Error cargando asistencias: '+e.message,'err'); });
+}
+
+function cargarMasAsistencias() {
+  // Carga 3 meses más atrás — para historial extendido
+  var mesesActuales = window._asistMeses || 1;
+  window._asistMeses = mesesActuales + 2;
+  lazyCargarAsistencias(function(){
+    renderHistorial && renderHistorial();
+    toast('Historial extendido a ' + (window._asistMeses + 1) + ' meses', 'ok');
+  }, window._asistMeses);
 }
 
 function cambiarTab(ev, id) {
@@ -4524,8 +4593,16 @@ function cambiarTab(ev, id) {
   ev.target.classList.add('active');
 
   // Lazy loading por tab — solo lee Firestore si los datos no están en memoria
+  if(id === 'jugadores'){
+    // Si el filtro es Inactivos y no los cargamos aún, hacerlo ahora
+    var estFil = document.getElementById('fEstado');
+    if(estFil && estFil.value === 'Inactivos' && !_cargado.inactivos){
+      lazyCargarInactivos(function(){ renderPlayers(); });
+    }
+  }
   if(id === 'cuotas'){
-    lazyCargarCuotasEInscripciones(function(){ poblarPeriodos(); renderCuotas(); });
+    poblarPeriodos();
+    lazyCargarCuotasEInscripciones(function(){ renderCuotas(); });
   }
   if(id === 'asistencias'){
     lazyCargarAsistencias(function(){ poblarTurnosAsist(); });
