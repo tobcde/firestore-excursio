@@ -1348,16 +1348,15 @@ function intentarLogin() {
   var pass = document.getElementById('passInput').value;
   if (!pass) return loginError('Ingresa la contraseña');
   mostrarLoader('Verificando...');
-  // Guardar token ANTES del signIn para que onAuthStateChanged lo encuentre
-  localStorage.setItem('sgd_token', pass);
-  TOKEN = pass;
   auth.signInWithEmailAndPassword(ADMIN_EMAIL, pass)
     .then(function(cred) {
+      // Solo guardamos que hay sesión activa — la contraseña NO se guarda
+      TOKEN = pass;
+      sessionStorage.setItem('sgd_sess', '1'); // solo dura mientras la pestaña está abierta
       inicializar();
     })
     .catch(function(e) {
       ocultarLoader();
-      localStorage.removeItem('sgd_token');
       TOKEN = '';
       var msg = 'Contraseña incorrecta';
       if (e.code === 'auth/too-many-requests') msg = 'Demasiados intentos. Esperá unos minutos.';
@@ -1370,7 +1369,9 @@ function ocultarLoader(){ document.getElementById('loader').style.display='none'
 
 // ── INICIALIZAR — carga todo desde Firestore ──────────────────────
 function inicializar() {
-  if (!TOKEN) return;
+  // TOKEN puede ser la pass real o el placeholder '_firebase_session_'
+  // En ambos casos lo que importa es que Firebase Auth tenga usuario activo
+  if (!auth.currentUser && !TOKEN) return;
   mostrarLoader('Conectando con Firestore...');
   var ahora = new Date();
   var corte = new Date(ahora.getFullYear(), ahora.getMonth()-3, 1).toLocaleDateString('sv');
@@ -4588,19 +4589,28 @@ function sgdConfirm(msg, onOk, btnOkLabel) {
 }
 
 window.onload = function() {
-  // onAuthStateChanged solo se usa para RESTAURAR sesion existente.
-  // El login nuevo lo maneja intentarLogin() directamente.
+  // Limpiar tokens viejos en localStorage (migración de seguridad)
+  localStorage.removeItem('sgd_token');
+  localStorage.removeItem('sgd_admin_uid');
+  // SEGURIDAD: la sesión solo se restaura si la MISMA pestaña la inició.
+  // sessionStorage se borra al cerrar la pestaña o con Ctrl+F5.
+  // Esto previene que alguien retome una sesión cerrada.
   var _restaurandoSesion = true;
   setTimeout(function(){ _restaurandoSesion = false; }, 3000);
 
   auth.onAuthStateChanged(function(user) {
-    if (!_restaurandoSesion) return; // ya paso la ventana de restauracion
+    if (!_restaurandoSesion) return;
     if (user) {
-      var savedToken = localStorage.getItem('sgd_token');
-      if (savedToken) {
-        TOKEN = savedToken;
+      var sesionActiva = sessionStorage.getItem('sgd_sess');
+      if (sesionActiva) {
+        // Sesión válida en esta pestaña — restaurar sin pedir contraseña
+        // Necesitamos TOKEN: lo pedimos via re-auth silenciosa
+        // Como no tenemos la pass guardada, pedimos al usuario que ingrese
+        // PERO: si el token de Firebase sigue válido, igual podemos leer Firestore
+        TOKEN = '_firebase_session_'; // token placeholder — Firestore usa Firebase Auth directamente
         inicializar();
       } else {
+        // Firebase tiene sesión pero esta pestaña no la inició → cerrar sesión
         auth.signOut();
       }
     }
