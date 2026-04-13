@@ -121,7 +121,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 .modal-overlay.open{display:flex;}
 .modal{background:var(--surface);width:100%;max-width:900px;border-radius:15px;max-height:95vh;overflow-y:auto;border:1px solid var(--primary);}
 .modal-sm{max-width:480px;}
-.modal-header{padding:20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;background:linear-gradient(135deg,var(--primary-dark) 0%,var(--surface) 100%);}
+.modal-header{padding:20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;background:linear-gradient(135deg,var(--primary-dark) 0%,var(--surface) 100%);position:relative;z-index:10;}
 .modal-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--secondary);text-transform:uppercase;}
 .modal-subtitle{font-size:12px;color:var(--muted);margin-top:4px;}
 .modal-close{background:none;border:none;color:var(--muted);font-size:30px;cursor:pointer;line-height:1;}
@@ -2784,7 +2784,7 @@ function cargarListaAsist(turnoId) {
       : '';
     html += '<div class="asist-row" data-dni="' + dni + '" data-nom="' + nom.toLowerCase() + '">';
     html += '<div><div class="asist-nombre">' + nom + catBadge + '</div><div class="asist-info">Doc: ' + dni + ' | ' + (f[COL.CATEGORIA_APP]||'') + (catSec && esPorSecundaria ? ' &rarr; ' + catSec : '') + '</div></div>';
-    html += '<button class="toggle-asist ' + (pres?'presente':'ausente') + '" onclick="toggleAsist(\'' + dni + '\',' + lista.length + ')"></button>';
+    html += '<button class="toggle-asist ' + (pres?'presente':'ausente') + '" id="tas-' + dni + '" onclick="toggleAsist(\'' + dni + '\',' + lista.length + ')"></button>';
     html += '</div>';
   });
   html += '</div></div>';
@@ -2810,7 +2810,7 @@ function marcarTodosPresentes(total) {
 
 function toggleAsist(dni, total) {
   asistActual[dni] = !asistActual[dni];
-  var btn = document.querySelector('.asist-row[data-dni="' + dni + '"] .toggle-asist');
+  var btn = document.getElementById('tas-' + dni) || document.querySelector('.asist-row[data-dni="' + dni + '"] .toggle-asist');
   if(btn){ btn.classList.toggle('presente', asistActual[dni]); btn.classList.toggle('ausente', !asistActual[dni]); }
   var nP = Object.values(asistActual).filter(Boolean).length;
   document.getElementById('cnt-p').innerText = nP;
