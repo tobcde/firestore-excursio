@@ -1804,7 +1804,10 @@ function _fsDispatch(action, p, ok, err) {
       db.collection('citaciones').orderBy('fechaCreacion','desc').limit(50).get()
         .then(function(snap){
           var cits = [];
-          snap.forEach(function(doc){ cits.push(Object.assign({id:doc.id}, doc.data())); });
+          snap.forEach(function(doc){
+            // rowIndex = docId para compatibilidad con citBorrar/citVerHistorico
+            cits.push(Object.assign({id:doc.id, rowIndex:doc.id}, doc.data()));
+          });
           cb({ok:true, citaciones:cits});
         }).catch(function(e){ cbErr(e.message); });
       break;
@@ -4913,8 +4916,8 @@ function citRenderHistorial() {
       + (c.observaciones ? ' &middot; ' + citEsc(c.observaciones) : '') + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:8px;align-items:center;">'
-      + '<button onclick="citVerHistorico(' + c.rowIndex + ')" style="font-size:11px;padding:5px 10px;background:var(--primary-dim);border:1px solid var(--primary-border);color:#6de097;border-radius:6px;cursor:pointer;font-family:\'Barlow Condensed\',sans-serif;">&#128424; Ver</button>'
-      + '<button onclick="citBorrar(' + c.rowIndex + ')" style="font-size:11px;padding:5px 10px;background:var(--red-dim);border:1px solid var(--red-border);color:var(--red);border-radius:6px;cursor:pointer;font-family:\'Barlow Condensed\',sans-serif;">&#10005;</button>'
+      + '<button onclick="citVerHistorico('' + c.rowIndex + '')" style="font-size:11px;padding:5px 10px;background:var(--primary-dim);border:1px solid var(--primary-border);color:#6de097;border-radius:6px;cursor:pointer;font-family:\'Barlow Condensed\',sans-serif;">&#128424; Ver</button>'
+      + '<button onclick="citBorrar('' + c.rowIndex + '')" style="font-size:11px;padding:5px 10px;background:var(--red-dim);border:1px solid var(--red-border);color:var(--red);border-radius:6px;cursor:pointer;font-family:\'Barlow Condensed\',sans-serif;">&#10005;</button>'
       + '</div></div>';
   });
   document.getElementById('cit-historial-list').innerHTML = html;
