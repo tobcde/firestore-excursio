@@ -570,18 +570,21 @@ function doForzarCambioPass() {
 function entrarApp(pass) {
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app').classList.add('visible');
-  if (!hayHuella() && window.PublicKeyCredential && pass) {
-    setTimeout(function(){
-      if(confirm('¿Activar acceso con huella o Face ID?')){ registrarHuella(pass); }
-    }, 800);
-  }
+  // Sin confirm() bloqueante — ofrecemos huella via botón en el perfil
   cargarDatos();
   actualizarBtnBio();
   iniciarFecha();
 }
 
 function doLogout() {
-  if (!confirm('¿Cerrar sesión?')) return;
+  // Logout directo sin confirm bloqueante
+  if (!window._logoutConfirmado) {
+    toast('Tocá de nuevo para salir', '');
+    window._logoutConfirmado = true;
+    setTimeout(function(){ window._logoutConfirmado = false; }, 2000);
+    return;
+  }
+  window._logoutConfirmado = false;
   limpiarSesion();
   DB = {horarios:[], jugadores:[]};
   asistencias = [];
