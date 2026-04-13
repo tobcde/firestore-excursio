@@ -3468,7 +3468,11 @@ function renderListActividades() {
   el.addEventListener('click', function(e){
     var btn = e.target.closest('[data-action="borrar"]');
     if(btn) {
-      sgdConfirm('Eliminar esta actividad?', function() { _borrarActividad(i, nom); }, 'ELIMINAR'); return; } function _borrarActividad(i, nom) {
+      sgdConfirm('Eliminar esta actividad?', function() { _borrarActividad(i, nom); }, 'ELIMINAR');
+    }); // fin forEach
+  }); // fin listener
+}
+function _borrarActividad(i, nom) {
       borrar(btn.dataset.tabla, parseInt(btn.dataset.row));
     }
   });
@@ -3761,7 +3765,10 @@ function renderListPrecios() {
   el.addEventListener('click', function(e) {
     var btn = e.target.closest('[data-action]'); if(!btn) return;
     if(btn.dataset.action === 'delprecio') {
-      sgdConfirm('Eliminar este precio?', function() { _confirmarEliminarPrecio(btn); }, 'ELIMINAR'); return; } function _confirmarEliminarPrecio(btn) {
+      sgdConfirm('Eliminar este precio?', function() { _confirmarEliminarPrecio(btn); }, 'ELIMINAR');
+      return;
+    }
+    function _confirmarEliminarPrecio(btn) {
       mostrarLoader('Eliminando...');
       callScript({action:'deletePrecio', rowIndex:parseInt(btn.dataset.row), pass:TOKEN, _noRetry:true}, function(){
         ocultarLoader();
@@ -3823,7 +3830,9 @@ function getPrecio(actividad, categoria) {
 }
 
 function migrarSaldos() {
-  sgdConfirm('Calcular saldo histórico para todos los socios desde sus pagos existentes?', function() { _migrarSaldosConfirmado(); }, 'CALCULAR'); return; } function _migrarSaldosConfirmado() {
+  sgdConfirm('Calcular saldo histórico para todos los socios desde sus pagos existentes?', function() { _migrarSaldosConfirmado(); }, 'CALCULAR');
+}
+function _migrarSaldosConfirmado() {
   mostrarLoader('Calculando saldos...');
   callScript({action:'migrarSaldos', pass:TOKEN, _noRetry:true}, function(r){
     ocultarLoader();
@@ -3908,7 +3917,9 @@ function ejecutarMasiva() {
   });
   if(!actividades.length) return alert('Selecciona al menos una actividad');
 
-  sgdConfirm('Generar inscripciones para todos los socios activos de <b>' + catNom + '</b>?<br><small style="color:var(--muted)">' + actividades.length + ' actividad(es) — desde ' + desde + '</small>', function() { _ejecutarMasivaConfirmada(catNom, actividades, desde, hasta, obs); }, 'GENERAR'); return; } function _ejecutarMasivaConfirmada(catNom, actividades, desde, hasta, obs) {
+  sgdConfirm('Generar inscripciones para todos los socios activos de <b>' + catNom + '</b>?<br><small style="color:var(--muted)">' + actividades.length + ' actividad(es) — desde ' + desde + '</small>', function() { _ejecutarMasivaConfirmada(catNom, actividades, desde, hasta, obs); }, 'GENERAR');
+}
+function _ejecutarMasivaConfirmada(catNom, actividades, desde, hasta, obs) {
 
   mostrarLoader('Generando inscripciones...');
   callScript({
@@ -4034,7 +4045,9 @@ function agregarCampoExtra() {
 }
 
 function eliminarCampoExtra(nombre) {
-  sgdConfirm('Eliminar el campo <b>' + nombre + '</b>?', function() { _eliminarCampoExtraConfirmado(nombre); }, 'ELIMINAR'); return; } function _eliminarCampoExtraConfirmado(nombre) {
+  sgdConfirm('Eliminar el campo <b>' + nombre + '</b>?', function() { _eliminarCampoExtraConfirmado(nombre); }, 'ELIMINAR');
+}
+function _eliminarCampoExtraConfirmado(nombre) {
   mostrarLoader('Eliminando...');
   callScript({action:'deleteCampoExtra', nombre:nombre, pass:TOKEN, _noRetry:true}, function(){
     ocultarLoader();
@@ -4491,7 +4504,13 @@ function registrarHuella(pass) {
   // Solo ofrecer en dispositivos t&aacute;ctiles (celular/tablet), no en desktop
   if(!navigator.maxTouchPoints || navigator.maxTouchPoints === 0) return;
   setTimeout(function(){
-    sgdConfirm('¿Querés ingresar con huella o Face ID la próxima vez?', function() { _registrarHuellaConfirmado(pass); }, 'ACTIVAR'); return; } function _registrarHuellaConfirmado(pass) {
+    sgdConfirm('¿Querés ingresar con huella o Face ID la próxima vez?', function() {
+      _registrarHuellaConfirmado(pass);
+    }, 'ACTIVAR');
+  }, 1000);
+}
+
+function _registrarHuellaConfirmado(pass) {
     var challenge = new Uint8Array(32); crypto.getRandomValues(challenge);
     var userId = new TextEncoder().encode('sgd_admin');
     navigator.credentials.create({publicKey:{
@@ -4507,7 +4526,6 @@ function registrarHuella(pass) {
       var btn = document.getElementById('btnHuella'); if(btn) btn.style.display = 'block';
       toast('Huella registrada', 'ok');
     }).catch(function(){});
-  }, 1000);
 }
 
 async function loginConHuella() {
