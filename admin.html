@@ -746,7 +746,8 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
           <option value="ranking_asist">Ranking asistencia</option>
           <option value="jugadores">Listado completo</option>
           <option value="caja_dia">Caja del dia</option>
-        </select></div>
+        <option value="auditoria">Auditoría de pagos</option>
+</select></div>
       <div class="filter-group" id="r-filter-mes">
         <label class="filter-label">Mes</label><select id="rMes" class="filter-select" onchange="renderReporte()"></select></div>
       <div class="filter-group" id="r-filter-desde" style="display:none;">
@@ -1343,15 +1344,17 @@ function horarioToRow(doc) {
   return [d.dia||'', d.hora||'', d.sede||'', d.profesores||'', d.grupo||'', d.liga||d.extra||'', d.modalidad||'Mixto', doc.id];
 }
 
-function cuotaToRow(d) {
-  // formato interno: [dni, nombre, plan, periodoDesde, periodoHasta, fechaPago, monto, metodo, cobrador, obs]
-  return [
+function cuotaToRow(d, fsId) {
+  // formato: [dni, nombre, plan, periodoDesde, periodoHasta, fechaPago, monto, metodo, cobrador, obs, _fsId]
+  var row = [
     d.dni||d.doc||'', d.nombre||'',
     d.plan||d.concepto||'',
     d.periodoDesde||'', d.periodoHasta||'',
     d.fechaPago||'', d.monto||0,
     d.metodo||'', d.cobrador||'', d.obs||''
   ];
+  row._fsId = fsId || d._fsId || '';
+  return row;
 }
 
 function inscToObj(doc) {
@@ -2626,7 +2629,8 @@ function confirmarPago() {
       hoja: pagoCtx.hoja
     };
     callScript({action:'registrarPago', pago:p, pass:TOKEN, _noRetry:true}, function(res){
-      CUOTAS_DB.cuotas.push([p.doc, p.nombre, p.plan, p.periodoDesde, p.periodoHasta, p.fechaPago, p.monto, p.metodo, p.cobrador, p.obs, p.hoja, Date.now()]);
+      var newRow = cuotaToRow({dni:p.doc, nombre:p.nombre, plan:p.plan, periodoDesde:p.periodoDesde, periodoHasta:p.periodoHasta, fechaPago:p.fechaPago, monto:p.monto, metodo:p.metodo, cobrador:p.cobrador, obs:p.obs}, r.id||'');
+      CUOTAS_DB.cuotas.push(newRow);
       // Nueva arquitectura: el saldo se recalcula en tiempo real desde CUOTAS_DB.
       // No hay col AA que actualizar.
       if(++done === pagos.length) {
@@ -2952,10 +2956,16 @@ function abrirM(ai) {
   var hc = CUOTAS_DB.cuotas.filter(function(c){ return c[0] == dni; }).sort(function(a,b){ return (b[5]||'').localeCompare(a[5]||''); });
   document.getElementById('m-hist-cuotas').innerHTML = !hc.length ? '<p style="color:var(--muted);font-size:12px;">Sin pagos registrados</p>' :
     hc.map(function(c){
-      return '<div class="hist-cuota-row"><div><div class="hist-periodo">' + (c[2]||'Sin plan') + '</div>'
+      var fsId = c._fsId || '';
+      var btnEdit = fsId ? '<button onclick="abrirEditarPago(\'' + fsId + '\')" title="Editar pago" style="background:none;border:none;cursor:pointer;color:var(--secondary);font-size:14px;padding:2px 4px;">&#x270F;</button>' : '';
+      var btnDel  = fsId ? '<button onclick="abrirEliminarPago(\'' + fsId + '\')" title="Eliminar pago" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px;padding:2px 4px;">&#x2715;</button>' : '';
+      return '<div class="hist-cuota-row"><div style="flex:1;"><div class="hist-periodo">' + (c[2]||'Sin plan') + '</div>'
         + '<div class="hist-meta">Fecha: ' + (c[5]||'-') + '</div>'
-        + '<div class="hist-meta">' + (c[7]||'-') + '</div></div>'
-        + '<div class="hist-monto">$' + Number(c[6]).toLocaleString('es-AR') + '</div></div>';
+        + '<div class="hist-meta">' + (c[7]||'-') + (c[9] ? ' · ' + c[9] : '') + '</div></div>'
+        + '<div style="display:flex;align-items:center;gap:4px;">'
+        + '<div class="hist-monto">$' + Number(c[6]).toLocaleString('es-AR') + '</div>'
+        + btnEdit + btnDel
+        + '</div></div>';
     }).join('');
   var _totPag=hc.reduce(function(s,p){return s+(Number(p[6])||0);},0);
   if(_totPag>0) document.getElementById('m-hist-cuotas').innerHTML += '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;display:flex;justify-content:space-between;"><span style="font-size:11px;color:var(--muted);text-transform:uppercase;">Total pagado</span><span style="font-size:13px;font-weight:700;color:#6de097;">$'+Number(_totPag).toLocaleString('es-AR')+'</span></div>';
@@ -4180,6 +4190,7 @@ function renderReporte() {
   else if(tipo === 'pagos_mes') rptPagosMes();
   else if(tipo === 'tipo_pago') rptTipoPago();
   else if(tipo === 'caja_dia') rptCajaDia();
+  else if(tipo === 'auditoria') rptAuditoria();
 }
 
 function setTablaHeaders(cols){ document.getElementById('r-thead').innerHTML = '<tr>' + cols.map(function(c){ return '<th>' + c + '</th>'; }).join('') + '</tr>'; }
@@ -4531,6 +4542,36 @@ function rptRankingAsist() {
   setTablaRows(rows);
 }
 
+function rptAuditoria() {
+  mostrarLoader('Cargando auditoría...');
+  db.collection('auditoria_pagos').orderBy('fecha','desc').limit(100).get()
+    .then(function(snap) {
+      _contarLecturas(snap.size);
+      ocultarLoader();
+      var rows = [];
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        var orig = d.pagoOriginal || {};
+        var tipoColor = d.tipo === 'ELIMINAR' ? 'var(--red)' : 'var(--secondary)';
+        var detalle = d.tipo === 'EDITAR' && d.pagoNuevo
+          ? 'Monto: $' + Number(orig.monto).toLocaleString('es-AR') + ' → $' + Number(d.pagoNuevo.monto).toLocaleString('es-AR')
+          : '$' + Number(orig.monto||0).toLocaleString('es-AR') + ' — ' + (orig.metodo||'-');
+        rows.push('<tr>'
+          + td('<span style="color:'+tipoColor+';font-weight:700;">'+d.tipo+'</span>')
+          + td(d.fecha||'-','muted')
+          + td((orig.nombre||'-')+'<br><small style="color:var(--muted)">'+orig.dni+'</small>')
+          + td(orig.plan||'-','muted')
+          + td(detalle)
+          + td(d.motivo||'-','muted')
+          + '</tr>');
+      });
+      setCards([{val:snap.size, lbl:'Registros de auditoría', color:'var(--secondary)'}]);
+      setTablaHeaders(['Tipo','Fecha','Socio','Plan','Detalle','Motivo']);
+      setTablaRows(rows);
+      if(!rows.length) document.getElementById('r-empty').style.display='';
+    }).catch(function(e){ ocultarLoader(); toast('Error: '+e.message,'err'); });
+}
+
 function rptCajaDia() {
   var fecha = document.getElementById('rCajaFecha').value;
   if(!fecha) return;
@@ -4616,7 +4657,7 @@ function lazyCargarCuotasEInscripciones(cb) {
         var mp = (c[3]||'').substring(0,7);
         return mp !== periodo;
       });
-      results[idx].forEach(function(doc){ CUOTAS_DB.cuotas.push(cuotaToRow(doc.data())); });
+      results[idx].forEach(function(doc){ var r = cuotaToRow(doc.data(), doc.id); CUOTAS_DB.cuotas.push(r); });
       _contarLecturas(results[idx].size); idx++;
       _cargado[cacheKey] = true;
       _cargado.cuotas = true;
@@ -4846,6 +4887,151 @@ if(installBtn){ installBtn.addEventListener('click', function(){
   });
 }); }
 
+
+
+// ── AUDITORÍA DE PAGOS ────────────────────────────────────────────
+var _auditCtx = null; // contexto del pago actual a editar/eliminar
+
+function abrirEditarPago(fsId) {
+  var c = CUOTAS_DB.cuotas.find(function(x){ return x._fsId === fsId; });
+  if(!c){ toast('Pago no encontrado','err'); return; }
+  _auditCtx = {tipo:'EDITAR', fsId:fsId, original:c.slice()};
+  _auditCtx.original._fsId = fsId;
+  document.getElementById('audit-titulo').innerText = 'Editar pago';
+  document.getElementById('audit-subtitulo').innerText = (c[1]||'') + ' — ' + (c[2]||'');
+  document.getElementById('audit-pago-original').innerHTML =
+    'Período: <b>' + (c[3]||'-') + '</b><br>' +
+    'Fecha pago: <b>' + (c[5]||'-') + '</b><br>' +
+    'Monto: <b>$' + Number(c[6]).toLocaleString('es-AR') + '</b><br>' +
+    'Método: <b>' + (c[7]||'-') + '</b>' +
+    (c[9] ? '<br>Obs: <b>' + c[9] + '</b>' : '');
+  document.getElementById('audit-campos-edicion').style.display = 'block';
+  document.getElementById('audit-monto').value = c[6]||0;
+  document.getElementById('audit-metodo').value = c[7]||'Efectivo';
+  var fechaRaw = c[5]||'';
+  if(fechaRaw.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+    var p = fechaRaw.split('/');
+    fechaRaw = p[2]+'-'+p[1]+'-'+p[0];
+  }
+  document.getElementById('audit-fecha').value = fechaRaw;
+  document.getElementById('audit-obs').value = c[9]||'';
+  document.getElementById('audit-motivo').value = '';
+  document.getElementById('audit-motivo-error').style.display = 'none';
+  document.getElementById('audit-btn-confirmar').style.background = 'var(--secondary)';
+  document.getElementById('audit-btn-confirmar').innerText = 'GUARDAR CAMBIOS';
+  document.getElementById('modalAuditoriaPago').classList.add('open');
+}
+
+function abrirEliminarPago(fsId) {
+  var c = CUOTAS_DB.cuotas.find(function(x){ return x._fsId === fsId; });
+  if(!c){ toast('Pago no encontrado','err'); return; }
+  _auditCtx = {tipo:'ELIMINAR', fsId:fsId, original:c.slice()};
+  _auditCtx.original._fsId = fsId;
+  document.getElementById('audit-titulo').innerText = 'Eliminar pago';
+  document.getElementById('audit-subtitulo').innerText = (c[1]||'') + ' — ' + (c[2]||'');
+  document.getElementById('audit-pago-original').innerHTML =
+    'Período: <b>' + (c[3]||'-') + '</b><br>' +
+    'Fecha pago: <b>' + (c[5]||'-') + '</b><br>' +
+    'Monto: <b style="color:var(--red);">$' + Number(c[6]).toLocaleString('es-AR') + '</b><br>' +
+    'Método: <b>' + (c[7]||'-') + '</b>' +
+    (c[9] ? '<br>Obs: <b>' + c[9] + '</b>' : '');
+  document.getElementById('audit-campos-edicion').style.display = 'none';
+  document.getElementById('audit-motivo').value = '';
+  document.getElementById('audit-motivo-error').style.display = 'none';
+  document.getElementById('audit-btn-confirmar').style.background = 'var(--red)';
+  document.getElementById('audit-btn-confirmar').innerText = 'ELIMINAR PAGO';
+  document.getElementById('modalAuditoriaPago').classList.add('open');
+}
+
+function cerrarModalAuditoria() {
+  document.getElementById('modalAuditoriaPago').classList.remove('open');
+  _auditCtx = null;
+}
+
+function confirmarAuditoriaPago() {
+  if(!_auditCtx) return;
+  var motivo = document.getElementById('audit-motivo').value.trim();
+  if(!motivo) {
+    document.getElementById('audit-motivo-error').style.display = 'block';
+    return;
+  }
+  document.getElementById('audit-motivo-error').style.display = 'none';
+  mostrarLoader(_auditCtx.tipo === 'ELIMINAR' ? 'Eliminando pago...' : 'Guardando cambios...');
+
+  var ahora = new Date();
+  var fechaAudit = ahora.toLocaleDateString('es-AR') + ' ' + ahora.toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit'});
+  var orig = _auditCtx.original;
+
+  var audDoc = {
+    tipo:         _auditCtx.tipo,
+    fecha:        fechaAudit,
+    motivo:       motivo,
+    pagoOriginal: {
+      dni:          orig[0]||'', nombre:      orig[1]||'',
+      plan:         orig[2]||'', periodoDesde:orig[3]||'',
+      periodoHasta: orig[4]||'', fechaPago:   orig[5]||'',
+      monto:        orig[6]||0,  metodo:      orig[7]||'',
+      cobrador:     orig[8]||'', obs:         orig[9]||'',
+      fsId:         _auditCtx.fsId
+    }
+  };
+
+  if(_auditCtx.tipo === 'EDITAR') {
+    var nuevoMonto  = parseFloat(document.getElementById('audit-monto').value)||0;
+    var nuevoMetodo = document.getElementById('audit-metodo').value;
+    var nuevaFecha  = document.getElementById('audit-fecha').value;
+    var nuevaObs    = document.getElementById('audit-obs').value.trim();
+    // Convertir fecha a dd/MM/yyyy
+    if(nuevaFecha.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      var fp = nuevaFecha.split('-');
+      nuevaFecha = fp[2]+'/'+fp[1]+'/'+fp[0];
+    }
+    audDoc.pagoNuevo = {monto:nuevoMonto, metodo:nuevoMetodo, fechaPago:nuevaFecha, obs:nuevaObs};
+
+    // 1. Actualizar en Firestore
+    db.collection('cuotas').doc(_auditCtx.fsId).update({
+      monto: nuevoMonto, metodo: nuevoMetodo, fechaPago: nuevaFecha, obs: nuevaObs
+    }).then(function() {
+      _contarEscrituras(1);
+      // 2. Guardar auditoría
+      return db.collection('auditoria_pagos').add(audDoc);
+    }).then(function() {
+      _contarEscrituras(1);
+      // 3. Actualizar en memoria
+      var idx = CUOTAS_DB.cuotas.findIndex(function(x){ return x._fsId === _auditCtx.fsId; });
+      if(idx >= 0) {
+        CUOTAS_DB.cuotas[idx][6] = nuevoMonto;
+        CUOTAS_DB.cuotas[idx][7] = nuevoMetodo;
+        CUOTAS_DB.cuotas[idx][5] = nuevaFecha;
+        CUOTAS_DB.cuotas[idx][9] = nuevaObs;
+      }
+      cerrarModalAuditoria();
+      ocultarLoader();
+      renderCuotas();
+      abrirM(itemSel); // refrescar ficha del socio
+      toast('Pago actualizado y auditado', 'ok');
+    }).catch(function(e){ ocultarLoader(); toast('Error: '+e.message,'err'); });
+
+  } else {
+    // ELIMINAR
+    // 1. Eliminar de Firestore
+    db.collection('cuotas').doc(_auditCtx.fsId).delete()
+    .then(function() {
+      _contarEscrituras(1);
+      // 2. Guardar auditoría
+      return db.collection('auditoria_pagos').add(audDoc);
+    }).then(function() {
+      _contarEscrituras(1);
+      // 3. Eliminar de memoria
+      CUOTAS_DB.cuotas = CUOTAS_DB.cuotas.filter(function(x){ return x._fsId !== _auditCtx.fsId; });
+      cerrarModalAuditoria();
+      ocultarLoader();
+      renderCuotas();
+      abrirM(itemSel); // refrescar ficha del socio
+      toast('Pago eliminado y registrado en auditoría', 'ok');
+    }).catch(function(e){ ocultarLoader(); toast('Error: '+e.message,'err'); });
+  }
+}
 
 // ── MODAL CONFIRMACION CUSTOM (reemplaza confirm() nativo) ────────
 function sgdConfirm(msg, onOk, btnOkLabel) {
@@ -5332,6 +5518,56 @@ function citBorrar(rowIndex) {
 }
 </style>
 
+
+<!-- MODAL AUDITORÍA PAGO -->
+<div class="modal-overlay" id="modalAuditoriaPago">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="audit-titulo">Editar pago</div>
+        <div class="modal-subtitle" id="audit-subtitulo"></div>
+      </div>
+      <button class="modal-close" onclick="cerrarModalAuditoria()">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;letter-spacing:.05em;">Pago original</div>
+        <div id="audit-pago-original" style="color:var(--text);line-height:1.8;"></div>
+      </div>
+      <div id="audit-campos-edicion" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div>
+            <label class="filter-label">Monto ($)</label>
+            <input id="audit-monto" type="number" class="edit-input" style="width:100%;margin-top:4px;">
+          </div>
+          <div>
+            <label class="filter-label">Método</label>
+            <select id="audit-metodo" class="edit-input" style="width:100%;margin-top:4px;">
+              <option>Efectivo</option><option>Transferencia</option><option>Débito</option><option>Crédito</option><option>MercadoPago</option><option>Otro</option>
+            </select>
+          </div>
+          <div>
+            <label class="filter-label">Fecha pago</label>
+            <input id="audit-fecha" type="date" class="edit-input" style="width:100%;margin-top:4px;">
+          </div>
+          <div>
+            <label class="filter-label">Observaciones</label>
+            <input id="audit-obs" type="text" class="edit-input" style="width:100%;margin-top:4px;" placeholder="Opcional">
+          </div>
+        </div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label class="filter-label">Motivo <span style="color:var(--red);">*</span></label>
+        <input id="audit-motivo" type="text" class="edit-input" style="width:100%;margin-top:4px;" placeholder="Ej: Monto incorrecto, método equivocado...">
+        <div id="audit-motivo-error" style="display:none;color:var(--red);font-size:11px;margin-top:4px;">El motivo es obligatorio</div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button id="audit-btn-confirmar" class="btn btn-save" style="flex:1;" onclick="confirmarAuditoriaPago()">CONFIRMAR</button>
+        <button class="btn" style="background:var(--surface2);border:1px solid var(--border);" onclick="cerrarModalAuditoria()">CANCELAR</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL CONFIRMACION CUSTOM -->
 <div id="modalConfirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9998;align-items:center;justify-content:center;padding:20px;">
