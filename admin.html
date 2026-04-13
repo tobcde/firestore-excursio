@@ -3249,18 +3249,7 @@ function enviarComprobanteEmail() {
         +'</td></tr>'
         +'</table>'
         +'</td></tr></table>'
-        +'
-<!-- MODAL CONFIRMACION CUSTOM -->
-<div id="modalConfirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9998;align-items:center;justify-content:center;padding:20px;">
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:360px;box-shadow:0 0 40px rgba(0,0,0,.5);">
-    <div id="modalConfirmMsg" style="font-size:15px;margin-bottom:20px;line-height:1.5;"></div>
-    <div style="display:flex;gap:10px;">
-      <button id="modalConfirmOk" style="flex:1;padding:12px;background:var(--red);color:#fff;border:none;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.05em;">CONFIRMAR</button>
-      <button id="modalConfirmCancel" style="flex:1;padding:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">CANCELAR</button>
-    </div>
-  </div>
-</div>
-</body></html>';
+        +'</body></html>';
     })(),
     pass:TOKEN, _noRetry:true},
     function(r){ ocultarLoader(); if(r&&r.ok===false){alert('Error: '+(r.error||''));return;} cerrarModalComprobante(); toast('Comprobante enviado a '+email, 'ok'); },
@@ -5011,6 +5000,18 @@ function citBorrar(rowIndex) {
   #cit-print-bar { display: none !important; }
 }
 </style>
+
+
+<!-- MODAL CONFIRMACION CUSTOM -->
+<div id="modalConfirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9998;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:360px;box-shadow:0 0 40px rgba(0,0,0,.5);">
+    <div id="modalConfirmMsg" style="font-size:15px;margin-bottom:20px;line-height:1.5;"></div>
+    <div style="display:flex;gap:10px;">
+      <button id="modalConfirmOk" style="flex:1;padding:12px;background:var(--red);color:#fff;border:none;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.05em;">CONFIRMAR</button>
+      <button id="modalConfirmCancel" style="flex:1;padding:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">CANCELAR</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
