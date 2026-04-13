@@ -1424,8 +1424,21 @@ function inicializar(passReal) {
     db.collection('config_actividades').get(),          // ~2
     db.collection('config_precios').get(),              // ~8
     db.collection('socios').where('activo','==',true).get(), // solo activos ~90
-    db.collection('inscripciones').get()  // necesario para calcular estado cuota en tab Socios
-    // cuotas y asistencias → lazy por tab
+    db.collection('inscripciones').get(), // necesario para calcular estado cuota
+    // Cuotas del mes actual — necesarias para mostrar estado en tab Socios
+    (function(){
+      // periodoDesde está en formato dd/MM/yyyy — construir rango del mes actual
+      var hoy = new Date();
+      var mm  = String(hoy.getMonth()+1).padStart(2,'0');
+      var yyyy = hoy.getFullYear();
+      var desde = '01/' + mm + '/' + yyyy;
+      var hasta  = '31/' + mm + '/' + yyyy;
+      return db.collection('cuotas')
+        .where('periodoDesde', '>=', desde)
+        .where('periodoDesde', '<=', hasta)
+        .get();
+    })()
+    // asistencias → lazy por tab
   ]).then(function(results) {
     var instDoc    = results[0];
     var horSnap    = results[1];
@@ -1436,7 +1449,8 @@ function inicializar(passReal) {
     var actSnap    = results[6];
     var precSnap   = results[7];
     var sociosSnap   = results[8];
-    var inscSnapInit = results[9];
+    var inscSnapInit  = results[9];
+    var cuotasMesSnap = results[10];
 
     // Institución
     INST = instDoc.exists ? instDoc.data() : {};
@@ -1480,8 +1494,15 @@ function inicializar(passReal) {
     inscSnapInit.forEach(function(doc){ DB.inscripciones.push(inscToObj(doc)); });
     _cargado.inscripciones = true;
 
+    // Procesar cuotas del mes actual
+    CUOTAS_DB.cuotas = [];
+    var mesActual = new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0');
+    cuotasMesSnap.forEach(function(doc){ CUOTAS_DB.cuotas.push(cuotaToRow(doc.data(), doc.id)); });
+    _cargado['cuotas_' + mesActual] = true;
+    _cargado.cuotas = true;
+
     // Contar lecturas del login con desglose en consola para debug
-    var loginReads = 1 + horSnap.size + profSnap.size + sedesSnap.size + catSnap.size + perSnap.size + actSnap.size + precSnap.size + sociosSnap.size + inscSnapInit.size;
+    var loginReads = 1 + horSnap.size + profSnap.size + sedesSnap.size + catSnap.size + perSnap.size + actSnap.size + precSnap.size + sociosSnap.size + inscSnapInit.size + cuotasMesSnap.size;
     console.log('[SGD] Lecturas login:', {
       config: 1, horarios: horSnap.size, profes: profSnap.size,
       sedes: sedesSnap.size, cats: catSnap.size, periodos: perSnap.size,
@@ -4635,13 +4656,18 @@ function lazyCargarCuotasEInscripciones(cb) {
 
   // Cuotas: query por períodoDesde del mes seleccionado
   // Traemos cuotas cuyo periodoDesde empieza en el mismo año-mes
-  var periodoDesdeMin = periodo + '-01'; // ej: 2026-04-01
-  var periodoDesdeMax = periodo + '-31'; // ej: 2026-04-31 (Firestore acepta fechas inexactas en string)
+  // periodoDesde en Firestore está en formato dd/MM/yyyy
+  // periodo viene como 'yyyy-MM' (ej: '2026-04')
   if (!_cargado[cacheKey]) {
+    var partesPer = periodo.split('-');
+    var mmLazy   = partesPer[1];
+    var yyyyLazy = partesPer[0];
+    var desdeLazy = '01/' + mmLazy + '/' + yyyyLazy;
+    var hastaLazy  = '31/' + mmLazy + '/' + yyyyLazy;
     promesas.push(
       db.collection('cuotas')
-        .where('periodoDesde', '>=', periodoDesdeMin)
-        .where('periodoDesde', '<=', periodoDesdeMax)
+        .where('periodoDesde', '>=', desdeLazy)
+        .where('periodoDesde', '<=', hastaLazy)
         .get()
     );
   }
