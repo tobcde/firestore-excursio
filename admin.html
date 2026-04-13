@@ -1348,14 +1348,17 @@ function intentarLogin() {
   var pass = document.getElementById('passInput').value;
   if (!pass) return loginError('Ingresa la contraseña');
   mostrarLoader('Verificando...');
+  // Guardar token ANTES del signIn para que onAuthStateChanged lo encuentre
+  localStorage.setItem('sgd_token', pass);
+  TOKEN = pass;
   auth.signInWithEmailAndPassword(ADMIN_EMAIL, pass)
     .then(function(cred) {
-      TOKEN = pass;
-      localStorage.setItem('sgd_token', pass);
       inicializar();
     })
     .catch(function(e) {
       ocultarLoader();
+      localStorage.removeItem('sgd_token');
+      TOKEN = '';
       var msg = 'Contraseña incorrecta';
       if (e.code === 'auth/too-many-requests') msg = 'Demasiados intentos. Esperá unos minutos.';
       loginError(msg);
