@@ -3468,12 +3468,9 @@ function renderListActividades() {
   el.addEventListener('click', function(e){
     var btn = e.target.closest('[data-action="borrar"]');
     if(btn) {
-      sgdConfirm('Eliminar esta actividad?', function() { _borrarActividad(i, nom); }, 'ELIMINAR');
-    }); // fin forEach
-  }); // fin listener
-}
-function _borrarActividad(i, nom) {
-      borrar(btn.dataset.tabla, parseInt(btn.dataset.row));
+      sgdConfirm('Eliminar esta actividad?', function() {
+        borrar(btn.dataset.tabla, parseInt(btn.dataset.row));
+      }, 'ELIMINAR');
     }
   });
   poblarSelectActividad();
@@ -3765,17 +3762,17 @@ function renderListPrecios() {
   el.addEventListener('click', function(e) {
     var btn = e.target.closest('[data-action]'); if(!btn) return;
     if(btn.dataset.action === 'delprecio') {
-      sgdConfirm('Eliminar este precio?', function() { _confirmarEliminarPrecio(btn); }, 'ELIMINAR');
+      var _rowDel = parseInt(btn.dataset.row);
+      sgdConfirm('Eliminar este precio?', function() {
+        mostrarLoader('Eliminando...');
+        callScript({action:'deletePrecio', rowIndex:_rowDel, pass:TOKEN, _noRetry:true}, function(){
+          ocultarLoader();
+          DB.precios = DB.precios.filter(function(p){ return p._row !== _rowDel; });
+          renderListPrecios();
+          toast('Precio eliminado', 'ok');
+        }, function(e){ ocultarLoader(); alert('Error: '+e); });
+      }, 'ELIMINAR');
       return;
-    }
-    function _confirmarEliminarPrecio(btn) {
-      mostrarLoader('Eliminando...');
-      callScript({action:'deletePrecio', rowIndex:parseInt(btn.dataset.row), pass:TOKEN, _noRetry:true}, function(){
-        ocultarLoader();
-        DB.precios = DB.precios.filter(function(p){ return p._row !== parseInt(btn.dataset.row); });
-        renderListPrecios();
-        toast('Precio eliminado', 'ok');
-      }, function(e){ ocultarLoader(); alert('Error: '+e); });
     }
     if(btn.dataset.action === 'editprecio') {
       var p = DB.precios[parseInt(btn.dataset.idx)];
