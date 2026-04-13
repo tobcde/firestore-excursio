@@ -32,6 +32,9 @@ img,canvas,table{max-width:100%;}
 .logo img{width:36px;height:36px;object-fit:contain;background:white;border-radius:5px;padding:2px;}
 header{background:var(--surface);border-bottom:2px solid var(--primary);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;gap:8px;}
 
+@keyframes shake {
+  0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 60%{transform:translateX(6px)}
+}
 /* TABS */
 .tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;}
 .tab{font-family:'Barlow Condensed',sans-serif;padding:15px 22px;cursor:pointer;color:var(--muted);border:none;background:none;text-transform:uppercase;border-bottom:3px solid transparent;font-size:13px;letter-spacing:.05em;white-space:nowrap;}
@@ -797,11 +800,11 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         </div>
         <div class="inst-field">
           <div class="inst-label">Color primario <span id="inst-color1-preview" class="color-preview" style="background:#1a7a3c;"></span></div>
-          <input id="inst-colorPrimario" class="inst-input" type="color" value="#1a7a3c" oninput="document.getElementById('inst-color1-preview').style.background=this.value" style="height:40px;padding:2px 8px;">
+          <input id="inst-colorPrimario" class="inst-input" type="color" value="#1a7a3c" oninput="document.getElementById('inst-color1-preview').style.background=this.value; aplicarBrandingPreview(this.value, null);" style="height:40px;padding:2px 8px;">
         </div>
         <div class="inst-field">
           <div class="inst-label">Color secundario <span id="inst-color2-preview" class="color-preview" style="background:#c9a227;"></span></div>
-          <input id="inst-colorSecundario" class="inst-input" type="color" value="#c9a227" oninput="document.getElementById('inst-color2-preview').style.background=this.value" style="height:40px;padding:2px 8px;">
+          <input id="inst-colorSecundario" class="inst-input" type="color" value="#c9a227" oninput="document.getElementById('inst-color2-preview').style.background=this.value; aplicarBrandingPreview(null, this.value);" style="height:40px;padding:2px 8px;">
         </div>
       </div>
 
@@ -1363,10 +1366,14 @@ function inscToObj(doc) {
 
 // ── LOGIN ─────────────────────────────────────────────────────────
 function loginError(msg) {
+  ocultarLoader(); // asegurarse que el loader no tape el error
   var el = document.getElementById('login-error');
   el.innerText = msg; el.style.display = 'block';
-  document.getElementById('passInput').style.borderColor = 'var(--red)';
-  setTimeout(function(){ el.style.display='none'; document.getElementById('passInput').style.borderColor=''; }, 4000);
+  var inp = document.getElementById('passInput');
+  inp.style.borderColor = 'var(--red)';
+  inp.style.animation = 'shake 0.3s ease';
+  setTimeout(function(){ inp.style.animation = ''; }, 300);
+  setTimeout(function(){ el.style.display='none'; inp.style.borderColor=''; }, 5000);
 }
 
 function intentarLogin() {
@@ -1463,8 +1470,15 @@ function inicializar(passReal) {
     DB.jugadores = [[]];
     sociosSnap.forEach(function(doc){ DB.jugadores.push(socioToRow(doc, doc.id)); });
     CARGA_COMPLETA = true;
-    // Contar lecturas del login
-    _contarLecturas(1 + horSnap.size + profSnap.size + sedesSnap.size + catSnap.size + perSnap.size + actSnap.size + precSnap.size + sociosSnap.size);
+    // Contar lecturas del login con desglose en consola para debug
+    var loginReads = 1 + horSnap.size + profSnap.size + sedesSnap.size + catSnap.size + perSnap.size + actSnap.size + precSnap.size + sociosSnap.size;
+    console.log('[SGD] Lecturas login:', {
+      config: 1, horarios: horSnap.size, profes: profSnap.size,
+      sedes: sedesSnap.size, cats: catSnap.size, periodos: perSnap.size,
+      acts: actSnap.size, precios: precSnap.size, socios: sociosSnap.size,
+      total: loginReads
+    });
+    _contarLecturas(loginReads);
 
     // Mostrar app
     document.getElementById('login-screen').style.display = 'none';
@@ -1531,6 +1545,9 @@ function _fsDispatch(action, p, ok, err) {
       var c = p.campos || {};
       var dniNorm = normDoc(c.dni || c.DNI || c.doc || '');
       if (!dniNorm){ cbErr('DNI requerido'); return; }
+      // Verificar duplicado antes de escribir
+      var dup = DB.jugadores.slice(1).find(function(f){ return (f[COL.DNI]||'').toString() === dniNorm; });
+      if (dup){ cbErr('Ya existe un jugador con DNI ' + dniNorm + ' (' + (dup[COL.APELLIDO]||'') + ', ' + (dup[COL.NOMBRE]||'') + ')'); return; }
       var hoy = new Date().toLocaleDateString('sv');
       var doc = {
         apellido:c.apellido||'', nombre:c.nombre||'', email:c.email||'',
@@ -1568,7 +1585,7 @@ function _fsDispatch(action, p, ok, err) {
       });
       if (campos.activo !== undefined) upd.activo = campos.activo === 'true' || campos.activo === true;
       db.collection('socios').doc(dniNorm).update(upd)
-        .then(function(){
+        .then(function(){ _contarEscrituras(1);
           // Actualizar en cache local
           var idx = DB.jugadores.findIndex(function(f){ return f && f[COL.DNI] && normDoc(f[COL.DNI]) === dniNorm; });
           if (idx > 0) {
@@ -1753,7 +1770,7 @@ function _fsDispatch(action, p, ok, err) {
           batch.set(db.collection(colName).doc(), _rowToDoc('Config_Periodos', row));
         });
         return batch.commit();
-      }).then(function(){ cb({ok:true}); inicializar(); })
+      }).then(function(){ _contarEscrituras(1); cb({ok:true}); _actualizarEnMemoria(p.tabName, p.rowIndex); })
         .catch(function(e){ cbErr(e.message); });
       break;
     }
@@ -1768,7 +1785,7 @@ function _fsDispatch(action, p, ok, err) {
 
     case 'saveInstitucion': {
       db.collection('config').doc('institucion').set(p.campos || p, {merge:true})
-        .then(function(){ cb({ok:true}); })
+        .then(function(){ _contarEscrituras(1); cb({ok:true}); })
         .catch(function(e){ cbErr(e.message); });
       break;
     }
@@ -3636,7 +3653,43 @@ function guardarProfesor() {
   }
 }
 
-function borrar(t, r){ sgdConfirm('Eliminar este elemento?', function(){ mostrarLoader('Eliminando...'); callScript({action:'deleteAdminItem', tabName:t, rowIndex:r, pass:TOKEN}, inicializar); }, 'ELIMINAR'); }
+
+// ── ACTUALIZAR EN MEMORIA (sin releer Firestore) ──────────────────
+// Llamada después de delete/update en tab Admin para evitar inicializar()
+function _actualizarEnMemoria(tabName, rowIndex) {
+  switch(tabName) {
+    case 'Config_Categorias':
+      DB.categorias = DB.categorias.filter(function(c){ return c[c.length-1] !== rowIndex && c[4] !== rowIndex; });
+      renderListCat(); poblarSelects(); poblarSelectMasiva();
+      break;
+    case 'Actividades':
+      DB.actividades = DB.actividades.filter(function(a){ return a._row !== rowIndex && String(a._row) !== String(rowIndex); });
+      renderListActividades(); poblarSelectActividad(); poblarSelectsPrecios();
+      break;
+    case 'Horarios':
+      DB.horarios = DB.horarios.filter(function(h){ return h[h.length-1] !== rowIndex && String(h[h.length-1]) !== String(rowIndex); });
+      renderHorarios(); poblarSelects();
+      break;
+    case 'Profesores':
+      DB.profesores = DB.profesores.filter(function(p){ return p[5] !== rowIndex && String(p[5]) !== String(rowIndex); });
+      renderListProfesores();
+      break;
+    case 'Sedes':
+      DB.sedes = DB.sedes.filter(function(s){ return s[1] !== rowIndex && String(s[1]) !== String(rowIndex); });
+      renderList('listS', DB.sedes, 'Sedes');
+      break;
+    case 'Config_Periodos':
+      // Períodos se manejan por lote — no hacer nada
+      break;
+    default:
+      // Para tablas no mapeadas, no recargar todo
+      break;
+  }
+  ocultarLoader();
+  toast('Eliminado correctamente', 'ok');
+}
+
+function borrar(t, r){ sgdConfirm('Eliminar este elemento?', function(){ mostrarLoader('Eliminando...'); callScript({action:'deleteAdminItem', tabName:t, rowIndex:r, pass:TOKEN}, function(){ _actualizarEnMemoria(t, r); }); }, 'ELIMINAR'); }
 
 // Col indices de DB.categorias: 0=Nombre 1=Color 2=AnoDesde 3=AnoHasta 4=Genero 5=Actividades (col F)
 function getCatActs(c) {
@@ -4000,6 +4053,22 @@ function poblarSelectActividad() {
 }
 
 // -- INSTITUCION --------------------------------------------------
+
+function aplicarBrandingPreview(primario, secundario) {
+  var r = document.documentElement.style;
+  if (primario) {
+    r.setProperty('--primary', primario);
+    r.setProperty('--primary-dim', primario + '22');
+    r.setProperty('--primary-border', primario + '55');
+    r.setProperty('--primary-dark', primario + '11');
+  }
+  if (secundario) {
+    r.setProperty('--secondary', secundario);
+    r.setProperty('--secondary-dim', secundario + '22');
+    r.setProperty('--secondary-border', secundario + '55');
+  }
+}
+
 function cargarFormInstitucion() {
   var campos = ['nombre','nombreCorto','logoUrl','colorPrimario','colorSecundario','terminologiaSocio','terminologiaSocios','terminologiaGrupo','terminologiaGrupos','emailRemitente'];
   campos.forEach(function(c){
@@ -4803,9 +4872,22 @@ function sgdConfirm(msg, onOk, btnOkLabel) {
 }
 
 window.onload = function() {
-  // Limpiar tokens viejos en localStorage (migración de seguridad)
+  // Limpiar tokens viejos en localStorage
   localStorage.removeItem('sgd_token');
   localStorage.removeItem('sgd_admin_uid');
+  // B7: Forzar limpieza de sessionStorage en recarga forzada
+  // Ctrl+F5 no siempre limpia sessionStorage en todos los browsers
+  // Verificamos con performance.navigation para detectar recarga forzada
+  if (performance && performance.navigation && performance.navigation.type === 1) {
+    // type 1 = reload (F5 o Ctrl+F5)
+    // En recarga forzada, verificar si Firebase Auth sigue activo
+    // Si no hay usuario en Firebase, limpiar sesión
+    var timer = setTimeout(function(){
+      if (!auth.currentUser) {
+        sessionStorage.removeItem('sgd_sess');
+      }
+    }, 500);
+  }
   // SEGURIDAD: la sesión solo se restaura si la MISMA pestaña la inició.
   // sessionStorage se borra al cerrar la pestaña o con Ctrl+F5.
   // Esto previene que alguien retome una sesión cerrada.
@@ -4831,7 +4913,7 @@ window.onload = function() {
   });
 };
 
-document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ if(typeof cerrarModalPago==='function') cerrarModalPago(); if(typeof cerrarModal==='function') cerrarModal(); } });
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ if(typeof cerrarModalPago==='function') cerrarModalPago(); if(typeof cerrarModal==='function') cerrarModal(); if(typeof citCerrarPrint==='function') citCerrarPrint(); } });
 
 // -- DESCUENTO HERMANOS ------------------------------------------
 function cargarDescuentoHermanos() {
@@ -5155,6 +5237,8 @@ function citMostrarPrint(jugadores, info) {
 }
 
 function citCerrarPrint() {
+  var el = document.getElementById('cit-print-screen');
+  if(el){ el.style.display='none'; el.classList.remove('open','visible','active'); }
   document.getElementById('cit-print-screen').style.display = 'none';
 }
 
@@ -5183,7 +5267,7 @@ function citRenderHistorial() {
       c.fechaPartido || '',
       c.horarioPartido ? c.horarioPartido + 'hs' : '',
       c.estadio || '',
-      c.total + ' citados'
+      (c.total !== undefined && c.total !== null ? c.total : (c.jugadoresJSON ? JSON.parse(c.jugadoresJSON||'[]').length : 0)) + ' citados'
     ].filter(Boolean).join(' &middot; ');
     html += '<div class="asist-row" style="flex-wrap:wrap;gap:8px;">'
       + '<div style="flex:1;min-width:200px;">'
