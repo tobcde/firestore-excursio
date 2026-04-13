@@ -297,6 +297,10 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   </div>
   <div id="carga-progreso" style="display:none;flex:1;align-items:center;gap:8px;margin:0 12px;"></div>
   <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+    <a id="fs-counter" href="https://console.firebase.google.com/project/excursionistas-futsal/firestore/databases/-default-/usage/last-24h" target="_blank"
+      style="font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;text-decoration:none;cursor:pointer;" title="Ver uso en Firebase Console">
+      &#x1F4D6; 0 | &#x270F; 0
+    </a>
     <button class="btn btn-secondary" onclick="inicializar()" style="padding:6px 10px;font-size:12px;">&#x21BB;</button>
     <button class="btn btn-save" id="btn-nuevo-socio" onclick="abrirNuevoSocio()" style="padding:6px 12px;font-size:12px;">&#x2B; <span id="lbl-nuevo-socio">Socio</span></button>
   </div>
@@ -1156,6 +1160,23 @@ document.body.style.visibility='visible';
 // ---------------------------------------------------------------
 var DB = {jugadores:[], profesores:[], sedes:[], categorias:[], horarios:[], configPagos:[], institucion:{}, actividades:[], inscripciones:[], precios:[]};
 var CUOTAS_DB = {planes:[], cuotas:[]};
+// Flags de carga lazy — evitan recargar datos que ya están en memoria
+var _cargado = {cuotas: false, asistencias: false, inscripciones: false, citaciones: false};
+
+// ── CONTADOR DE LECTURAS ──────────────────────────────────────────
+var _lecturas = parseInt(sessionStorage.getItem('fs_lecturas')||'0');
+var _escrituras = parseInt(sessionStorage.getItem('fs_escrituras')||'0');
+function _contarLecturas(n){ _lecturas += (n||1); sessionStorage.setItem('fs_lecturas', _lecturas); _actualizarContador(); }
+function _contarEscrituras(n){ _escrituras += (n||1); sessionStorage.setItem('fs_escrituras', _escrituras); _actualizarContador(); }
+function _actualizarContador(){
+  var el = document.getElementById('fs-counter');
+  if(!el) return;
+  var lColor = _lecturas > 40000 ? 'var(--red)' : _lecturas > 30000 ? 'var(--secondary)' : 'var(--muted)';
+  var wColor = _escrituras > 15000 ? 'var(--red)' : _escrituras > 10000 ? 'var(--secondary)' : 'var(--muted)';
+  el.innerHTML = '<span title="Lecturas Firestore hoy (límite 50k)" style="color:'+lColor+'">&#x1F4D6; '+_lecturas.toLocaleString('es-AR')+'</span>'
+    + ' <span style="color:var(--border)">|</span> '
+    + '<span title="Escrituras Firestore hoy (límite 20k)" style="color:'+wColor+'">&#x270F; '+_escrituras.toLocaleString('es-AR')+'</span>';
+}
 var TOKEN = '', itemSel = null, catEditIdx = null;
 var asistencias = [], asistActual = {}, pagoCtx = null, PERIODOS_EDIT = [];
 var INST = {}; // configuracion de la institucion en memoria
@@ -1375,24 +1396,21 @@ function inicializar(passReal) {
   var ahora = new Date();
   var corte = new Date(ahora.getFullYear(), ahora.getMonth()-3, 1).toLocaleDateString('sv');
 
+  // ── CARGA MÍNIMA AL LOGIN ──────────────────────────────────────
+  // Solo cargamos lo estrictamente necesario para mostrar la app:
+  // config + horarios + socios (~140 lecturas vs 2133 antes)
+  // Cuotas, asistencias e inscripciones se cargan lazy al abrir cada tab.
   Promise.all([
-    // Config
-    db.collection('config').doc('institucion').get(),
-    db.collection('horarios').get(),
-    db.collection('profesores').get(),
-    db.collection('config_sedes').get(),
-    db.collection('config_categorias').get(),
-    db.collection('config_periodos').get(),
-    db.collection('config_actividades').get(),
-    db.collection('config_precios').get(),
-    // Socios (primer batch — se carga todo, Firestore es ~20x más rápido que Sheets)
-    db.collection('socios').get(),
-    // Cuotas
-    db.collection('cuotas').get(),
-    // Asistencias últimos 3 meses
-    db.collection('asistencias').where('fecha', '>=', corte).get(),
-    // Inscripciones
-    db.collection('inscripciones').get()
+    db.collection('config').doc('institucion').get(),   // 1
+    db.collection('horarios').get(),                    // ~16
+    db.collection('profesores').get(),                  // ~10
+    db.collection('config_sedes').get(),                // ~2
+    db.collection('config_categorias').get(),           // ~8
+    db.collection('config_periodos').get(),             // ~12
+    db.collection('config_actividades').get(),          // ~2
+    db.collection('config_precios').get(),              // ~8
+    db.collection('socios').get()                       // ~107
+    // cuotas, asistencias, inscripciones → lazy por tab
   ]).then(function(results) {
     var instDoc    = results[0];
     var horSnap    = results[1];
@@ -1403,15 +1421,12 @@ function inicializar(passReal) {
     var actSnap    = results[6];
     var precSnap   = results[7];
     var sociosSnap = results[8];
-    var cuotasSnap = results[9];
-    var asistSnap  = results[10];
-    var inscSnap   = results[11];
 
     // Institución
     INST = instDoc.exists ? instDoc.data() : {};
     DB.institucion = INST;
 
-    // Horarios → array de arrays (formato legacy)
+    // Horarios
     DB.horarios = [];
     horSnap.forEach(function(doc) { DB.horarios.push(horarioToRow(doc)); });
     DB.horarios.sort(function(a,b){ var dias=['Lunes','Martes','Miercoles','Jueves','Viernes','Sabado','Domingo']; return dias.indexOf(a[0])-dias.indexOf(b[0]); });
@@ -1440,28 +1455,18 @@ function inicializar(passReal) {
     DB.precios = [];
     precSnap.forEach(function(doc){ var d=doc.data(); DB.precios.push({actividad:d.actividad||'',categoria:d.categoria||'',monto:Number(d.monto)||0,_row:doc.id}); });
 
-    // Socios → formato array legacy
+    // Socios
     DB.jugadores = [[]];
     sociosSnap.forEach(function(doc){ DB.jugadores.push(socioToRow(doc, doc.id)); });
     CARGA_COMPLETA = true;
-
-    // Cuotas
-    CUOTAS_DB.cuotas = [];
-    cuotasSnap.forEach(function(doc){ CUOTAS_DB.cuotas.push(cuotaToRow(doc.data())); });
-
-    // Asistencias → formato array legacy [fecha,turnoId,label,dni,nombre,presente]
-    asistencias = [];
-    asistSnap.forEach(function(doc){ var d=doc.data(); asistencias.push([d.fecha||'',d.turnoId||'',d.label||'',d.dni||'',d.nombre||'',d.presente===true]); });
-
-    // Inscripciones
-    DB.inscripciones = [];
-    inscSnap.forEach(function(doc){ DB.inscripciones.push(inscToObj(doc)); });
+    // Contar lecturas del login
+    _contarLecturas(1 + horSnap.size + profSnap.size + sedesSnap.size + catSnap.size + perSnap.size + actSnap.size + precSnap.size + sociosSnap.size);
 
     // Mostrar app
     document.getElementById('login-screen').style.display = 'none';
     aplicarBranding();
     aplicarTerminologia();
-    if(passReal) registrarHuella(passReal); // solo ofrecer huella en login nuevo, no en restauración
+    if(passReal) registrarHuella(passReal);
     PERIODOS_EDIT = DB.configPagos.map(function(r){
       return {mes:r[0], anioD:r[1], diaD:r[2], anioH:r[3], diaH:r[4], gracia:r[5], desc:r[6]};
     });
@@ -1481,7 +1486,6 @@ function inicializar(passReal) {
     ocultarLoader();
     console.error('Error inicializar:', e);
     loginError('Error conectando. Verificá la configuración Firebase.');
-    localStorage.removeItem('sgd_token');
     TOKEN = '';
   });
 }
@@ -1537,7 +1541,7 @@ function _fsDispatch(action, p, ok, err) {
         actividades:c.actividades||'', saldo:0, catSecundaria:c.catSecundaria||''
       };
       db.collection('socios').doc(dniNorm).set(doc)
-        .then(function(){ DB.jugadores.push(socioToRow({data:function(){return doc;},id:dniNorm}, dniNorm)); renderPlayers(); cb({ok:true}); })
+        .then(function(){ _contarEscrituras(1); DB.jugadores.push(socioToRow({data:function(){return doc;},id:dniNorm}, dniNorm)); renderPlayers(); cb({ok:true}); })
         .catch(function(e){ cbErr(e.message); });
       break;
     }
@@ -1614,7 +1618,7 @@ function _fsDispatch(action, p, ok, err) {
         periodo:pg.periodo||'', ts:Date.now()
       };
       db.collection('cuotas').add(docData)
-        .then(function(ref){ cb({ok:true, id:ref.id}); })
+        .then(function(ref){ _contarEscrituras(1); cb({ok:true, id:ref.id}); })
         .catch(function(e){ cbErr(e.message); });
       break;
     }
@@ -1902,8 +1906,10 @@ function renderAll() {
   renderListProfesores();
   renderList('listS', DB.sedes, 'Sedes');
   renderListCat(); renderHorarios();
-  poblarSelects(); poblarTurnosAsist(); poblarPeriodos(); poblarSelectsPrecios();
+  poblarSelects(); poblarTurnosAsist(); poblarSelectsPrecios();
   poblarSelectMasiva();
+  // poblarPeriodos() y renderCuotas() se llaman lazy al abrir tab Cuotas
+  // renderAsistencias() se llama lazy al abrir tab Asistencias
   PERIODOS_EDIT = DB.configPagos.map(function(r){
     return {mes:r[0], anioD:r[1], diaD:r[2], anioH:r[3], diaH:r[4], gracia:r[5], desc:r[6]};
   });
@@ -4465,14 +4471,74 @@ function exportarReporteCSV() {
 }
 
 // -- TABS ---------------------------------------------------------
+
+// ── CARGA LAZY POR TAB ────────────────────────────────────────────
+// Cada colección se carga UNA SOLA VEZ al abrir su tab por primera vez.
+// Si ya está en memoria, no vuelve a leer Firestore.
+
+function lazyCargarCuotasEInscripciones(cb) {
+  if (_cargado.cuotas && _cargado.inscripciones) { if(cb) cb(); return; }
+  mostrarLoader('Cargando cuotas...');
+  var promesas = [];
+  if (!_cargado.cuotas)        promesas.push(db.collection('cuotas').get());
+  if (!_cargado.inscripciones) promesas.push(db.collection('inscripciones').get());
+  Promise.all(promesas).then(function(results) {
+    var idx = 0;
+    if (!_cargado.cuotas) {
+      CUOTAS_DB.cuotas = [];
+      results[idx].forEach(function(doc){ CUOTAS_DB.cuotas.push(cuotaToRow(doc.data())); });
+      _contarLecturas(results[idx].size); idx++;
+      _cargado.cuotas = true;
+    }
+    if (!_cargado.inscripciones) {
+      DB.inscripciones = [];
+      results[idx].forEach(function(doc){ DB.inscripciones.push(inscToObj(doc)); });
+      _contarLecturas(results[idx].size); idx++;
+      _cargado.inscripciones = true;
+    }
+    ocultarLoader();
+    if(cb) cb();
+  }).catch(function(e){ ocultarLoader(); toast('Error cargando cuotas: '+e.message,'err'); });
+}
+
+function lazyCargarAsistencias(cb) {
+  if (_cargado.asistencias) { if(cb) cb(); return; }
+  mostrarLoader('Cargando asistencias...');
+  var ahora = new Date();
+  var corte = new Date(ahora.getFullYear(), ahora.getMonth()-3, 1).toLocaleDateString('sv');
+  db.collection('asistencias').where('fecha', '>=', corte).get()
+    .then(function(snap) {
+      asistencias = [];
+      snap.forEach(function(doc){ var d=doc.data(); asistencias.push([d.fecha||'',d.turnoId||'',d.label||'',d.dni||'',d.nombre||'',d.presente===true]); });
+      _contarLecturas(snap.size);
+      _cargado.asistencias = true;
+      ocultarLoader();
+      if(cb) cb();
+    }).catch(function(e){ ocultarLoader(); toast('Error cargando asistencias: '+e.message,'err'); });
+}
+
 function cambiarTab(ev, id) {
   document.querySelectorAll('.tab-content').forEach(function(c){ c.style.display = 'none'; });
   document.getElementById('tab-' + id).style.display = 'block';
   document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
   ev.target.classList.add('active');
-  if(id === 'cuotas'){ renderCuotas(); }
-  if(id === 'citaciones'){ citInicializar(); }
-  if(id === 'reportes'){ iniciarReportes(); }
+
+  // Lazy loading por tab — solo lee Firestore si los datos no están en memoria
+  if(id === 'cuotas'){
+    lazyCargarCuotasEInscripciones(function(){ poblarPeriodos(); renderCuotas(); });
+  }
+  if(id === 'asistencias'){
+    lazyCargarAsistencias(function(){ poblarTurnosAsist(); });
+  }
+  if(id === 'citaciones'){
+    citInicializar(); // citaciones se cargan dentro de citInicializar con su propio lazy
+  }
+  if(id === 'reportes'){
+    // Reportes necesitan cuotas + asistencias + inscripciones
+    lazyCargarCuotasEInscripciones(function(){
+      lazyCargarAsistencias(function(){ iniciarReportes(); });
+    });
+  }
   if(id === 'institucion'){ cargarFormInstitucion(); cargarCamposExtra(); }
   if(id === 'admin'){ initEmojiPicker(); }
 }
@@ -4769,6 +4835,11 @@ function citEsc(s) {
 }
 
 function citInicializar() {
+  // Citaciones se cargan lazy — solo la primera vez que se abre el tab
+  if (!_cargado.citaciones) {
+    _cargado.citaciones = true; // marcar antes para evitar doble carga
+    citCargarHistorial(); // carga las citaciones de Firestore
+  }
   // Popular selector de actividades
   var actSel = document.getElementById('cit-sel-act');
   actSel.innerHTML = '<option value="">-- Actividad --</option>';
