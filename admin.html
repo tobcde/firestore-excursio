@@ -1350,10 +1350,9 @@ function intentarLogin() {
   mostrarLoader('Verificando...');
   auth.signInWithEmailAndPassword(ADMIN_EMAIL, pass)
     .then(function(cred) {
-      // Solo guardamos que hay sesión activa — la contraseña NO se guarda
       TOKEN = pass;
-      sessionStorage.setItem('sgd_sess', '1'); // solo dura mientras la pestaña está abierta
-      inicializar();
+      sessionStorage.setItem('sgd_sess', '1');
+      inicializar(pass); // pasar pass para ofrecer huella post-login
     })
     .catch(function(e) {
       ocultarLoader();
@@ -1368,7 +1367,7 @@ function mostrarLoader(m){ document.getElementById('loader').style.display='flex
 function ocultarLoader(){ document.getElementById('loader').style.display='none'; }
 
 // ── INICIALIZAR — carga todo desde Firestore ──────────────────────
-function inicializar() {
+function inicializar(passReal) {
   // TOKEN puede ser la pass real o el placeholder '_firebase_session_'
   // En ambos casos lo que importa es que Firebase Auth tenga usuario activo
   if (!auth.currentUser && !TOKEN) return;
@@ -1462,7 +1461,7 @@ function inicializar() {
     document.getElementById('login-screen').style.display = 'none';
     aplicarBranding();
     aplicarTerminologia();
-    registrarHuella(TOKEN);
+    if(passReal) registrarHuella(passReal); // solo ofrecer huella en login nuevo, no en restauración
     PERIODOS_EDIT = DB.configPagos.map(function(r){
       return {mes:r[0], anioD:r[1], diaD:r[2], anioH:r[3], diaH:r[4], gracia:r[5], desc:r[6]};
     });
@@ -4496,10 +4495,42 @@ window.addEventListener('load', function() {
   }
 });
 
+// ── BIOMETRÍA — Opción B: pass cifrada con AES-GCM ───────────────
+// La pass se cifra con una clave derivada del rawId de WebAuthn.
+// Solo el mismo dispositivo con la misma huella puede descifrarla.
+// No se guarda la pass en texto plano en ningún momento.
+
+async function _derivarClave(rawId) {
+  // Derivar clave AES-GCM a partir del rawId de la credencial WebAuthn
+  var keyMaterial = await crypto.subtle.importKey(
+    'raw', rawId, {name:'PBKDF2'}, false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    {name:'PBKDF2', salt: new TextEncoder().encode('sgd_salt_v1'), iterations:100000, hash:'SHA-256'},
+    keyMaterial, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']
+  );
+}
+
+async function _cifrar(texto, clave) {
+  var iv = crypto.getRandomValues(new Uint8Array(12));
+  var encoded = new TextEncoder().encode(texto);
+  var ciphertext = await crypto.subtle.encrypt({name:'AES-GCM', iv:iv}, clave, encoded);
+  return {
+    iv: btoa(String.fromCharCode(...iv)),
+    data: btoa(String.fromCharCode(...new Uint8Array(ciphertext)))
+  };
+}
+
+async function _descifrar(cifrado, clave) {
+  var iv = Uint8Array.from(atob(cifrado.iv), function(c){ return c.charCodeAt(0); });
+  var data = Uint8Array.from(atob(cifrado.data), function(c){ return c.charCodeAt(0); });
+  var decoded = await crypto.subtle.decrypt({name:'AES-GCM', iv:iv}, clave, data);
+  return new TextDecoder().decode(decoded);
+}
+
 function registrarHuella(pass) {
   if(!window.PublicKeyCredential) return;
   if(localStorage.getItem(WA_CRED_KEY)) return;
-  // Solo ofrecer en dispositivos t&aacute;ctiles (celular/tablet), no en desktop
   if(!navigator.maxTouchPoints || navigator.maxTouchPoints === 0) return;
   setTimeout(function(){
     sgdConfirm('¿Querés ingresar con huella o Face ID la próxima vez?', function() {
@@ -4508,38 +4539,78 @@ function registrarHuella(pass) {
   }, 1000);
 }
 
-function _registrarHuellaConfirmado(pass) {
+async function _registrarHuellaConfirmado(pass) {
+  try {
     var challenge = new Uint8Array(32); crypto.getRandomValues(challenge);
     var userId = new TextEncoder().encode('sgd_admin');
-    navigator.credentials.create({publicKey:{
-      challenge:challenge, rp:{name: INST.nombre || 'Sistema de Gestion'},
-      user:{id:userId, name:'admin', displayName:'Admin'},
-      pubKeyCredParams:[{alg:-7,type:'public-key'}],
-      authenticatorSelection:{authenticatorAttachment:'platform', userVerification:'required'},
-      timeout:60000
-    }}).then(function(cred){
-      localStorage.setItem(WA_CRED_KEY, JSON.stringify({
-        credId: btoa(String.fromCharCode(...new Uint8Array(cred.rawId))), pass:pass
-      }));
-      var btn = document.getElementById('btnHuella'); if(btn) btn.style.display = 'block';
-      toast('Huella registrada', 'ok');
-    }).catch(function(){});
+    var cred = await navigator.credentials.create({publicKey:{
+      challenge: challenge,
+      rp: {name: INST.nombre || 'SGD'},
+      user: {id:userId, name:'admin', displayName:'Admin'},
+      pubKeyCredParams: [{alg:-7, type:'public-key'}],
+      authenticatorSelection: {authenticatorAttachment:'platform', userVerification:'required'},
+      timeout: 60000
+    }});
+
+    // Cifrar la contraseña con clave derivada del rawId
+    var rawId = new Uint8Array(cred.rawId);
+    var clave = await _derivarClave(rawId);
+    var cifrado = await _cifrar(pass, clave);
+
+    localStorage.setItem(WA_CRED_KEY, JSON.stringify({
+      credId:  btoa(String.fromCharCode(...rawId)),
+      cifrado: cifrado   // pass cifrada — sin texto plano
+    }));
+
+    var btn = document.getElementById('btnHuella');
+    if(btn) btn.style.display = 'block';
+    toast('Huella registrada correctamente', 'ok');
+  } catch(e) {
+    toast('No se pudo registrar la huella', 'err');
+  }
 }
 
 async function loginConHuella() {
-  var data = null; try{ data = JSON.parse(localStorage.getItem(WA_CRED_KEY)); }catch(e){}
-  if(!data){ toast('No hay huella registrada','err'); return; }
-  try{
+  var data = null;
+  try { data = JSON.parse(localStorage.getItem(WA_CRED_KEY)); } catch(e) {}
+  if(!data || !data.cifrado){ toast('No hay huella registrada','err'); return; }
+
+  try {
     var challenge = new Uint8Array(32); crypto.getRandomValues(challenge);
     var credId = Uint8Array.from(atob(data.credId), function(c){ return c.charCodeAt(0); });
-    await navigator.credentials.get({publicKey:{
-      challenge:challenge,
-      allowCredentials:[{type:'public-key', id:credId, transports:['internal']}],
-      userVerification:'required', timeout:60000
+
+    // Verificar huella — WebAuthn devuelve la misma credencial con el rawId
+    var assertion = await navigator.credentials.get({publicKey:{
+      challenge: challenge,
+      allowCredentials: [{type:'public-key', id:credId, transports:['internal']}],
+      userVerification: 'required',
+      timeout: 60000
     }});
-    document.getElementById('passInput').value = data.pass;
+
+    // Descifrar la pass usando el rawId verificado
+    var rawId = new Uint8Array(assertion.rawId);
+    var clave = await _derivarClave(rawId);
+    var pass = await _descifrar(data.cifrado, clave);
+
+    // Autenticar en Firebase con la pass descifrada
+    document.getElementById('passInput').value = pass;
     intentarLogin();
-  }catch(e){ toast('No se pudo verificar la huella','err'); }
+
+  } catch(e) {
+    if(e.name === 'NotAllowedError') {
+      toast('Huella no reconocida o cancelada', 'err');
+    } else {
+      toast('Error de autenticación biométrica', 'err');
+      console.error(e);
+    }
+  }
+}
+
+function olvidarHuella() {
+  localStorage.removeItem(WA_CRED_KEY);
+  var btn = document.getElementById('btnHuella');
+  if(btn) btn.style.display = 'none';
+  toast('Huella eliminada', 'ok');
 }
 
 // -- PWA ----------------------------------------------------------
