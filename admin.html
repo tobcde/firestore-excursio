@@ -583,7 +583,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       </div>
       <div style="margin-bottom:10px;">
         <label class="filter-label">Observacion (opcional)</label>
-        <input id="masiva-obs" class="edit-input" style="width:100%;margin-top:4px;" placeholder="ej: Cuota abril 2025">
+        <input id="masiva-obs" class="edit-input" maxlength="500" style="width:100%;margin-top:4px;" placeholder="ej: Cuota abril 2025">
       </div>
       <div id="masiva-preview" style="display:none;background:var(--bg);border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;border:1px solid var(--border);"></div>
       <button class="btn btn-save" onclick="ejecutarMasiva()" id="btn-masiva" style="width:100%;">GENERAR INSCRIPCIONES</button>
@@ -1000,7 +1000,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         </div>
         <div class="filter-group full" style="grid-column:1/-1;">
           <label class="filter-label">Observaciones</label>
-          <input id="mi-obs" class="edit-input" style="width:100%;" placeholder="ej: baja programada junio">
+          <input id="mi-obs" class="edit-input" maxlength="500" style="width:100%;" placeholder="ej: baja programada junio">
         </div>
         <div class="filter-group full" style="grid-column:1/-1;">
           <label class="filter-label" style="color:var(--secondary);">&#x1F46A; Hermano de (DNI)</label>
@@ -1088,7 +1088,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Domicilio</label><input id="ns-domicilio" class="edit-input" style="width:100%;"></div>
         <div class="filter-group"><label class="filter-label" id="lbl-ns-categoria">Categoria</label>
           <select id="ns-categoria" class="edit-input" style="width:100%;"></select></div>
-        <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Observaciones</label><input id="ns-obs" class="edit-input" style="width:100%;"></div>
+        <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Observaciones</label><input id="ns-obs" class="edit-input" maxlength="500" style="width:100%;"></div>
         <div style="grid-column:1/-1;border-top:1px solid var(--border);margin-top:6px;padding-top:12px;">
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Contactos de emergencia</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -2380,8 +2380,8 @@ function renderPlayers() {
     html += '<div style="' + prStyle + '">';
     var catSecCard = (f[COL.CAT_SECUNDARIA]||'').toString().trim();
     var catSecBadge = catSecCard ? '<span style="background:rgba(201,162,39,.2);color:var(--secondary);font-size:10px;font-weight:800;padding:1px 7px;border-radius:8px;margin-left:6px;font-family:\'Barlow Condensed\',sans-serif;">+' + catSecCard + '</span>' : '';
-    html += '<h4 class="card-nombre" style="margin:0 0 2px 0;">' + apellido + catSecBadge + '<br><span style="font-size:12px;color:var(--muted);">' + nombre + '</span></h4>';
-    html += '<p class="card-info" style="margin:0 0 6px 0;">Doc: ' + dni + (anioNac ? ' | Nac. ' + anioNac : '') + '</p>';
+    html += '<h4 class="card-nombre" style="margin:0 0 2px 0;">' + esc(apellido) + catSecBadge + '<br><span style="font-size:12px;color:var(--muted);">' + esc(nombre) + '</span></h4>';
+    html += '<p class="card-info" style="margin:0 0 6px 0;">Doc: ' + esc(dni) + (anioNac ? ' | Nac. ' + anioNac : '') + '</p>';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
     html += '<div><span class="status-dot ' + (act ? 'active-dot' : 'inactive-dot') + '"></span>';
     html += '<span style="font-size:11px;font-weight:600;text-transform:uppercase;">' + (act ? 'ACTIVO' : 'INACTIVO') + '</span></div>';
@@ -2809,7 +2809,7 @@ function renderPeriodosAdmin() {
   if(!el) return;
   el.innerHTML = !PERIODOS_EDIT.length ? '<p style="color:var(--muted);font-size:12px;padding:8px;">Sin periodos definidos</p>' :
     PERIODOS_EDIT.map(function(p, i){
-      return '<div class="item-row"><span>' + nombreMes(p.mes) + ' ' + p.anioD + (p.desc ? ' - ' + p.desc : '') + '</span>'
+      return '<div class="item-row"><span>' + esc(nombreMes(p.mes)) + ' ' + p.anioD + (p.desc ? ' - ' + esc(p.desc) : '') + '</span>'
         + '<button class="icon-btn" style="color:var(--red);" onclick="eliminarPeriodoEdit(' + i + ')">X</button></div>';
     }).join('');
 }
@@ -3684,7 +3684,7 @@ function guardarActividadesJ() {
 function renderList(id, data, tabla) {
   var el = document.getElementById(id); if(!el) return;
   el.innerHTML = data.map(function(item){
-    return '<div class="item-row"><span>' + item[0] + '</span>'
+    return '<div class="item-row"><span>' + esc(item[0]) + '</span>'
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="' + tabla + '" data-row="' + item[item.length-1] + '">X</button></div>';
   }).join('');
   el.addEventListener('click', function(e){ var btn = e.target.closest('[data-action="borrar"]'); if(btn) borrar(btn.dataset.tabla, parseInt(btn.dataset.row)); });
@@ -3704,12 +3704,12 @@ function renderListProfesores() {
   var el = document.getElementById('listP'); if(!el) return;
   el.innerHTML = DB.profesores.map(function(p, i) {
     var nombre = p[0] || '';
-    var dni = p[1] ? (' &bull; DNI: ' + p[1]) : '';
-    var email = p[3] ? (' &bull; ' + p[3]) : '';
+    var dni = p[1] ? (' &bull; DNI: ' + esc(p[1])) : '';
+    var email = p[3] ? (' &bull; ' + esc(p[3])) : '';
     var row = p[p.length - 1];
     return '<div class="item-row" style="flex-direction:column;align-items:flex-start;gap:4px;">'
       + '<div style="display:flex;width:100%;justify-content:space-between;align-items:center;">'
-      + '<span style="font-weight:600;">' + nombre + '</span>'
+      + '<span style="font-weight:600;">' + esc(nombre) + '</span>'
       + '<div style="display:flex;gap:6px;">'
       + '<button class="icon-btn" style="color:var(--muted);font-size:13px;" data-action="editprof" data-idx="' + i + '">editar</button>'
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Profesores" data-row="' + row + '">X</button>'
@@ -3851,7 +3851,7 @@ function renderListCat() {
     var acts = getCatActs(c);
     var actsHtml = acts ? (' <span style="font-size:11px;color:var(--muted);">[' + acts + ']</span>') : '';
     return '<div class="item-row"><span style="border-left:6px solid ' + c[1] + ';padding-left:10px;flex:1;">'
-      + '<strong>' + c[0] + '</strong> (' + c[2] + ' al ' + c[3] + ') - ' + c[4]
+      + '<strong>' + esc(c[0]) + '</strong> (' + esc(c[2]) + ' al ' + esc(c[3]) + ') - ' + esc(c[4])
       + actsHtml + '</span>'
       + '<div style="display:flex;gap:4px;"><button class="icon-btn" style="color:var(--muted);" data-action="editcat" data-idx="' + i + '">editar</button>'
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Config_Categorias" data-row="' + c[c.length-1] + '">X</button></div></div>';
@@ -3946,8 +3946,8 @@ function renderListPrecios() {
     return '<div class="item-row">'
       + '<span style="flex:1;">'
       + '<span class="emoji" style="font-size:15px;">' + icono + '</span> '
-      + '<strong>' + p.actividad + '</strong>'
-      + ' <span style="color:var(--muted);font-size:12px;">/ ' + p.categoria + '</span>'
+      + '<strong>' + esc(p.actividad) + '</strong>'
+      + ' <span style="color:var(--muted);font-size:12px;">/ ' + esc(p.categoria) + '</span>'
       + ' &nbsp;<span style="color:#6de097;font-weight:700;">$' + Number(p.monto).toLocaleString('es-AR') + '</span>'
       + '</span>'
       + '<div style="display:flex;gap:4px;">'
@@ -4234,7 +4234,7 @@ function cargarCamposExtra() {
   var el = document.getElementById('lista-campos-extra'); if(!el) return;
   el.innerHTML = !campos.length ? '<p style="color:var(--muted);font-size:12px;">Sin campos personalizados</p>' :
     campos.map(function(c){
-      return '<div class="campo-extra-row"><span><strong>' + c.nombre + '</strong> (' + c.tipo + ')</span>'
+      return '<div class="campo-extra-row"><span><strong>' + esc(c.nombre) + '</strong> (' + esc(c.tipo) + ')</span>'
         + '<button class="icon-btn" style="color:var(--red);" onclick="eliminarCampoExtra(\'' + c.nombre + '\')">X</button></div>';
     }).join('');
 }
@@ -5601,7 +5601,7 @@ function citRenderHistorial() {
       + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:15px;font-weight:800;text-transform:uppercase;">'
       + citEsc(c.categoria) + ' &mdash; vs ' + citEsc(c.rival) + '</div>'
       + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + subtitulo
-      + (c.observaciones ? ' &middot; ' + citEsc(c.observaciones) : '') + '</div>'
+      + (c.observaciones ? ' &middot; ' + esc(c.observaciones) : '') + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:8px;align-items:center;">'
       + '<button onclick="citVerHistorico(\'' + c.rowIndex + '\')" style="font-size:11px;padding:5px 10px;background:var(--primary-dim);border:1px solid var(--primary-border);color:#6de097;border-radius:6px;cursor:pointer;font-family:\'Barlow Condensed\',sans-serif;">&#128424; Ver</button>'
