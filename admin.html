@@ -304,7 +304,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       style="font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;text-decoration:none;cursor:pointer;" title="Ver uso en Firebase Console">
       &#x1F4D6; 0 | &#x270F; 0
     </a>
-    <button class="btn btn-secondary" onclick="inicializar()" style="padding:6px 10px;font-size:12px;">&#x21BB;</button>
+    <button class="btn btn-secondary" onclick="refrescarDatos()" style="padding:6px 10px;font-size:12px;" title="Refrescar datos">&#x21BB;</button>
     <button class="btn btn-save" id="btn-nuevo-socio" onclick="abrirNuevoSocio()" style="padding:6px 12px;font-size:12px;">&#x2B; <span id="lbl-nuevo-socio">Socio</span></button>
   </div>
 </header>
@@ -1402,6 +1402,40 @@ function mostrarLoader(m){ document.getElementById('loader').style.display='flex
 function ocultarLoader(){ document.getElementById('loader').style.display='none'; }
 
 // ── INICIALIZAR — carga todo desde Firestore ──────────────────────
+
+// ── REFRESCAR DATOS (sin recargar config ni horarios) ────────────
+// Solo recarga socios activos + cuotas del período actual
+// Usar cuando otro admin hizo cambios y querés ver los datos frescos
+function refrescarDatos() {
+  mostrarLoader('Actualizando...');
+  var hoy = new Date();
+  var corteFecha = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1).toLocaleDateString('sv');
+  Promise.all([
+    db.collection('socios').where('activo','==',true).get(),
+    db.collection('cuotas').where('fechaPago','>=', corteFecha).get(),
+    db.collection('inscripciones').get()
+  ]).then(function(results) {
+    DB.jugadores = [[]];
+    results[0].forEach(function(doc){ DB.jugadores.push(socioToRow(doc, doc.id)); });
+    if(_cargado.inactivos) {
+      // recargar inactivos también si ya estaban cargados
+      db.collection('socios').where('activo','==',false).get().then(function(snap){
+        snap.forEach(function(doc){ DB.jugadores.push(socioToRow(doc, doc.id)); });
+        renderPlayers();
+      });
+    }
+    CUOTAS_DB.cuotas = [];
+    results[1].forEach(function(doc){ CUOTAS_DB.cuotas.push(cuotaToRow(doc.data(), doc.id)); });
+    DB.inscripciones = [];
+    results[2].forEach(function(doc){ DB.inscripciones.push(inscToObj(doc)); });
+    _contarLecturas(results[0].size + results[1].size + results[2].size);
+    ocultarLoader();
+    renderPlayers();
+    renderCuotas();
+    toast('Datos actualizados', 'ok');
+  }).catch(function(e){ ocultarLoader(); toast('Error: '+e.message,'err'); });
+}
+
 function inicializar(passReal) {
   // TOKEN puede ser la pass real o el placeholder '_firebase_session_'
   // En ambos casos lo que importa es que Firebase Auth tenga usuario activo
@@ -1425,17 +1459,18 @@ function inicializar(passReal) {
     db.collection('config_precios').get(),              // ~8
     db.collection('socios').where('activo','==',true).get(), // solo activos ~90
     db.collection('inscripciones').get(), // necesario para calcular estado cuota
-    // Cuotas del mes actual — necesarias para mostrar estado en tab Socios
+    // Cuotas del mes actual — filtrar por fechaPago (formato yyyy-MM-dd)
     (function(){
-      // periodoDesde está en formato dd/MM/yyyy — construir rango del mes actual
       var hoy = new Date();
-      var mm  = String(hoy.getMonth()+1).padStart(2,'0');
       var yyyy = hoy.getFullYear();
-      var desde = '01/' + mm + '/' + yyyy;
-      var hasta  = '31/' + mm + '/' + yyyy;
+      var mm   = String(hoy.getMonth()+1).padStart(2,'0');
+      var desdeISO = yyyy + '-' + mm + '-01';
+      var hastaISO = yyyy + '-' + mm + '-31';
+      // También traer históricos del mes actual (fechaPago puede ser fin de mes anterior)
+      // Usamos un corte de 2 meses para capturar todos los pagos relevantes
+      var corteFecha = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1).toLocaleDateString('sv');
       return db.collection('cuotas')
-        .where('periodoDesde', '>=', desde)
-        .where('periodoDesde', '<=', hasta)
+        .where('fechaPago', '>=', corteFecha)
         .get();
     })()
     // asistencias → lazy por tab
@@ -2691,7 +2726,12 @@ function _marcarTodosMesConfirmado() {
   pend.forEach(function(f){
     var _cv = estadoCuotaV2(f);
     var p = {doc:f[COL.DNI]||f[COL.TARJETA], nombre:f[COL.APELLIDO]+' '+f[COL.NOMBRE], plan:_cv.planNom||'', periodoDesde:desde, periodoHasta:hasta, fechaPago:new Date().toISOString().split('T')[0], monto:_cv.planMonto||0, metodo:'Efectivo', cobrador:'', obs:'Marcado masivo', hoja:f[f.length-2]};
-    callScript({action:'registrarPago', pago:p, pass:TOKEN}, function(){ if(++done === pend.length){ ocultarLoader(); inicializar(); } });
+    callScript({action:'registrarPago', pago:p, pass:TOKEN}, function(res){
+      var newRow = [p.doc, p.nombre, p.plan, p.periodoDesde, p.periodoHasta, p.fechaPago, p.monto, p.metodo, p.cobrador, p.obs];
+      newRow._fsId = (res && res.id) || '';
+      CUOTAS_DB.cuotas.push(newRow);
+      if(++done === pend.length){ ocultarLoader(); renderCuotas(); renderPlayers(); toast('Pagos registrados', 'ok'); }
+    });
   });
 }
 
@@ -2741,7 +2781,13 @@ function guardarPeriodos() {
   if(!PERIODOS_EDIT.length) return alert('Sin periodos para guardar');
   var rows = PERIODOS_EDIT.map(function(p){ return [p.mes, p.anioD, p.diaD, p.anioH, p.diaH, p.gracia, p.desc]; });
   mostrarLoader('Guardando periodos...');
-  callScript({action:'reemplazarHoja', tabName:'Config_Periodos', rows:rows, pass:TOKEN}, function(){ inicializar(); toast('Periodos guardados', 'ok'); }, function(e){ ocultarLoader(); alert('Error: ' + e); });
+  callScript({action:'reemplazarHoja', tabName:'Config_Periodos', rows:rows, pass:TOKEN}, function(){
+    // Actualizar en memoria
+    DB.configPagos = rows;
+    PERIODOS_EDIT = rows.map(function(r){ return {mes:r[0],anioD:r[1],diaD:r[2],anioH:r[3],diaH:r[4],gracia:r[5],desc:r[6]}; });
+    renderPeriodosAdmin(); poblarPeriodos();
+    ocultarLoader(); toast('Periodos guardados', 'ok');
+  }, function(e){ ocultarLoader(); alert('Error: ' + e); });
 }
 
 // -- ASISTENCIAS --------------------------------------------------
@@ -3677,7 +3723,7 @@ function guardarProfesor() {
     document.getElementById('inpPPass').value.trim()
   ];
   mostrarLoader('Guardando...');
-  var cb = function() { cancelarEditProfesor(); inicializar(); toast('Instructor guardado', 'ok'); };
+  var cb = function() { cancelarEditProfesor(); renderListProfesores(); poblarSelects(); toast('Instructor guardado', 'ok'); };
   var err = function(e) { ocultarLoader(); alert('Error: ' + e); };
   if(profEditIdx) {
     callScript({action:'updateAdminItem', tabName:'Profesores', rowIndex:profEditIdx, rowArray:rowArray, pass:TOKEN, _noRetry:true}, cb, err);
@@ -3941,7 +3987,7 @@ function _migrarSaldosConfirmado() {
   mostrarLoader('Calculando saldos...');
   callScript({action:'migrarSaldos', pass:TOKEN, _noRetry:true}, function(r){
     ocultarLoader();
-    inicializar();
+    refrescarDatos();
     toast('Saldos migrados: ' + (r.migrados||0) + ' socios', 'ok');
   }, function(e){ ocultarLoader(); alert('Error: ' + e); });
 }
@@ -4038,7 +4084,7 @@ function _ejecutarMasivaConfirmada(catNom, actividades, desde, hasta, obs) {
     _noRetry: true
   }, function(r) {
     ocultarLoader();
-    inicializar();
+    refrescarDatos();
     toast('Creadas: ' + (r.creados||0) + ' | Saltadas (ya existian): ' + (r.saltados||0), 'ok');
   }, function(e) {
     ocultarLoader();
