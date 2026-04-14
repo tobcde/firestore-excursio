@@ -2774,9 +2774,15 @@ function _marcarTodosMesConfirmado() {
 
 function exportarCSV() {
   var rows = [T('socio') + ',Nombre,Documento,' + T('grupo') + ',Plan,Estado,Vigente Hasta'];
+  function _csvCell(v) {
+    var s = String(v||'').replace(/"/g,'""');
+    if(/^[=+\-@	]/.test(s)) s = "'" + s;
+    return '"' + s + '"';
+  }
   DB.jugadores.slice(1).filter(function(f){ var a = f[COL.ACTIVO]; return a===true||String(a).toLowerCase()==='si'; }).forEach(function(f){
     var cv = estadoCuotaV2(f);
-    rows.push(['"'+(f[COL.APELLIDO]||'')+'"','"'+(f[COL.NOMBRE]||'')+'"',f[COL.DNI]||f[COL.TARJETA],'"'+(f[COL.CATEGORIA_APP]||'')+'"','"'+(cv.planNom||'')+'"',cv.estado,(function(){ var ins = (DB.inscripciones||[]).filter(function(ii){ return (ii.dni||'').toString()===((f[COL.DNI]||f[COL.TARJETA]||'').toString()); }); var v = ins.find(function(ii){ return !ii.hasta; }); return v ? 'indefinida' : (ins.length ? ins[0].hasta||'-' : '-'); })()].join(','));
+    var vigenteHasta = (function(){ var ins = (DB.inscripciones||[]).filter(function(ii){ return (ii.dni||'').toString()===((f[COL.DNI]||f[COL.TARJETA]||'').toString()); }); var v = ins.find(function(ii){ return !ii.hasta; }); return v ? 'indefinida' : (ins.length ? ins[0].hasta||'-' : '-'); })();
+    rows.push([_csvCell(f[COL.APELLIDO]),_csvCell(f[COL.NOMBRE]),f[COL.DNI]||f[COL.TARJETA],_csvCell(f[COL.CATEGORIA_APP]),_csvCell(cv.planNom),cv.estado,vigenteHasta].join(','));
   });
   var blob = new Blob(['\uFEFF'+rows.join('\n')], {type:'text/csv;charset=utf-8;'});
   var url = URL.createObjectURL(blob), a = document.createElement('a');
@@ -3234,6 +3240,16 @@ function procesarArchivo(event) {
         if(window._tipoArchivo === 'dni')       mostrarFotoInline('l-dni-frente',r.url, false);
         if(window._tipoArchivo === 'dni-dorso') mostrarFotoInline('l-dni-dorso', r.url, false);
         if(window._tipoArchivo === 'apto')      mostrarFotoInline('l-apto',      r.url, file.type.includes('pdf'));
+        // Persistir URL en Firestore
+        var _dniUp = (DB.jugadores[itemSel.arrIdx][COL.DNI]||DB.jugadores[itemSel.arrIdx][COL.TARJETA]||'').toString();
+        var _campoMap = {foto:'foto', dni:'dniFoto', 'dni-dorso':'dniDorso', apto:'apto'};
+        var _campoUp = _campoMap[window._tipoArchivo];
+        if(_dniUp && _campoUp) {
+          var _upd = {}; _upd[_campoUp] = r.url;
+          db.collection('socios').doc(_dniUp).update(_upd)
+            .then(function(){ _contarEscrituras(1); })
+            .catch(function(e){ console.error('Error guardando URL:', e); });
+        }
         toast('Archivo subido correctamente', 'ok');
       }
     }, function(e){ ocultarLoader(); alert('Error: ' + e); });
@@ -3365,8 +3381,8 @@ function enviarComprobanteEmail() {
   callScript({action:'sendEmail', emailDest:email, logoUrl:(INST.logoUrl||''), asunto:'Comprobante de pago - ' + (INST.nombre||''), htmlBody:
     (function(){
       var _logo = '<img src="cid:logo" style="width:80px;height:80px;object-fit:contain;background:white;border-radius:10px;padding:6px;" alt="">';
-      var _nombre = INST.nombre || 'Club Atletico Excursionistas';
-      var _plan = (datos.planAct||'') + (datos.plSoc ? ' + ' + datos.plSoc : '');
+      var _nombre = esc(INST.nombre || 'Club Atletico Excursionistas');
+      var _plan = esc((datos.planAct||'') + (datos.plSoc ? ' + ' + datos.plSoc : ''));
       var _monto = '$' + Number(datos.moTotal||0).toLocaleString('es-AR');
       var _row = function(lbl, val) {
         return '<tr><td style="padding:10px 16px;color:#888;font-size:13px;border-bottom:1px solid #2a2a2a;white-space:nowrap;">'+lbl+'</td>'
@@ -3384,7 +3400,7 @@ function enviarComprobanteEmail() {
         +'</td></tr>'
         // Saludo
         +'<tr><td style="padding:24px 32px 8px;">'
-        +'<p style="color:#e8f0e8;font-size:15px;margin:0;">Hola <b style="color:#c9a227;">'+datos.nombre+'</b>,</p>'
+        +'<p style="color:#e8f0e8;font-size:15px;margin:0;">Hola <b style="color:#c9a227;">'+esc(datos.nombre||'')+'</b>,</p>'
         +'<p style="color:#7a927a;font-size:13px;margin:8px 0 0;">Registramos tu pago correctamente. Aca tenes el detalle:</p>'
         +'</td></tr>'
         // Tabla de detalle
@@ -4254,7 +4270,7 @@ function agregarCampoExtra() {
 }
 
 function eliminarCampoExtra(nombre) {
-  sgdConfirm('Eliminar el campo <b>' + nombre + '</b>?', function() { _eliminarCampoExtraConfirmado(nombre); }, 'ELIMINAR');
+  sgdConfirm('Eliminar el campo <b>' + esc(nombre) + '</b>?', function() { _eliminarCampoExtraConfirmado(nombre); }, 'ELIMINAR');
 }
 function _eliminarCampoExtraConfirmado(nombre) {
   mostrarLoader('Eliminando...');
@@ -4710,7 +4726,11 @@ function exportarReporteCSV() {
   var headers = Array.from(document.querySelectorAll('#r-thead th')).map(function(th){ return '"' + th.innerText + '"'; });
   var rows = [headers.join(',')];
   document.querySelectorAll('#r-tbody tr').forEach(function(tr){
-    rows.push(Array.from(tr.querySelectorAll('td')).map(function(td){ return '"' + td.innerText + '"'; }).join(','));
+    rows.push(Array.from(tr.querySelectorAll('td')).map(function(td){
+      var s = td.innerText.replace(/"/g,'""');
+      if(/^[=+\-@	]/.test(s)) s = "'" + s;
+      return '"' + s + '"';
+    }).join(','));
   });
   var blob = new Blob(['\uFEFF'+rows.join('\n')], {type:'text/csv;charset=utf-8;'});
   var url = URL.createObjectURL(blob), a = document.createElement('a');
@@ -5202,6 +5222,15 @@ window.onload = function() {
   // Limpiar tokens viejos en localStorage
   localStorage.removeItem('sgd_token');
   localStorage.removeItem('sgd_admin_uid');
+  // H-042: validar GAS_URL configurado
+  if (!GAS_URL || GAS_URL === '' || GAS_URL.trim() === '') {
+    console.warn('[SGD] GAS_URL no configurado — subida de fotos y emails deshabilitados');
+    setTimeout(function(){
+      document.querySelectorAll('[onclick^="subirArchivo"]').forEach(function(btn){
+        btn.disabled = true; btn.title = 'Subida no configurada'; btn.style.opacity = '0.4';
+      });
+    }, 1000);
+  }
   // B7: Forzar limpieza de sessionStorage en recarga forzada
   // Ctrl+F5 no siempre limpia sessionStorage en todos los browsers
   // Verificamos con performance.navigation para detectar recarga forzada
