@@ -1046,7 +1046,12 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-        <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Monto total ($)</label><input id="mp-monto" type="number" class="edit-input" style="width:100%;font-size:16px;padding:12px;" oninput="sincronizarMontoManual()"></div>
+        <div class="filter-group full" style="grid-column:1/-1;">
+          <label class="filter-label">Monto total a cobrar</label>
+          <div id="mp-monto-display" style="font-size:20px;font-weight:800;color:#6de097;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-align:center;">$0</div>
+          <input id="mp-monto" type="number" style="display:none;">
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;text-align:center;">Se cobra la suma de los planes marcados arriba</div>
+        </div>
         <div class="filter-group"><label class="filter-label">Desde</label><input id="mp-desde" type="date" class="edit-input" style="width:100%;"></div>
         <div class="filter-group"><label class="filter-label">Hasta</label><input id="mp-hasta" type="date" class="edit-input" style="width:100%;"></div>
         <div class="filter-group"><label class="filter-label">Metodo de pago</label>
@@ -1055,7 +1060,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         <div class="filter-group"><label class="filter-label">Fecha de pago</label><input id="mp-fecha" type="date" class="edit-input" style="width:100%;"></div>
         <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Cobrador</label>
           <select id="mp-cobrador" class="edit-input" style="width:100%;"></select></div>
-        <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Observaciones</label><input id="mp-obs" class="edit-input" style="width:100%;"></div>
+        <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Observaciones</label><input id="mp-obs" class="edit-input" style="width:100%;" maxlength="500" placeholder="Opcional"></div>
       </div>
       <button class="btn btn-save" onclick="confirmarPago()" style="width:100%;padding:14px;font-size:14px;">CONFIRMAR PAGO</button>
     </div>
@@ -1344,14 +1349,31 @@ function horarioToRow(doc) {
   return [d.dia||'', d.hora||'', d.sede||'', d.profesores||'', d.grupo||'', d.liga||d.extra||'', d.modalidad||'Mixto', doc.id];
 }
 
+function _normalizarFechaDisplay(f) {
+  // Convierte cualquier formato de fecha a dd/MM/yyyy para display consistente
+  if (!f) return '';
+  var s = f.toString().trim();
+  // Si ya es dd/MM/yyyy → dejar igual
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  // Si es yyyy-MM-dd → convertir
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    var p = s.substring(0,10).split('-');
+    return p[2] + '/' + p[1] + '/' + p[0];
+  }
+  return s;
+}
+
 function cuotaToRow(d, fsId) {
-  // formato: [dni, nombre, plan, periodoDesde, periodoHasta, fechaPago, monto, metodo, cobrador, obs, _fsId]
+  // formato: [dni, nombre, plan, periodoDesde, periodoHasta, fechaPago, monto, metodo, cobrador, obs]
+  // Normalizar fechas a dd/MM/yyyy para que calcularEstadoTiempoReal funcione siempre
   var row = [
     d.dni||d.doc||'', d.nombre||'',
     d.plan||d.concepto||'',
-    d.periodoDesde||'', d.periodoHasta||'',
-    d.fechaPago||'', d.monto||0,
-    d.metodo||'', d.cobrador||'', d.obs||''
+    _normalizarFechaDisplay(d.periodoDesde||''),
+    _normalizarFechaDisplay(d.periodoHasta||''),
+    _normalizarFechaDisplay(d.fechaPago||''),
+    d.monto||0,
+    d.metodo||'', d.cobrador||d.obs||'', d.obs||''
   ];
   row._fsId = fsId || d._fsId || '';
   return row;
@@ -1609,7 +1631,7 @@ function _fsDispatch(action, p, ok, err) {
       var dniNorm = normDoc(c.dni || c.DNI || c.doc || '');
       if (!dniNorm){ cbErr('DNI requerido'); return; }
       // Verificar duplicado antes de escribir
-      var dup = DB.jugadores.slice(1).find(function(f){ return (f[COL.DNI]||'').toString() === dniNorm; });
+      var dup = DB.jugadores.slice(1).find(function(jj){ return (jj[COL.DNI]||jj[COL.TARJETA]||'').toString().replace(/[^0-9]/g,'') === dniNorm; });
       if (dup){ cbErr('Ya existe un jugador con DNI ' + dniNorm + ' (' + (dup[COL.APELLIDO]||'') + ', ' + (dup[COL.NOMBRE]||'') + ')'); return; }
       var hoy = new Date().toLocaleDateString('sv');
       var doc = {
@@ -2096,7 +2118,7 @@ function renderInscripcionesModal(dni) {
 function abrirModalInscripcion() {
   if(!itemSel) return;
   var f = DB.jugadores[itemSel.arrIdx];
-  document.getElementById('mi-sub').innerText = (f[COL.APELLIDO]||'') + ' ' + (f[COL.NOMBRE]||'');
+  document.getElementById('mi-sub').innerText = esc(f[COL.APELLIDO]||'') + ' ' + esc(f[COL.NOMBRE]||'');
   // Poblar select de planes
   var sel = document.getElementById('mi-plan');
   sel.innerHTML = '<option value="">-- Seleccionar --</option>'
@@ -2300,7 +2322,7 @@ function renderPlayers() {
     lazyCargarInactivos(function(){ renderPlayers(); });
     return;
   }
-  var busq = document.getElementById('busq').value.toLowerCase();
+  var busq = (document.getElementById('busq').value||'').trim().toLowerCase();
   var genF = document.getElementById('fGen').value, catF = document.getElementById('fCat').value;
   var estF = document.getElementById('fEstado').value, cuotaF = document.getElementById('fCuota').value;
   var grid = document.getElementById('gridJugadores');
@@ -2485,7 +2507,7 @@ function renderCuotas() {
     var lb = it.est==='ok'?'Al dia':it.est==='debe'?'DEBE':it.est==='vence'?'POR VENCER':it.est==='parcial'?'PARCIAL':'Sin plan';
     var _vigente = it.hastaStr ? formatDate(it.hastaStr) : it.hasta ? formatDate(it.hasta) : '-';
     html += '<div class="ct-row">';
-    html += '<div><div class="ct-nombre">' + (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'') + '</div><div class="ct-sub">Doc: ' + (f[COL.DNI]||f[COL.TARJETA]||'') + ' | ' + (f[COL.CATEGORIA_APP]||'Sin ' + T('grupo')) + '</div></div>';
+    html += '<div><div class="ct-nombre">' + esc(f[COL.APELLIDO]||'') + ', ' + esc(f[COL.NOMBRE]||'') + '</div><div class="ct-sub">Doc: ' + esc(f[COL.DNI]||f[COL.TARJETA]||'') + ' | ' + esc(f[COL.CATEGORIA_APP]||'Sin ' + T('grupo')) + '</div></div>';
     html += '<div><span class="cuota-pill ' + cl + '">' + lb + '</span></div>';
     var _chipExtras = it.extraConceptos && it.extraConceptos.length ?
       it.extraConceptos.map(function(x){ return '<span style="background:rgba(201,162,39,.2);color:var(--secondary);font-size:10px;padding:1px 6px;border-radius:8px;margin-top:3px;display:inline-block;">+' + x + '</span>'; }).join(' ') : '';
@@ -2559,6 +2581,8 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
   document.getElementById('mp-desde').value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
   document.getElementById('mp-hasta').value = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().split('T')[0];
   document.getElementById('mp-monto').value = _moSugerido || '';
+  var _disp = document.getElementById('mp-monto-display');
+  if(_disp) _disp.innerText = '$' + Number(_moSugerido||0).toLocaleString('es-AR');
   document.getElementById('mp-obs').value = '';
   document.getElementById('mp-cobrador').innerHTML = DB.profesores.map(function(p){ return '<option>' + p[0] + '</option>'; }).join('') || '<option>Sin especificar</option>';
   // Poblar planes vigentes del socio
@@ -2622,6 +2646,8 @@ function recalcularTotalPago() {
   var calcEl = document.getElementById('mp-total-calc');
   if(calcEl) calcEl.innerText = '$' + total.toLocaleString('es-AR');
   document.getElementById('mp-monto').value = total || '';
+  var disp = document.getElementById('mp-monto-display');
+  if(disp) disp.innerText = '$' + Number(total||0).toLocaleString('es-AR');
 }
 
 function togglePagoExtra() {
@@ -2648,6 +2674,16 @@ function confirmarPago() {
   var _obs = document.getElementById('mp-obs').value;
   var _fecha = document.getElementById('mp-fecha').value;
   if(!_fecha || !desde || !hasta) { pagoCtx._enviando = false; return alert('Completa fecha y periodo'); }
+  // H-006: desde <= hasta
+  if(desde > hasta) { pagoCtx._enviando = false; return alert('La fecha DESDE no puede ser posterior a HASTA'); }
+  // H-007: fecha de pago no puede ser futura (máximo 7 días adelante)
+  var _hoy = new Date(); _hoy.setHours(0,0,0,0);
+  var _maxFecha = new Date(_hoy); _maxFecha.setDate(_maxFecha.getDate() + 7);
+  var _fechaObj = new Date(_fecha);
+  if(_fechaObj > _maxFecha) { pagoCtx._enviando = false; return alert('La fecha de pago no puede ser más de 7 días en el futuro'); }
+  // H-008: fecha de pago no puede ser anterior a 5 años
+  var _minFecha = new Date(_hoy); _minFecha.setFullYear(_minFecha.getFullYear() - 5);
+  if(_fechaObj < _minFecha) { pagoCtx._enviando = false; return alert('La fecha de pago parece incorrecta (más de 5 años atrás)'); }
 
   var periodo = periodoLabel(document.getElementById('cPeriodo') ? document.getElementById('cPeriodo').value : '');
 
@@ -2740,7 +2776,7 @@ function exportarCSV() {
   var rows = [T('socio') + ',Nombre,Documento,' + T('grupo') + ',Plan,Estado,Vigente Hasta'];
   DB.jugadores.slice(1).filter(function(f){ var a = f[COL.ACTIVO]; return a===true||String(a).toLowerCase()==='si'; }).forEach(function(f){
     var cv = estadoCuotaV2(f);
-    rows.push(['"'+(f[COL.APELLIDO]||'')+'"','"'+(f[COL.NOMBRE]||'')+'"',f[COL.DNI]||f[COL.TARJETA],'"'+(f[COL.CATEGORIA_APP]||'')+'"','"'+(cv.planNom||'')+'"',cv.estado,cv.hasta?formatDate(cv.hasta):''].join(','));
+    rows.push(['"'+(f[COL.APELLIDO]||'')+'"','"'+(f[COL.NOMBRE]||'')+'"',f[COL.DNI]||f[COL.TARJETA],'"'+(f[COL.CATEGORIA_APP]||'')+'"','"'+(cv.planNom||'')+'"',cv.estado,(function(){ var ins = (DB.inscripciones||[]).filter(function(ii){ return (ii.dni||'').toString()===((f[COL.DNI]||f[COL.TARJETA]||'').toString()); }); var v = ins.find(function(ii){ return !ii.hasta; }); return v ? 'indefinida' : (ins.length ? ins[0].hasta||'-' : '-'); })()].join(','));
   });
   var blob = new Blob(['\uFEFF'+rows.join('\n')], {type:'text/csv;charset=utf-8;'});
   var url = URL.createObjectURL(blob), a = document.createElement('a');
@@ -2966,7 +3002,7 @@ function abrirM(ai) {
   var dni = (f[COL.DNI]||f[COL.TARJETA]||'').toString();
   var sheet = f[f.length-2], row = f[f.length-1];
   itemSel = {sheet:sheet, row:row, dni:dni, arrIdx:ai};
-  document.getElementById('m-nombre').innerText = (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'');
+  document.getElementById('m-nombre').innerText = esc(f[COL.APELLIDO]||'') + ', ' + esc(f[COL.NOMBRE]||'');
   document.getElementById('m-dni-sub').innerText = 'Doc: ' + dni + (f[COL.FECHA_NAC] ? ' | Nac: ' + f[COL.FECHA_NAC] : '');
   var anioNac = extraerAnioNac(f[COL.FECHA_NAC]);
   document.getElementById('m-edad').innerText = anioNac ? anioNac + ' (' + calcularEdad(f[COL.FECHA_NAC]) + ' anios)' : '-';
@@ -3255,8 +3291,9 @@ function abrirNuevoSocio() {
 function cerrarNuevoSocio(){ document.getElementById('modalNuevoSocio').classList.remove('open'); }
 
 function guardarNuevoSocio() {
-  var apellido = document.getElementById('ns-apellido').value.trim();
-  var nombre = document.getElementById('ns-nombre').value.trim();
+  // H-016: sanitizar entrada — remover tags HTML antes de guardar
+  var apellido = document.getElementById('ns-apellido').value.trim().replace(/<[^>]*>/g, '');
+  var nombre = document.getElementById('ns-nombre').value.trim().replace(/<[^>]*>/g, '');
   var dni = document.getElementById('ns-dni').value.trim();
   var errEl = document.getElementById('ns-error');
   function _err(msg){ errEl.innerText = msg; errEl.style.display = ''; return; }
@@ -3265,6 +3302,10 @@ function guardarNuevoSocio() {
   if(!dni || dni.length < 4) return _err('Documento invalido');
   var dup = DB.jugadores.slice(1).find(function(f){ return f && (f[COL.DNI]||f[COL.TARJETA]||'').toString() === dni; });
   if(dup) return _err('Ya existe un ' + T('socio') + ' con documento ' + dni);
+  var _emailVal = document.getElementById('ns-email').value.trim();
+  if(_emailVal && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(_emailVal)) return _err('El email no tiene formato válido');
+  var _celVal = document.getElementById('ns-celular').value.trim();
+  if(_celVal && !/^[0-9+\s\-]{6,20}$/.test(_celVal)) return _err('El celular debe contener solo números (6-20 dígitos)');
   errEl.style.display = 'none';
   var jug = {
     apellido:apellido.toUpperCase(), nombre:nombre.toUpperCase(), doc:dni,
@@ -4250,6 +4291,7 @@ function renderReporte() {
   _sd('r-filter-hasta', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz'].includes(tipo) ? '' : 'none');
   _sd('r-filter-caja-fecha', tipo === 'caja_dia' ? '' : 'none');
   _sd('r-filter-cat', ['deudores','al_dia','jugadores','asist_matriz'].includes(tipo) ? '' : 'none');
+  toast('Generando reporte...', '');
   if(tipo === 'deudores') rptDeudores();
   else if(tipo === 'al_dia') rptAlDia();
   else if(tipo === 'jugadores') rptJugadores();
@@ -4270,6 +4312,14 @@ function getMesSeleccionado(){ return document.getElementById('rMes').value; }
 function td(txt, cls){ return '<td' + (cls?' class="'+cls+'"':'') + '>' + txt + '</td>'; }
 function getRangoFechas(){ return {desde:document.getElementById('rDesde').value, hasta:document.getElementById('rHasta').value}; }
 function periodoLabel(p){ var a = p.split('-'); var m = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']; return m[parseInt(a[1])-1] + ' ' + a[0]; }
+
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, function(ch) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+  });
+}
+
 function normFecha(f) {
   if(!f) return '';
   var s = f.toString().trim();
@@ -4643,8 +4693,9 @@ function rptAuditoria() {
 }
 
 function rptCajaDia() {
-  var fecha = document.getElementById('rCajaFecha').value;
+  var fecha = document.getElementById('rCajaFecha') ? document.getElementById('rCajaFecha').value : '';
   if(!fecha) return;
+  var cont = document.getElementById('r-tbody'); if(!cont) return;
   var pagos = CUOTAS_DB.cuotas.filter(function(c){ return (c[5]||'') === fecha; });
   var total = pagos.reduce(function(s,c){ return s + Number(c[6]||0); }, 0);
   var rows = pagos.map(function(c){
@@ -5028,6 +5079,7 @@ function confirmarAuditoriaPago() {
   var motivo = document.getElementById('audit-motivo').value.trim();
   if(!motivo) {
     document.getElementById('audit-motivo-error').style.display = 'block';
+    toast('El motivo es obligatorio', 'err');
     return;
   }
   document.getElementById('audit-motivo-error').style.display = 'none';
@@ -5053,6 +5105,13 @@ function confirmarAuditoriaPago() {
 
   if(_auditCtx.tipo === 'EDITAR') {
     var nuevoMonto  = parseFloat(document.getElementById('audit-monto').value)||0;
+    if (nuevoMonto <= 0) {
+      ocultarLoader();
+      document.getElementById('audit-monto').style.borderColor = 'var(--red)';
+      setTimeout(function(){ document.getElementById('audit-monto').style.borderColor = ''; }, 3000);
+      toast('El monto debe ser mayor a $0', 'err');
+      return;
+    }
     var nuevoMetodo = document.getElementById('audit-metodo').value;
     var nuevaFecha  = document.getElementById('audit-fecha').value;
     var nuevaObs    = document.getElementById('audit-obs').value.trim();
