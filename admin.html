@@ -1407,28 +1407,25 @@ function ocultarLoader(){ document.getElementById('loader').style.display='none'
 // Solo recarga socios activos + cuotas del período actual
 // Usar cuando otro admin hizo cambios y querés ver los datos frescos
 function refrescarDatos() {
+  // Recarga solo socios activos + cuotas del mes actual
+  // Inscripciones NO se recargan (cambian poco — solo con nueva inscripción)
   mostrarLoader('Actualizando...');
   var hoy = new Date();
-  var corteFecha = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1).toLocaleDateString('sv');
+  var yyyy = hoy.getFullYear();
+  var mm   = String(hoy.getMonth()+1).padStart(2,'0');
+  // Cuotas: 2 meses atrás para capturar históricos del mes anterior
+  var corteFecha = new Date(yyyy, hoy.getMonth()-1, 1).toLocaleDateString('sv');
   Promise.all([
-    db.collection('socios').where('activo','==',true).get(),
-    db.collection('cuotas').where('fechaPago','>=', corteFecha).get(),
-    db.collection('inscripciones').get()
+    db.collection('socios').where('activo','==',true).get(),  // ~350
+    db.collection('cuotas').where('fechaPago','>=', corteFecha).get() // ~350-700
   ]).then(function(results) {
+    // Socios
     DB.jugadores = [[]];
     results[0].forEach(function(doc){ DB.jugadores.push(socioToRow(doc, doc.id)); });
-    if(_cargado.inactivos) {
-      // recargar inactivos también si ya estaban cargados
-      db.collection('socios').where('activo','==',false).get().then(function(snap){
-        snap.forEach(function(doc){ DB.jugadores.push(socioToRow(doc, doc.id)); });
-        renderPlayers();
-      });
-    }
+    // Cuotas
     CUOTAS_DB.cuotas = [];
     results[1].forEach(function(doc){ CUOTAS_DB.cuotas.push(cuotaToRow(doc.data(), doc.id)); });
-    DB.inscripciones = [];
-    results[2].forEach(function(doc){ DB.inscripciones.push(inscToObj(doc)); });
-    _contarLecturas(results[0].size + results[1].size + results[2].size);
+    _contarLecturas(results[0].size + results[1].size);
     ocultarLoader();
     renderPlayers();
     renderCuotas();
@@ -1678,6 +1675,7 @@ function _fsDispatch(action, p, ok, err) {
       var turnoId = registros[0][1];
       db.collection('asistencias').where('turnoId','==',turnoId).get()
         .then(function(snap){
+          _contarLecturas(snap.size || 1); // contar lecturas del query
           var batch = db.batch();
           snap.forEach(function(doc){ batch.delete(doc.ref); });
           registros.forEach(function(r){
@@ -1686,7 +1684,10 @@ function _fsDispatch(action, p, ok, err) {
               fecha:r[0], turnoId:r[1], label:r[2], dni:r[3].toString(), nombre:r[4], presente:r[5]===true||r[5]==='true'
             });
           });
-          return batch.commit();
+          return batch.commit().then(function(){
+            // Contar escrituras del batch: deletes + sets
+            _contarEscrituras(snap.size + registros.length);
+          });
         })
         .then(function(){ cb({ok:true}); })
         .catch(function(e){ cbErr(e.message); });
@@ -2586,7 +2587,7 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
         }
       } else if(_sc.estado === 'parcial') {
         _badge = '<span style="background:rgba(255,193,7,.15);color:#ffc107;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px;">'
-          + 'pago parcial â�?��?� falta $' + Number(_sc.faltaPesos).toLocaleString('es-AR') + '</span>';
+          + 'pago parcial &#x26A0; falta $' + Number(_sc.faltaPesos).toLocaleString('es-AR') + '</span>';
         _montoSugerido = _sc.faltaPesos;
       } else if(_sc.estado === 'debe') {
         _badge = '<span style="background:rgba(220,53,69,.15);color:var(--red);font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px;">'
