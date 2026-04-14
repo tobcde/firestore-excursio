@@ -1132,7 +1132,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 </div>
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.10</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.12</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -1159,7 +1159,7 @@ var FIREBASE_CONFIG = {
   "messagingSenderId": "729515294858",
   "appId": "1:729515294858:web:5264a67291c5d649956d73"
 };
-var GAS_URL         = 'https://script.google.com/macros/s/AKfycbx4DPUUx6MoJgusmPdqABnrIVysucZ9XPgVq-wtUnoIp1g464ptIONkccUmnighqIv0EA/exec';
+var GAS_URL         = 'https://script.google.com/macros/s/AKfycbxqR-lxYWRUKsPcjeOD-Pi7YSn8ukopiaE7BJIbi2PaOVA9X_9MF5dLb1YJaquCKCnI3g/exec';
 var GAS_OCR_KEY     = ''; // deprecated — se usa Firebase ID token
 var ADMIN_EMAIL     = 'admin@sgd.app';
 
@@ -1611,19 +1611,14 @@ function callScriptPost(payload, onSuccess, onError) {
       var body = Object.assign({}, payload, {idToken: idToken});
       // Eliminar campos legacy innecesarios
       delete body.token; delete body.pass;
-      // GAS devuelve 302 en el primer POST — hay que seguir la redirección manualmente
-      // para que el body no se pierda
-      var _bodyStr = 'payload=' + encodeURIComponent(JSON.stringify(body));
-      // Paso 1: GET para resolver la URL final (evita el 302 con POST)
-      fetch(GAS_URL, {method:'GET', redirect:'follow'})
-      .then(function(r){ return r.url || GAS_URL; })
-      .then(function(finalUrl) {
-        // Paso 2: POST a la URL final directamente
-        return fetch(finalUrl, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          body: _bodyStr
-        });
+      // Mandar idToken como query param — sobrevive el redirect 302 de GAS
+      var _gasUrl = GAS_URL + '?idToken=' + encodeURIComponent(body.idToken);
+      var _bodyNoToken = Object.assign({}, body); delete _bodyNoToken.idToken;
+      fetch(_gasUrl, {
+        method: 'POST',
+        redirect: 'follow',
+        headers: {'Content-Type': 'text/plain'},
+        body: JSON.stringify(_bodyNoToken)
       })
       .then(function(r){ return r.text(); })
       .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={error:'Respuesta inválida'};} if(d&&d.error){if(onError)onError(d.error);}else{if(onSuccess)onSuccess(d);} })
@@ -1975,15 +1970,13 @@ function _fsDispatch(action, p, ok, err) {
         var _emailBody = {action:'sendEmail', idToken:_idTok, to:p.to, subject:p.subject, body:p.body,
           colorPrimario: INST.colorPrimario||'#1a7a3c', nombreOrg:INST.nombre||'SGD',
           emailRemit: INST.emailRemitente||''};
-        var _eBodyStr = 'payload=' + encodeURIComponent(JSON.stringify(_emailBody));
-        fetch(GAS_URL, {method:'GET', redirect:'follow'})
-        .then(function(r){ return r.url || GAS_URL; })
-        .then(function(finalUrl){
-          return fetch(finalUrl, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: _eBodyStr
-          });
+        var _gasUrlEmail = GAS_URL + '?idToken=' + encodeURIComponent(_emailBody.idToken);
+        var _emailBodyNoToken = Object.assign({}, _emailBody); delete _emailBodyNoToken.idToken;
+        fetch(_gasUrlEmail, {
+          method: 'POST',
+          redirect: 'follow',
+          headers: {'Content-Type': 'text/plain'},
+          body: JSON.stringify(_emailBodyNoToken)
         })
         .then(function(r){ return r.text(); })
         .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={ok:true};} cb(d); })
