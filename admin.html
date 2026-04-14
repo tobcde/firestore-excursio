@@ -1132,7 +1132,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 </div>
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.7</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.9</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -1159,7 +1159,7 @@ var FIREBASE_CONFIG = {
   "messagingSenderId": "729515294858",
   "appId": "1:729515294858:web:5264a67291c5d649956d73"
 };
-var GAS_URL         = 'https://script.google.com/macros/s/AKfycbz4_MRWE5-lfCOxDvmcybQCIvvHmDk7McEvdnKZ-k5A9OeW-lvhqVWHZfd0w5yLV21nTQ/exec';
+var GAS_URL         = 'https://script.google.com/macros/s/AKfycbx4DPUUx6MoJgusmPdqABnrIVysucZ9XPgVq-wtUnoIp1g464ptIONkccUmnighqIv0EA/exec';
 var GAS_OCR_KEY     = ''; // deprecated — se usa Firebase ID token
 var ADMIN_EMAIL     = 'admin@sgd.app';
 
@@ -1612,9 +1612,9 @@ function callScriptPost(payload, onSuccess, onError) {
       // Eliminar campos legacy innecesarios
       delete body.token; delete body.pass;
       fetch(GAS_URL, {
-        method:'POST', redirect:'follow',
-        headers:{'Content-Type':'text/plain'},
-        body: JSON.stringify(body)
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'payload=' + encodeURIComponent(JSON.stringify(body))
       })
       .then(function(r){ return r.text(); })
       .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={error:'Respuesta inválida'};} if(d&&d.error){if(onError)onError(d.error);}else{if(onSuccess)onSuccess(d);} })
@@ -1963,11 +1963,13 @@ function _fsDispatch(action, p, ok, err) {
       var _user = auth.currentUser;
       if (!_user) { cbErr('Sin sesión activa'); break; }
       _user.getIdToken(false).then(function(_idTok) {
+        var _emailBody = {action:'sendEmail', idToken:_idTok, to:p.to, subject:p.subject, body:p.body,
+          colorPrimario: INST.colorPrimario||'#1a7a3c', nombreOrg:INST.nombre||'SGD',
+          emailRemit: INST.emailRemitente||''};
         fetch(GAS_URL, {
-          method:'POST', headers:{'Content-Type':'text/plain'},
-          body: JSON.stringify({action:'sendEmail', idToken:_idTok, to:p.to, subject:p.subject, body:p.body,
-            colorPrimario: INST.colorPrimario||'#1a7a3c', nombreOrg:INST.nombre||'SGD',
-            emailRemit: INST.emailRemitente||''})
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: 'payload=' + encodeURIComponent(JSON.stringify(_emailBody))
         }).then(function(r){ return r.text(); })
           .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={ok:true};} cb(d); })
           .catch(function(){ cbErr('Sin conexión para enviar email'); });
