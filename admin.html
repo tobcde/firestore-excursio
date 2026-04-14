@@ -2141,8 +2141,6 @@ function darDeBajaInscripcion(rowIndex, dni) {
 // Sin col AA, sin debitarMensual, calcula cada vez desde cero.
 // ================================================================
 function calcularEstadoTiempoReal(f) {
-  // Acepta jugador array o DNI string
-  // Acepta: string DNI, number DNI, o array jugador
   var dni = (typeof f === 'string') ? f.trim()
            : (typeof f === 'number') ? String(f).trim()
            : ((f[COL.DNI]||'').toString().trim());
@@ -2150,7 +2148,6 @@ function calcularEstadoTiempoReal(f) {
   var hoy = new Date();
   var mesHoy = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0');
 
-  // Todas las inscripciones del socio (vigentes y vencidas â�?��?� para detectar deudas del pasado)
   var inscTodas = (DB.inscripciones||[]).filter(function(i) {
     return (i.dni||'').toString().trim() === dni;
   });
@@ -2160,7 +2157,6 @@ function calcularEstadoTiempoReal(f) {
             planNom:null, planMonto:0, saldoNeto:0, detalle:[]};
   }
 
-  // Inscripciones vigentes en el mes actual (para planNom y planMonto corrientes)
   var inscVigentes = inscTodas.filter(function(i) {
     var mD = i.desde ? normFecha(i.desde).substring(0,7) : '';
     var mH = i.hasta ? normFecha(i.hasta).substring(0,7) : '';
@@ -2172,9 +2168,8 @@ function calcularEstadoTiempoReal(f) {
     var d = Number(i.descuentoHno) || 0;
     return s + (d > 0 && d < m ? m - d : m);
   }, 0);
-  var planNom   = inscVigentes.map(function(i){ return i.plan; }).join(' + ');
+  var planNom = inscVigentes.map(function(i){ return i.plan; }).join(' + ');
 
-  // Calcular estado por cada inscripcion (solo pagos exactos por plan, sin historicos)
   var deudaTotal = 0, favorTotal = 0;
   var estadoPeor = 'ok';
   var prioridad  = {ok:0, parcial:1, debe:2};
@@ -2187,17 +2182,15 @@ function calcularEstadoTiempoReal(f) {
     if (!pm) return;
 
     var mD = insc.desde ? normFecha(insc.desde).substring(0,7) : '';
-    if (!mD || mD > mesHoy) return; // no empezó aún
+    if (!mD || mD > mesHoy) return;
 
-    // Hasta: fecha de baja si tiene, sino mes actual
     var mH = insc.hasta ? normFecha(insc.hasta).substring(0,7) : mesHoy;
 
-    // Meses transcurridos en este periodo
     var d1 = mD.split('-'), d2 = mH.split('-');
     var mesesT = (parseInt(d2[0]) - parseInt(d1[0])) * 12 + (parseInt(d2[1]) - parseInt(d1[1])) + 1;
     if (mesesT < 1) mesesT = 1;
 
-    // Total pagado para esta actividad — solo pagos con plan exacto (sin historicos)
+    // Solo pagos con concepto exacto al plan (sin historicos)
     var totalPagado = 0;
     (CUOTAS_DB.cuotas || []).forEach(function(row) {
       var docPago  = (row[0] || '').toString().trim();
@@ -2205,18 +2198,10 @@ function calcularEstadoTiempoReal(f) {
       var mesPago  = normFecha((row[5] || '').toString().trim()).substring(0, 7);
       var monto    = Number(row[6]) || 0;
       if (docPago !== dni) return;
-      if (concepto.indexOf('Historico') === 0) return; // historicos se aplican globalmente
-      // Aceptar: concepto exacto, o concepto que contenga el plan (pago combinado)
-      var esCombinado = concepto !== insc.plan && concepto.indexOf(insc.plan) !== -1;
-      if (concepto !== insc.plan && !esCombinado) return;
-      // Si es pago combinado, distribuir proporcionalmente según cantidad de planes en el concepto
-      var montoAplicar = Number(row[6]) || 0;
-      if (esCombinado) {
-        var planesEnConcepto = concepto.split('+').length || 1;
-        montoAplicar = montoAplicar / planesEnConcepto;
-      }
+      if (concepto.indexOf('Historico') === 0) return;
+      if (concepto !== insc.plan) return;
       if (mesPago < mD || mesPago > mH) return;
-      totalPagado += montoAplicar;
+      totalPagado += monto;
     });
 
     var totalRequerido = mesesT * pm;
@@ -2225,8 +2210,8 @@ function calcularEstadoTiempoReal(f) {
     var estadoInsc = diff >= 0 ? 'ok' : (diff > -pm ? 'parcial' : 'debe');
     if ((prioridad[estadoInsc]||0) > (prioridad[estadoPeor]||0)) estadoPeor = estadoInsc;
 
-    if (diff < 0) deudaTotal  += Math.abs(diff);
-    else          favorTotal  += diff;
+    if (diff < 0) deudaTotal += Math.abs(diff);
+    else          favorTotal += diff;
 
     detalle.push({
       plan: insc.plan, monto: pm,
@@ -2236,22 +2221,20 @@ function calcularEstadoTiempoReal(f) {
     });
   });
 
-  // Aplicar pagos historicos: cada historico cubre el MES de su periodoDesde
-  // "Historico Abril 2026" (periodoDesde=2026-04-01) cubre solo Abril 2026
+  // Historicos del MES ACTUAL como credito global (por fechaPago = row[5])
   var creditoHistorico = 0;
   (CUOTAS_DB.cuotas || []).forEach(function(row) {
     var docPago  = (row[0] || '').toString().trim();
     var concepto = (row[2] || '').toString().trim();
-    var mesPeriodo = normFecha((row[3] || '').toString().trim()).substring(0, 7);
+    var mesPago  = normFecha((row[5] || '').toString().trim()).substring(0, 7);
     if (docPago !== dni) return;
     if (concepto.indexOf('Historico') !== 0) return;
-    if (mesPeriodo !== mesHoy) return; // solo cubre el mes de su periodo
+    if (mesPago !== mesHoy) return; // solo el mes corriente
     creditoHistorico += Number(row[6]) || 0;
   });
 
   if (creditoHistorico > 0) {
     if (creditoHistorico >= deudaTotal) {
-      var excedente = creditoHistorico - deudaTotal;
       deudaTotal = 0;
       if (estadoPeor !== 'none') estadoPeor = 'ok';
     } else {
@@ -2261,19 +2244,18 @@ function calcularEstadoTiempoReal(f) {
   }
 
   return {
-    estado:          estadoPeor,
-    deuda:           deudaTotal,
-    saldoAFavor:     favorTotal,
-    deudaActividad:  deudaTotal,
-    deudaSocial:     0,
-    planNom:         planNom || (inscTodas[0] ? inscTodas[0].plan : null),
-    planMonto:       planMonto,
-    saldoNeto:       favorTotal - deudaTotal,
-    detalle:         detalle
+    estado:         estadoPeor,
+    deuda:          deudaTotal,
+    saldoAFavor:    favorTotal,
+    deudaActividad: deudaTotal,
+    deudaSocial:    0,
+    planNom:        planNom || (inscTodas[0] ? inscTodas[0].plan : null),
+    planMonto:      planMonto,
+    saldoNeto:      favorTotal - deudaTotal,
+    detalle:        detalle
   };
 }
 
-// Alias de compatibilidad
 function estadoCuotaV2(f) { return calcularEstadoTiempoReal(f); }// -- RENDER SOCIOS ------------------------------------------------
 function renderPlayers() {
   // Si el filtro es Inactivos y no están cargados, cargarlos primero
@@ -2623,16 +2605,17 @@ function confirmarPago() {
   if(!pagoCtx) return;
   if(pagoCtx._enviando) return; // guard doble submit
   pagoCtx._enviando = true;
+
   var desde = document.getElementById('mp-desde').value, hasta = document.getElementById('mp-hasta').value;
   var _metodo = document.getElementById('mp-metodo').value;
   var _cobrador = document.getElementById('mp-cobrador').value;
   var _obs = document.getElementById('mp-obs').value;
   var _fecha = document.getElementById('mp-fecha').value;
-  if(!_fecha || !desde || !hasta) return alert('Completa fecha y periodo');
+  if(!_fecha || !desde || !hasta) { pagoCtx._enviando = false; return alert('Completa fecha y periodo'); }
 
   var periodo = periodoLabel(document.getElementById('cPeriodo') ? document.getElementById('cPeriodo').value : '');
 
-  // Armar lista de pagos: uno por plan seleccionado + extra si hay
+  // Un pago por plan seleccionado
   var pagos = [];
   var checks = document.querySelectorAll('#mp-planes-lista input[name="pp_check"]:checked');
   if(checks.length > 0) {
@@ -2640,7 +2623,6 @@ function confirmarPago() {
       var monto = Number(cb.getAttribute('data-monto'))||0;
       if(monto > 0) pagos.push({plan: cb.getAttribute('data-plan'), monto: monto});
     });
-    // Extra
     var extraCheck = document.getElementById('mp-extra-check');
     if(extraCheck && extraCheck.checked) {
       var extraDesc = document.getElementById('mp-extra-desc').value.trim() || 'Cobro extraordinario';
@@ -2649,15 +2631,14 @@ function confirmarPago() {
     }
   }
 
-  // Si no hay planes seleccionados (pago manual), usar el monto del input
   if(pagos.length === 0) {
     var _monto = Number(document.getElementById('mp-monto').value)||0;
-    if(!_monto) return alert('Ingresa un monto');
+    if(!_monto) { pagoCtx._enviando = false; return alert('Ingresa un monto'); }
     pagos.push({plan: pagoCtx.planNom || 'Actividad', monto: _monto});
   }
 
   var moTotal = pagos.reduce(function(s, p){ return s + p.monto; }, 0);
-  if(!moTotal) return alert('El monto total no puede ser cero');
+  if(!moTotal) { pagoCtx._enviando = false; return alert('El monto total no puede ser cero'); }
 
   mostrarLoader('Registrando pago...');
   var done = 0;
@@ -2670,10 +2651,10 @@ function confirmarPago() {
       hoja: pagoCtx.hoja
     };
     callScript({action:'registrarPago', pago:p, pass:TOKEN, _noRetry:true}, function(res){
-      var newRow = cuotaToRow({dni:p.doc, nombre:p.nombre, plan:p.plan, periodoDesde:p.periodoDesde, periodoHasta:p.periodoHasta, fechaPago:p.fechaPago, monto:p.monto, metodo:p.metodo, cobrador:p.cobrador, obs:p.obs}, (res&&res.id)||'');
+      // Agregar a memoria con fsId para poder editar/eliminar después
+      var newRow = [p.doc, p.nombre, p.plan, p.periodoDesde, p.periodoHasta, p.fechaPago, p.monto, p.metodo, p.cobrador, p.obs];
+      newRow._fsId = (res && res.id) || '';
       CUOTAS_DB.cuotas.push(newRow);
-      // Nueva arquitectura: el saldo se recalcula en tiempo real desde CUOTAS_DB.
-      // No hay col AA que actualizar.
       if(++done === pagos.length) {
         window._ultimoPago = {
           nombre: pagoCtx.nombre, dni: pagoCtx.dni,
@@ -2689,6 +2670,7 @@ function confirmarPago() {
     }, function(e){ pagoCtx._enviando = false; alert('Error: ' + e); ocultarLoader(); });
   });
 }
+
 
 function marcarTodosMes() {
   sgdConfirm('Marcar como pagados <b>TODOS</b> los que deben este mes?', function() {
@@ -5054,26 +5036,33 @@ function confirmarAuditoriaPago() {
       cerrarModalAuditoria();
       ocultarLoader();
       renderCuotas();
-      abrirM(itemSel); // refrescar ficha del socio
+      renderPlayers();
+      // Refrescar ficha si está abierta
+      if(itemSel) {
+        var dniSel = (itemSel[COL.DNI]||itemSel[COL.TARJETA]||'').toString().trim();
+        if(dniSel) abrirM(itemSel);
+      }
       toast('Pago actualizado y auditado', 'ok');
     }).catch(function(e){ ocultarLoader(); toast('Error: '+e.message,'err'); });
 
   } else {
     // ELIMINAR
-    // 1. Eliminar de Firestore
     db.collection('cuotas').doc(_auditCtx.fsId).delete()
     .then(function() {
       _contarEscrituras(1);
-      // 2. Guardar auditoría
       return db.collection('auditoria_pagos').add(audDoc);
     }).then(function() {
       _contarEscrituras(1);
-      // 3. Eliminar de memoria
       CUOTAS_DB.cuotas = CUOTAS_DB.cuotas.filter(function(x){ return x._fsId !== _auditCtx.fsId; });
       cerrarModalAuditoria();
       ocultarLoader();
       renderCuotas();
-      abrirM(itemSel); // refrescar ficha del socio
+      renderPlayers();
+      // Refrescar ficha si está abierta
+      if(itemSel) {
+        var dniSel = (itemSel[COL.DNI]||itemSel[COL.TARJETA]||'').toString().trim();
+        if(dniSel) abrirM(itemSel);
+      }
       toast('Pago eliminado y registrado en auditoría', 'ok');
     }).catch(function(e){ ocultarLoader(); toast('Error: '+e.message,'err'); });
   }
