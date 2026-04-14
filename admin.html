@@ -1132,7 +1132,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 </div>
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.9</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.10</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -1611,10 +1611,19 @@ function callScriptPost(payload, onSuccess, onError) {
       var body = Object.assign({}, payload, {idToken: idToken});
       // Eliminar campos legacy innecesarios
       delete body.token; delete body.pass;
-      fetch(GAS_URL, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: 'payload=' + encodeURIComponent(JSON.stringify(body))
+      // GAS devuelve 302 en el primer POST — hay que seguir la redirección manualmente
+      // para que el body no se pierda
+      var _bodyStr = 'payload=' + encodeURIComponent(JSON.stringify(body));
+      // Paso 1: GET para resolver la URL final (evita el 302 con POST)
+      fetch(GAS_URL, {method:'GET', redirect:'follow'})
+      .then(function(r){ return r.url || GAS_URL; })
+      .then(function(finalUrl) {
+        // Paso 2: POST a la URL final directamente
+        return fetch(finalUrl, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: _bodyStr
+        });
       })
       .then(function(r){ return r.text(); })
       .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={error:'Respuesta inválida'};} if(d&&d.error){if(onError)onError(d.error);}else{if(onSuccess)onSuccess(d);} })
@@ -1966,13 +1975,19 @@ function _fsDispatch(action, p, ok, err) {
         var _emailBody = {action:'sendEmail', idToken:_idTok, to:p.to, subject:p.subject, body:p.body,
           colorPrimario: INST.colorPrimario||'#1a7a3c', nombreOrg:INST.nombre||'SGD',
           emailRemit: INST.emailRemitente||''};
-        fetch(GAS_URL, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          body: 'payload=' + encodeURIComponent(JSON.stringify(_emailBody))
-        }).then(function(r){ return r.text(); })
-          .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={ok:true};} cb(d); })
-          .catch(function(){ cbErr('Sin conexión para enviar email'); });
+        var _eBodyStr = 'payload=' + encodeURIComponent(JSON.stringify(_emailBody));
+        fetch(GAS_URL, {method:'GET', redirect:'follow'})
+        .then(function(r){ return r.url || GAS_URL; })
+        .then(function(finalUrl){
+          return fetch(finalUrl, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: _eBodyStr
+          });
+        })
+        .then(function(r){ return r.text(); })
+        .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={ok:true};} cb(d); })
+        .catch(function(){ cbErr('Sin conexión para enviar email'); });
       }).catch(function(){ cbErr('Error de autenticación'); });
       break;
     }
