@@ -2008,10 +2008,13 @@ function getInscripcionesVigentes(dni, fecha) {
   var dniStr = (dni||'').toString().trim();
   return (DB.inscripciones||[]).filter(function(i) {
     if((i.dni||'').toString().trim() !== dniStr) return false;
-    var desde = i.desde ? new Date(i.desde) : null;
-    var hasta  = i.hasta ? new Date(i.hasta)  : null;
-    if(desde && desde > ref) return false;   // todavia no empieza
-    if(hasta && hasta < ref) return false;   // ya termino
+    // parseDate maneja dd/MM/yyyy correctamente (new Date no lo hace)
+    var desde = i.desde ? parseDate(i.desde) : null;
+    var hasta  = i.hasta ? parseDate(i.hasta)  : null;
+    if(desde) desde.setHours(0,0,0,0);
+    if(hasta)  hasta.setHours(0,0,0,0);
+    if(desde && desde > ref) return false;
+    if(hasta && hasta < ref) return false;
     return true;
   });
 }
@@ -2203,9 +2206,17 @@ function calcularEstadoTiempoReal(f) {
       var monto    = Number(row[6]) || 0;
       if (docPago !== dni) return;
       if (concepto.indexOf('Historico') === 0) return; // historicos se aplican globalmente
-      if (concepto !== insc.plan) return;
+      // Aceptar: concepto exacto, o concepto que contenga el plan (pago combinado)
+      var esCombinado = concepto !== insc.plan && concepto.indexOf(insc.plan) !== -1;
+      if (concepto !== insc.plan && !esCombinado) return;
+      // Si es pago combinado, distribuir proporcionalmente según cantidad de planes en el concepto
+      var montoAplicar = Number(row[6]) || 0;
+      if (esCombinado) {
+        var planesEnConcepto = concepto.split('+').length || 1;
+        montoAplicar = montoAplicar / planesEnConcepto;
+      }
       if (mesPago < mD || mesPago > mH) return;
-      totalPagado += monto;
+      totalPagado += montoAplicar;
     });
 
     var totalRequerido = mesesT * pm;
