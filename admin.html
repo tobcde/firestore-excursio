@@ -696,7 +696,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <input id="inpPDNI" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="DNI">
       <input id="inpPFecha" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="Fecha de nacimiento (ej: 01/05/1990)">
       <input id="inpPEmail" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="Email">
-      <input id="inpPPass" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="Contrasena (para login)">
+      <input id="inpPPass" type="password" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="Contrasena (para login)" autocomplete="new-password">
       <div style="display:flex;gap:8px;">
         <button id="btnProfesor" class="btn btn-save" style="flex:1;" onclick="guardarProfesor()">AGREGAR</button>
         <button id="btnCancelProfesor" class="btn" style="display:none;background:var(--muted);color:#fff;" onclick="cancelarEditProfesor()">CANCELAR</button>
@@ -2776,7 +2776,7 @@ function exportarCSV() {
   var rows = [T('socio') + ',Nombre,Documento,' + T('grupo') + ',Plan,Estado,Vigente Hasta'];
   function _csvCell(v) {
     var s = String(v||'').replace(/"/g,'""');
-    if(/^[=+\-@	]/.test(s)) s = "'" + s;
+    if (/^[=+\-@	]/.test(s)) s = "'" + s;
     return '"' + s + '"';
   }
   DB.jugadores.slice(1).filter(function(f){ var a = f[COL.ACTIVO]; return a===true||String(a).toLowerCase()==='si'; }).forEach(function(f){
@@ -3240,7 +3240,6 @@ function procesarArchivo(event) {
         if(window._tipoArchivo === 'dni')       mostrarFotoInline('l-dni-frente',r.url, false);
         if(window._tipoArchivo === 'dni-dorso') mostrarFotoInline('l-dni-dorso', r.url, false);
         if(window._tipoArchivo === 'apto')      mostrarFotoInline('l-apto',      r.url, file.type.includes('pdf'));
-        // Persistir URL en Firestore
         var _dniUp = (DB.jugadores[itemSel.arrIdx][COL.DNI]||DB.jugadores[itemSel.arrIdx][COL.TARJETA]||'').toString();
         var _campoMap = {foto:'foto', dni:'dniFoto', 'dni-dorso':'dniDorso', apto:'apto'};
         var _campoUp = _campoMap[window._tipoArchivo];
@@ -3406,13 +3405,13 @@ function enviarComprobanteEmail() {
         // Tabla de detalle
         +'<tr><td style="padding:8px 32px 24px;">'
         +'<table width="100%" cellpadding="0" cellspacing="0" style="background:#121812;border-radius:10px;border:1px solid #253025;overflow:hidden;color:#e8f0e8;">'
-        +_row('Plan', _plan)
+        +_row('Plan', esc(_plan))
         +'<tr><td style="padding:10px 16px;color:#888;font-size:13px;border-bottom:1px solid #2a2a2a;">Monto</td>'
         +'<td style="padding:10px 16px;font-size:20px;font-weight:800;color:#c9a227;border-bottom:1px solid #2a2a2a;text-align:right;">'+_monto+'</td></tr>'
-        +_row('Periodo', datos.periodo||'-')
-        +_row('Vigente hasta', (function(v){ if(!v||v==='-')return '-'; var p=v.split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:v; })(datos.vigente))
-        +_row('Metodo', datos.metodo||'Efectivo')
-        +_row('Cobrado por', datos.cobrador||'-')
+        +_row('Periodo', esc(datos.periodo||'-'))
+        +_row('Vigente hasta', esc((function(v){ if(!v||v==='-')return '-'; var p=v.split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:v; })(datos.vigente)))
+        +_row('Metodo', esc(datos.metodo||'Efectivo'))
+        +_row('Cobrado por', esc(datos.cobrador||'-'))
         +'</table>'
         +'</td></tr>'
         // Badge verde AL DIA
@@ -3635,7 +3634,7 @@ function renderListActividades() {
       return '<div class="item-row">'
         + '<span style="display:flex;align-items:center;gap:8px;">'
         + '<span class="emoji" style="font-size:20px;">' + (a.icono||'') + '</span>'
-        + '<strong>' + a.nombre + '</strong>'
+        + '<strong>' + esc(a.nombre) + '</strong>'
         + '<span style="width:14px;height:14px;border-radius:50%;background:' + (a.color||'#888') + ';display:inline-block;"></span>'
         + '</span>'
         + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Actividades" data-row="' + (i+2) + '">X</button>'
@@ -4154,9 +4153,9 @@ function renderHorarios() {
   var el = document.getElementById('listH'); if(!el) return;
   el.innerHTML = DB.horarios.map(function(h){
     return '<div class="item-row" style="border-left:4px solid var(--secondary);flex-direction:column;align-items:flex-start;">'
-      + '<div style="display:flex;justify-content:space-between;width:100%;margin-bottom:4px;"><strong>' + h[0] + ' ' + h[1] + ' hs</strong>'
+      + '<div style="display:flex;justify-content:space-between;width:100%;margin-bottom:4px;"><strong>' + esc(h[0]) + ' ' + esc(h[1]) + ' hs</strong>'
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Horarios" data-row="' + h[h.length-1] + '">X</button></div>'
-      + '<small style="color:var(--muted);">Sede: ' + (h[2]||'-') + ' | Instructores: ' + (h[3]||'-') + ' | ' + T('grupo') + ': ' + (h[4]||'-') + (h[5] ? ' | Actividad: ' + h[5] : '') + ' | Modalidad: ' + (h[6]||'Mixto') + '</small></div>';
+      + '<small style="color:var(--muted);">Sede: ' + esc(h[2]||'-') + ' | Instructores: ' + esc(h[3]||'-') + ' | ' + T('grupo') + ': ' + esc(h[4]||'-') + (h[5] ? ' | Actividad: ' + esc(h[5]) : '') + ' | Modalidad: ' + esc(h[6]||'Mixto') + '</small></div>';
   }).join('');
   el.addEventListener('click', function(e){ var btn = e.target.closest('[data-action="borrar"]'); if(btn) borrar(btn.dataset.tabla, parseInt(btn.dataset.row)); });
 }
@@ -4219,10 +4218,15 @@ function cargarFormInstitucion() {
 }
 
 function guardarInstitucion() {
+  var _logoRaw = document.getElementById('inst-logoUrl').value.trim();
+  // H-028: bloquear javascript: en logoUrl
+  if (_logoRaw && /^javascript:/i.test(_logoRaw)) {
+    return alert('URL de logo inválida');
+  }
   var campos = {
     nombre: document.getElementById('inst-nombre').value.trim(),
     nombreCorto: document.getElementById('inst-nombreCorto').value.trim(),
-    logoUrl: document.getElementById('inst-logoUrl').value.trim(),
+    logoUrl: _logoRaw,
     colorPrimario: document.getElementById('inst-colorPrimario').value,
     colorSecundario: document.getElementById('inst-colorSecundario').value,
     terminologiaSocio: document.getElementById('inst-terminologiaSocio').value.trim() || 'Socio',
@@ -4728,7 +4732,7 @@ function exportarReporteCSV() {
   document.querySelectorAll('#r-tbody tr').forEach(function(tr){
     rows.push(Array.from(tr.querySelectorAll('td')).map(function(td){
       var s = td.innerText.replace(/"/g,'""');
-      if(/^[=+\-@	]/.test(s)) s = "'" + s;
+      if (/^[=+\-@	]/.test(s)) s = "'" + s;
       return '"' + s + '"';
     }).join(','));
   });
@@ -5219,12 +5223,10 @@ function sgdConfirm(msg, onOk, btnOkLabel) {
 }
 
 window.onload = function() {
-  // Limpiar tokens viejos en localStorage
   localStorage.removeItem('sgd_token');
   localStorage.removeItem('sgd_admin_uid');
-  // H-042: validar GAS_URL configurado
   if (!GAS_URL || GAS_URL === '' || GAS_URL.trim() === '') {
-    console.warn('[SGD] GAS_URL no configurado — subida de fotos y emails deshabilitados');
+    console.warn('[SGD] GAS_URL no configurado');
     setTimeout(function(){
       document.querySelectorAll('[onclick^="subirArchivo"]').forEach(function(btn){
         btn.disabled = true; btn.title = 'Subida no configurada'; btn.style.opacity = '0.4';
