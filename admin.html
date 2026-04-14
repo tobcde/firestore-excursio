@@ -2610,6 +2610,8 @@ function sincronizarMontoManual() {
 
 function confirmarPago() {
   if(!pagoCtx) return;
+  if(pagoCtx._enviando) return; // guard doble submit
+  pagoCtx._enviando = true;
   var desde = document.getElementById('mp-desde').value, hasta = document.getElementById('mp-hasta').value;
   var _metodo = document.getElementById('mp-metodo').value;
   var _cobrador = document.getElementById('mp-cobrador').value;
@@ -2657,7 +2659,7 @@ function confirmarPago() {
       hoja: pagoCtx.hoja
     };
     callScript({action:'registrarPago', pago:p, pass:TOKEN, _noRetry:true}, function(res){
-      var newRow = cuotaToRow({dni:p.doc, nombre:p.nombre, plan:p.plan, periodoDesde:p.periodoDesde, periodoHasta:p.periodoHasta, fechaPago:p.fechaPago, monto:p.monto, metodo:p.metodo, cobrador:p.cobrador, obs:p.obs}, r.id||'');
+      var newRow = cuotaToRow({dni:p.doc, nombre:p.nombre, plan:p.plan, periodoDesde:p.periodoDesde, periodoHasta:p.periodoHasta, fechaPago:p.fechaPago, monto:p.monto, metodo:p.metodo, cobrador:p.cobrador, obs:p.obs}, (res&&res.id)||'');
       CUOTAS_DB.cuotas.push(newRow);
       // Nueva arquitectura: el saldo se recalcula en tiempo real desde CUOTAS_DB.
       // No hay col AA que actualizar.
@@ -2673,7 +2675,7 @@ function confirmarPago() {
         cerrarModalPago(); ocultarLoader(); renderCuotas(); renderPlayers();
         ofrecerEnvioComprobante(window._ultimoPago);
       }
-    }, function(e){ alert('Error: ' + e); ocultarLoader(); });
+    }, function(e){ pagoCtx._enviando = false; alert('Error: ' + e); ocultarLoader(); });
   });
 }
 
