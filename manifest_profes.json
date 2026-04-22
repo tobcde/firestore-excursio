@@ -1,10 +1,12 @@
 {
-  "name": "Excursionistas - Personal",
+  "id": "/firestore-excursio/profes",
+  "name": "EXCURSIONISTAS - Personal",
   "short_name": "Personal",
-  "start_url": "/profes.html",
+  "start_url": "https://tobcde.github.io/firestore-excursio/profes.html",
+  "scope": "https://tobcde.github.io/firestore-excursio/profes.html",
   "display": "standalone",
   "background_color": "#0d1117",
-  "theme_color": "#2563eb",
+  "theme_color": "#329d0c",
   "icons": [
     {
       "src": "icons/profes/icon-profes-192.png",
