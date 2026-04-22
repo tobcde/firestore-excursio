@@ -10,6 +10,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icons/profes/icon-profes-192.png">
+<link rel="icon" type="image/png" href="icons/profes/icon-profes-192.png">
 <style>
 :root{
   --primary:#1a7a3c;--primary-dark:#0f5228;--secondary:#c9a227;
@@ -135,6 +137,32 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
 .btn-bio-perfil{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:11px 16px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;width:100%;}
 .btn-logout{background:var(--red-dim);border:1px solid var(--red-border);color:var(--red);border-radius:10px;padding:12px;width:100%;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;}
 
+/* Jugadores grid + ficha */
+.jug-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px;}
+.jug-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px;cursor:pointer;transition:border-color .15s;display:flex;flex-direction:column;align-items:center;text-align:center;}
+.jug-card:hover{border-color:var(--secondary);}
+.jug-foto{width:72px;height:72px;border-radius:50%;object-fit:cover;background:var(--surface2);border:2px solid var(--border);margin-bottom:8px;}
+.jug-foto-ph{width:72px;height:72px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);margin-bottom:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:24px;}
+.jug-nombre{font-size:13px;font-weight:600;line-height:1.2;margin-bottom:4px;word-break:break-word;}
+.jug-meta{font-size:11px;color:var(--muted);line-height:1.4;}
+.jug-estado{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;margin-top:4px;text-transform:uppercase;letter-spacing:.03em;}
+.jug-estado.activo{background:var(--primary-dim);color:#6de097;border:1px solid var(--primary-border);}
+.jug-estado.inactivo{background:var(--red-dim);color:var(--red);border:1px solid var(--red-border);}
+.ficha-modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;}
+.ficha-header{display:flex;gap:12px;align-items:center;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+.ficha-foto{width:64px;height:64px;border-radius:50%;object-fit:cover;background:var(--surface2);border:2px solid var(--secondary);flex-shrink:0;}
+.ficha-foto-ph{width:64px;height:64px;border-radius:50%;background:var(--surface2);border:2px solid var(--secondary);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:22px;}
+.ficha-title-wrap{flex:1;min-width:0;}
+.ficha-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;text-transform:uppercase;line-height:1.2;}
+.ficha-sub{color:var(--muted);font-size:12px;margin-top:2px;}
+.ficha-section{margin-bottom:14px;}
+.ficha-section-title{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--secondary);margin-bottom:8px;}
+.ficha-row{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border);gap:10px;}
+.ficha-row:last-child{border-bottom:none;}
+.ficha-row-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;flex-shrink:0;}
+.ficha-row-v{font-size:13px;font-weight:500;text-align:right;word-break:break-word;}
+.ficha-close{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px;width:100%;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-top:6px;text-transform:uppercase;letter-spacing:.05em;}
+
 /* Modal reset pass */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:20px;z-index:200;}
 .modal-overlay.open{display:flex;}
@@ -227,6 +255,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
   <div class="app-tabs">
     <button class="app-tab active" id="tab-asist"    onclick="irTab('asist')">&#x1F4CB; Asistencia</button>
     <button class="app-tab"        id="tab-historial" onclick="irTab('historial')">&#x1F4CA; Historial</button>
+    <button class="app-tab"        id="tab-jugadores" onclick="irTab('jugadores')">&#x26BD; Jugadores</button>
     <button class="app-tab"        id="tab-perfil"    onclick="irTab('perfil')">&#x1F464; Perfil</button>
   </div>
 
@@ -285,6 +314,16 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
     <div class="empty-state" id="hist-empty">Sin registros en el período</div>
   </div>
 
+  <!-- JUGADORES -->
+  <div class="app-section" id="sec-jugadores">
+    <input type="search" class="search-bar" id="jug-search" placeholder="Buscar jugador..." oninput="aplicarFiltrosJugadores()">
+    <select id="jug-cat-filter" class="search-bar" style="margin-top:6px;" onchange="aplicarFiltrosJugadores()">
+      <option value="">Todas las categor&iacute;as</option>
+    </select>
+    <div id="jug-grid" class="jug-grid"></div>
+    <div class="empty-state" id="jug-empty" style="display:none;">No hay jugadores en tus grupos</div>
+  </div>
+
   <!-- PERFIL -->
   <div class="app-section" id="sec-perfil">
     <div class="perfil-card">
@@ -331,8 +370,40 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
   </div>
 </div>
 
+<!-- MODAL FICHA JUGADOR -->
+<div class="modal-overlay" id="modal-ficha">
+  <div class="ficha-modal">
+    <div class="ficha-header">
+      <img id="ficha-foto" class="ficha-foto" src="" alt="" style="display:none;" onerror="document.getElementById('ficha-foto').style.display='none';document.getElementById('ficha-foto-ph').style.display='flex';">
+      <div id="ficha-foto-ph" class="ficha-foto-ph">&#x1F464;</div>
+      <div class="ficha-title-wrap">
+        <div class="ficha-title" id="ficha-nombre">&mdash;</div>
+        <div class="ficha-sub" id="ficha-sub">&mdash;</div>
+      </div>
+    </div>
+
+    <div class="ficha-section">
+      <div class="ficha-section-title">&#x1FA7A; Datos m&eacute;dicos</div>
+      <div class="ficha-row"><span class="ficha-row-l">Apto f&iacute;sico</span><span class="ficha-row-v" id="ficha-apto">&mdash;</span></div>
+      <div class="ficha-row"><span class="ficha-row-l">Obs. m&eacute;dicas</span><span class="ficha-row-v" id="ficha-medico">&mdash;</span></div>
+      <div class="ficha-row"><span class="ficha-row-l">DDJJ salud</span><span class="ficha-row-v" id="ficha-ddjj">&mdash;</span></div>
+    </div>
+
+    <div class="ficha-section">
+      <div class="ficha-section-title">&#x1F4DE; Datos de contacto</div>
+      <div class="ficha-row"><span class="ficha-row-l">Email</span><span class="ficha-row-v" id="ficha-email">&mdash;</span></div>
+      <div class="ficha-row"><span class="ficha-row-l">Celular</span><span class="ficha-row-v" id="ficha-celular">&mdash;</span></div>
+      <div class="ficha-row"><span class="ficha-row-l">Domicilio</span><span class="ficha-row-v" id="ficha-domicilio">&mdash;</span></div>
+      <div class="ficha-row"><span class="ficha-row-l">Contacto 1</span><span class="ficha-row-v" id="ficha-c1">&mdash;</span></div>
+      <div class="ficha-row"><span class="ficha-row-l">Contacto 2</span><span class="ficha-row-v" id="ficha-c2">&mdash;</span></div>
+    </div>
+
+    <button class="ficha-close" onclick="cerrarFichaJugador()">Cerrar</button>
+  </div>
+</div>
+
 <div id="toast"></div>
-<div id="vbadge">v1.0</div>
+<div id="vbadge">v1.2</div>
 
 <!-- FIREBASE SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -351,10 +422,11 @@ var FIREBASE_CONFIG = {
   "projectId": "excursionistas-futsal",
   "storageBucket": "excursionistas-futsal.firebasestorage.app",
   "messagingSenderId": "729515294858",
-  "appId": "1:729515294858:web:5264a67291c5d649956d73"
+  "appId": "1:729515294858:web:5264a67291c5d649956d73",
+  "measurementId": "G-4TF8ZYXQ5R"
 };
-var GAS_URL         = '';      // Solo para resetPass (email)
-var GAS_OCR_KEY     = '';
+var GAS_URL         = 'https://script.google.com/macros/s/AKfycbxsBHnK0iyNJkBgeDYsDbzemV4uyzDJii5eeMT4O4xnTYTGLU8Y5HZMr7K5bvDDv4r-jA/exec';      // Solo para resetPass (email)
+var GAS_OCR_KEY     = 'sgd2026';
 
 // ══════════════════════════════════════════════════════════════════
 // INIT FIREBASE
@@ -727,7 +799,7 @@ function cargarDatos() {
 
     // Query por activo=true y luego filtrar por categoría en cliente
     // (Firestore no permite .where('categoriaApp', 'in', misGrupos) con prefijos)
-    return db.collection('socios').where('activo', '==', true).get()
+    return db.collection('socios').get() // todos — incluye auto-registros pendientes (activo:false)
       .then(function(sociosSnap) {
         DB.jugadores = [];
         sociosSnap.forEach(function(doc) {
@@ -795,6 +867,165 @@ function irTab(tab) {
   document.getElementById('tab-'+tab).classList.add('active');
   document.getElementById('sec-'+tab).classList.add('active');
   if (tab === 'historial') iniciarHistorial();
+  if (tab === 'jugadores') renderJugadoresGrid();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// JUGADORES — grid + ficha reducida
+// ══════════════════════════════════════════════════════════════════
+function renderJugadoresGrid() {
+  var grid = document.getElementById('jug-grid');
+  var empty = document.getElementById('jug-empty');
+  if (!DB.jugadores || !DB.jugadores.length) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  var ordenados = DB.jugadores.slice().sort(function(a,b){
+    var an = ((a.apellido||'') + ' ' + (a.nombre||'')).toLowerCase();
+    var bn = ((b.apellido||'') + ' ' + (b.nombre||'')).toLowerCase();
+    return an.localeCompare(bn);
+  });
+
+  // Poblar dropdown de categorias a partir de los jugadores cargados
+  var sel = document.getElementById('jug-cat-filter');
+  if (sel) {
+    var prev = sel.value;
+    var cats = {};
+    ordenados.forEach(function(f){
+      var c = (f.categoriaApp||'').toString().trim();
+      if (c) cats[c] = true;
+    });
+    var sorted = Object.keys(cats).sort(function(a,b){ return a.localeCompare(b); });
+    sel.innerHTML = '<option value="">Todas las categor\u00edas</option>' +
+      sorted.map(function(c){ return '<option value="'+escapeHtml(c)+'">'+escapeHtml(c)+'</option>'; }).join('');
+    if (prev && cats[prev]) sel.value = prev;
+  }
+
+  grid.innerHTML = ordenados.map(function(f){
+    var nombre = ((f.apellido||'') + ', ' + (f.nombre||'')).replace(/^,\s*/, '').replace(/,\s*$/,'') || '\u2014';
+    var cat = (f.categoriaApp||'').toString() || '\u2014';
+    var fn  = (f.fechaNac||'').toString() || '\u2014';
+    var activo = !!f.activo;
+    var foto = (f.foto||'').toString();
+    var dni = (f.dni||f.id||'').toString();
+    var fotoHtml = foto
+      ? '<img class="jug-foto" src="'+foto+'" alt="" onerror="this.outerHTML=\'<div class=&quot;jug-foto-ph&quot;>&#x1F464;</div>\'">'
+      : '<div class="jug-foto-ph">&#x1F464;</div>';
+    return '<div class="jug-card" data-cat="'+escapeHtml(cat)+'" onclick="abrirFichaJugador(\''+dni+'\')">'+
+      fotoHtml +
+      '<div class="jug-nombre">'+escapeHtml(nombre)+'</div>'+
+      '<div class="jug-meta">'+escapeHtml(cat)+'<br>Nac: '+escapeHtml(fn)+'</div>'+
+      '<span class="jug-estado '+(activo?'activo':'inactivo')+'">'+(activo?'Activo':'Inactivo')+'</span>'+
+    '</div>';
+  }).join('');
+
+  aplicarFiltrosJugadores();
+}
+
+function aplicarFiltrosJugadores() {
+  var q = (document.getElementById('jug-search')||{}).value || '';
+  var cat = (document.getElementById('jug-cat-filter')||{}).value || '';
+  var qn = q.toString().toLowerCase().trim();
+  var cards = document.querySelectorAll('#jug-grid .jug-card');
+  cards.forEach(function(c){
+    var txt = c.innerText.toLowerCase();
+    var cCat = c.getAttribute('data-cat') || '';
+    var okTxt = (!qn || txt.indexOf(qn) !== -1);
+    var okCat = (!cat || cCat === cat);
+    c.style.display = (okTxt && okCat) ? '' : 'none';
+  });
+}
+
+// Compat: llamadas antiguas a filtrarJugadores siguen funcionando
+function filtrarJugadores(q) {
+  var i = document.getElementById('jug-search');
+  if (i && q != null) i.value = q;
+  aplicarFiltrosJugadores();
+}
+
+function abrirFichaJugador(dni) {
+  var f = DB.jugadores.find(function(j){ return (j.dni||j.id||'').toString() === dni.toString(); });
+  if (!f) return;
+  var nombre = ((f.apellido||'') + ', ' + (f.nombre||'')).replace(/^,\s*/, '').replace(/,\s*$/,'') || '\u2014';
+  document.getElementById('ficha-nombre').innerText = nombre;
+  document.getElementById('ficha-sub').innerText = (f.categoriaApp||'\u2014') + ' \u00b7 Nac: ' + (f.fechaNac||'\u2014') + ' \u00b7 ' + (f.activo?'Activo':'Inactivo');
+
+  var fotoImg = document.getElementById('ficha-foto');
+  var fotoPh  = document.getElementById('ficha-foto-ph');
+  if (f.foto) {
+    fotoImg.src = f.foto;
+    fotoImg.style.display = 'block';
+    fotoPh.style.display = 'none';
+  } else {
+    fotoImg.style.display = 'none';
+    fotoPh.style.display = 'flex';
+  }
+
+  document.getElementById('ficha-apto').innerText    = f.apto || '\u2014';
+  document.getElementById('ficha-medico').innerText  = f.medico || '\u2014';
+  var ddjj = f.ddjjSalud;
+  var ddjjTxt = '\u2014';
+  if (ddjj && ddjj.firmado) {
+    var fecha = ddjj.fecha ? new Date(ddjj.fecha).toLocaleDateString() : '';
+    ddjjTxt = '\u2713 Firmada' + (fecha ? ' (' + fecha + ')' : '');
+  }
+  document.getElementById('ficha-ddjj').innerText = ddjjTxt;
+
+  document.getElementById('ficha-email').innerHTML    = mailLink(f.email);
+  document.getElementById('ficha-celular').innerHTML  = waLink(f.celular);
+  document.getElementById('ficha-domicilio').innerText= f.domicilio || '\u2014';
+  document.getElementById('ficha-c1').innerHTML       = waLink(f.contacto1);
+  document.getElementById('ficha-c2').innerHTML       = waLink(f.contacto2);
+
+  document.getElementById('modal-ficha').classList.add('open');
+}
+
+// Convierte un valor (tel o "Nombre 351 555-5555") en link wa.me con normalizacion AR.
+// Si no hay suficientes digitos o no se puede parsear -> devuelve texto plano.
+function waLink(val) {
+  if (!val) return '\u2014';
+  var display = escapeHtml(String(val));
+  var d = String(val).replace(/\D/g, '');
+  if (d.length < 8) return display;
+  if (d.indexOf('549') === 0) {
+    // ya esta normalizado
+  } else if (d.indexOf('54') === 0) {
+    d = '549' + d.slice(2);
+  } else {
+    if (d.indexOf('0') === 0) d = d.slice(1);
+    // Heuristica: sacar '15' despues del area code si esta presente
+    if (d.length >= 11) {
+      for (var p = 2; p <= 4; p++) {
+        if (d.substr(p, 2) === '15' && (d.length - 2) >= 10) {
+          d = d.substr(0, p) + d.substr(p + 2);
+          break;
+        }
+      }
+    }
+    d = '549' + d;
+  }
+  var waIcon = '<svg viewBox="0 0 24 24" width="14" height="14" fill="#25D366" style="vertical-align:-2px;margin-left:4px;"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.966-.273-.101-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>';
+  return '<a href="https://wa.me/' + d + '" target="_blank" rel="noopener" style="color:var(--secondary);text-decoration:none;">' + display + waIcon + '</a>';
+}
+
+function mailLink(val) {
+  if (!val) return '\u2014';
+  var display = escapeHtml(String(val));
+  if (String(val).indexOf('@') < 0) return display;
+  return '<a href="mailto:' + display + '" style="color:var(--secondary);text-decoration:none;">' + display + '</a>';
+}
+
+function cerrarFichaJugador() {
+  document.getElementById('modal-ficha').classList.remove('open');
+}
+
+function escapeHtml(s) {
+  return (s==null?'':String(s)).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════
