@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title id="page-title">Registro de Datos</title>
+<link rel="manifest" href="manifest_datos.json">
+<meta name="theme-color" id="meta-theme" content="#1a7a3c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icons/datos/icon-datos-192.png">
+<link rel="icon" type="image/png" href="icons/datos/icon-datos-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -37,8 +44,42 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-
 /* HEADER */
 .app-header{background:var(--surface);border-bottom:2px solid var(--primary);padding:12px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50;}
 .app-header img{width:38px;height:38px;border-radius:8px;object-fit:contain;background:#fff;padding:2px;}
-.app-header h1{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;}
+.app-header h1{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;flex:1;}
 .app-header h1 span{color:var(--secondary);}
+.help-btn{width:34px;height:34px;border-radius:50%;background:var(--secondary-dim);border:1px solid var(--secondary-border);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;}
+.help-btn:hover{background:var(--secondary);color:#000;}
+
+/* AYUDA MODAL */
+.ayuda-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+.ayuda-overlay.open{display:flex;}
+.ayuda-modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:560px;width:100%;padding:0;margin:20px auto;}
+.ayuda-head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);border-radius:14px 14px 0 0;z-index:2;}
+.ayuda-head h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--secondary);}
+.ayuda-close{background:transparent;border:none;color:var(--text);font-size:24px;cursor:pointer;padding:0 4px;line-height:1;}
+.ayuda-body{padding:20px;}
+.ayuda-section{margin-bottom:22px;}
+.ayuda-section h3{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--primary);margin-bottom:10px;border-left:3px solid var(--primary);padding-left:8px;}
+.ayuda-section p{font-size:14px;line-height:1.5;color:var(--text);margin-bottom:8px;}
+.ayuda-section ul{list-style:none;padding:0;}
+.ayuda-section li{font-size:13.5px;line-height:1.5;color:var(--text);padding:6px 0 6px 22px;position:relative;}
+.ayuda-section li::before{content:'';position:absolute;left:4px;top:14px;width:6px;height:6px;border-radius:50%;background:var(--secondary);}
+.ayuda-step{display:flex;gap:12px;margin-bottom:10px;padding:10px;background:var(--surface2);border-radius:8px;}
+.ayuda-step-num{width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ayuda-step-body{font-size:13.5px;line-height:1.45;}
+.ayuda-step-body b{color:var(--secondary);}
+.ayuda-tip{background:var(--primary-dim);border:1px solid var(--primary-border);border-radius:8px;padding:10px 12px;font-size:13px;color:#6de097;margin-top:8px;}
+.ayuda-nota{background:var(--secondary-dim);border:1px solid var(--secondary-border);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--secondary);margin-top:8px;}
+
+/* DDJJ */
+.ddjj-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;}
+.ddjj-title{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;color:var(--secondary);margin-bottom:10px;letter-spacing:.05em;}
+.ddjj-texto{font-size:12.5px;line-height:1.5;color:var(--text);margin-bottom:12px;}
+.ddjj-check{display:flex;gap:10px;align-items:flex-start;cursor:pointer;user-select:none;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;transition:border-color .2s;}
+.ddjj-check:hover{border-color:var(--primary);}
+.ddjj-check input{width:20px;height:20px;accent-color:var(--primary);margin-top:1px;flex-shrink:0;cursor:pointer;}
+.ddjj-check-label{font-size:13px;line-height:1.45;color:var(--text);}
+.ddjj-check-label b{color:var(--secondary);}
+.ddjj-box.firmada{border-color:var(--primary-border);background:var(--primary-dim);}
 
 /* PROGRESS */
 .progress-bar{display:flex;align-items:center;padding:14px 16px;background:var(--surface);border-bottom:1px solid var(--border);gap:0;overflow-x:auto;}
@@ -60,8 +101,9 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-
 .card-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:14px;color:var(--secondary);}
 
 /* CAMARA */
-.cam-wrap{position:relative;background:#000;border-radius:10px;overflow:hidden;display:none;}
-.cam-guide{position:absolute;inset:10% 7.5%;border:2px solid rgba(26,122,60,.7);border-radius:6px;pointer-events:none;}
+.cam-wrap{position:relative;background:#000;border-radius:10px;overflow:hidden;display:none;aspect-ratio:1.585/1;}
+.cam-wrap video{width:100%;height:100%;object-fit:cover;display:block;}
+.cam-guide{position:absolute;inset:6% 4%;border:2px solid rgba(26,122,60,.7);border-radius:6px;pointer-events:none;}
 .cam-guide::before,.cam-guide::after{content:'';position:absolute;width:16px;height:16px;border-color:var(--primary);border-style:solid;}
 .cam-guide::before{top:-2px;left:-2px;border-width:2px 0 0 2px;}
 .cam-guide::after{bottom:-2px;right:-2px;border-width:0 2px 2px 0;}
@@ -145,6 +187,95 @@ video{width:100%;display:block;}
 <div class="app-header">
   <img id="header-logo" src="" alt="Logo" onerror="this.style.display='none'">
   <h1 id="header-titulo">Sistema de <span>Registro</span></h1>
+  <button class="help-btn" onclick="toggleAyuda()" aria-label="Ayuda">?</button>
+</div>
+
+<!-- AYUDA MODAL -->
+<div class="ayuda-overlay" id="ayuda-overlay" onclick="if(event.target===this)toggleAyuda()">
+  <div class="ayuda-modal">
+    <div class="ayuda-head">
+      <h2>&#x2139; Gu&iacute;a de uso</h2>
+      <button class="ayuda-close" onclick="toggleAyuda()" aria-label="Cerrar">&#x2715;</button>
+    </div>
+    <div class="ayuda-body">
+
+      <div class="ayuda-section">
+        <h3>&#x1F4CC; &iquest;Qu&eacute; hace esta app?</h3>
+        <p>Esta app sirve para <b>registrar o actualizar tus datos</b> en el club a partir del DNI. Escanea el documento con la c&aacute;mara, lee autom&aacute;ticamente los datos y te deja completar el resto.</p>
+      </div>
+
+      <div class="ayuda-section">
+        <h3>&#x1F4CB; Qu&eacute; necesit&aacute;s a mano</h3>
+        <ul>
+          <li>DNI (frente y dorso)</li>
+          <li>Foto tipo carnet (opcional)</li>
+          <li>Certificado m&eacute;dico / apto f&iacute;sico (opcional &mdash; imagen o PDF)</li>
+          <li>Email y celular de contacto</li>
+          <li>Datos de 1 o 2 contactos de emergencia</li>
+        </ul>
+      </div>
+
+      <div class="ayuda-section">
+        <h3>&#x1F4DD; Paso a paso</h3>
+
+        <div class="ayuda-step">
+          <div class="ayuda-step-num">1</div>
+          <div class="ayuda-step-body"><b>Frente del DNI.</b> Toc&aacute; "Usar c&aacute;mara" y captur&aacute;, o sub&iacute; una foto desde la galer&iacute;a.</div>
+        </div>
+
+        <div class="ayuda-step">
+          <div class="ayuda-step-num">2</div>
+          <div class="ayuda-step-body"><b>Dorso del DNI.</b> Mismo procedimiento. Sirve para leer domicilio. Opcional pero recomendado.</div>
+        </div>
+
+        <div class="ayuda-step">
+          <div class="ayuda-step-num">3</div>
+          <div class="ayuda-step-body"><b>Verificar.</b> El sistema lee los datos con IA y busca si ya exist&iacute;s. Revis&aacute; que apellido, nombre y DNI coincidan con el documento.</div>
+        </div>
+
+        <div class="ayuda-step">
+          <div class="ayuda-step-num">4</div>
+          <div class="ayuda-step-body"><b>Completar.</b> Carg&aacute; email, celular, domicilio, contactos de emergencia y categor&iacute;a. Pod&eacute;s sumar foto y apto m&eacute;dico.</div>
+        </div>
+
+        <div class="ayuda-step">
+          <div class="ayuda-step-num">5</div>
+          <div class="ayuda-step-body"><b>Confirmar.</b> Revis&aacute; el resumen y toc&aacute; <b>ENVIAR DATOS</b>. Listo.</div>
+        </div>
+      </div>
+
+      <div class="ayuda-section">
+        <h3>&#x1F4F8; Tips para las fotos del DNI</h3>
+        <ul>
+          <li>Buena luz, sin reflejos ni sombras</li>
+          <li>DNI plano sobre una superficie lisa</li>
+          <li>Encuadr&aacute; todo el documento dentro del marco verde</li>
+          <li>Enfocado &mdash; sin movimiento, sin borrosidad</li>
+        </ul>
+        <div class="ayuda-tip">&#x1F4A1; Si la lectura falla, volv&eacute; al paso 1 y sac&aacute; la foto de nuevo con mejor luz.</div>
+      </div>
+
+      <div class="ayuda-section">
+        <h3>&#x1FA7A; Datos m&eacute;dicos</h3>
+        <p>En el paso 4 hay una secci&oacute;n colapsable con datos m&eacute;dicos (grupo sangu&iacute;neo, alergias, medicaci&oacute;n, etc.). Es <b>opcional</b> pero muy &uacute;til para el cuerpo t&eacute;cnico en caso de emergencia.</p>
+        <p>Pod&eacute;s completarla ahora o m&aacute;s adelante volviendo a escanear tu DNI.</p>
+      </div>
+
+      <div class="ayuda-section">
+        <h3>&#x2753; Preguntas frecuentes</h3>
+        <p><b>&iquest;Y si ya estoy registrado?</b><br>La app detecta tu DNI y te deja actualizar los datos existentes.</p>
+        <p><b>&iquest;Tengo que subir todo de una?</b><br>No. Pod&eacute;s volver a entrar otra vez y completar lo que falte.</p>
+        <p><b>&iquest;La foto del DNI la ve alguien?</b><br>Solo el admin del club. Se guarda en una carpeta privada de Google Drive del club.</p>
+        <p><b>No me lee bien el DNI, &iquest;qu&eacute; hago?</b><br>Sac&aacute; la foto de nuevo con mejor luz. Si sigue fallando, pod&eacute;s editar los campos manualmente en el paso 4.</p>
+      </div>
+
+      <div class="ayuda-section">
+        <h3>&#x1F512; Privacidad</h3>
+        <div class="ayuda-nota">Tus datos se usan <b>&uacute;nicamente</b> para la gesti&oacute;n deportiva del club. No se comparten con terceros. Las im&aacute;genes del DNI se guardan cifradas en Google Drive y solo tiene acceso la direcci&oacute;n del club.</div>
+      </div>
+
+    </div>
+  </div>
 </div>
 
 <!-- PROGRESS BAR -->
@@ -257,7 +388,7 @@ video{width:100%;display:block;}
       <img id="prev-foto-img" class="upload-preview">
     </div>
     <div class="upload-zone" id="zona-foto">
-      <div class="upload-zone-icon">&#x1F930;</div>
+      <div class="upload-zone-icon">&#x1F933;</div>
       <div class="upload-zone-label">Subir foto (opcional)</div>
       <input type="file" accept="image/*" onchange="cargarFoto('foto', this)">
     </div>
@@ -274,6 +405,16 @@ video{width:100%;display:block;}
     </div>
   </div>
 
+  <!-- DATOS MEDICOS (colapsable) -->
+  <div class="card">
+    <div class="card-title" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;" onclick="toggleMedico()">
+      <span>&#x1FA7A; Datos médicos <span style="color:var(--muted);font-size:11px;font-weight:normal;">(opcional)</span></span>
+      <span id="medico-chev" style="font-size:14px;">&#x25BC;</span>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:-6px;margin-bottom:4px;">Podés completarlo ahora o más adelante volviendo a escanear el DNI.</div>
+    <div id="medico-body" style="display:none;margin-top:10px;"></div>
+  </div>
+
   <div class="btn-row">
     <button class="btn btn-outline" onclick="irPaso(3)">&#x2190; Volver</button>
     <button class="btn btn-primary" onclick="irPaso(5)">Continuar &#x2192;</button>
@@ -286,7 +427,22 @@ video{width:100%;display:block;}
     <div class="card-title">&#x2705; Confirmar envío</div>
     <div id="resumen-datos"></div>
   </div>
-  <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarGuardar()">&#x1F4BE; ENVIAR DATOS</button>
+
+  <!-- DDJJ DE SALUD -->
+  <div class="card">
+    <div class="card-title">&#x1FA7A; Declaraci&oacute;n Jurada de Salud</div>
+    <div class="ddjj-box" id="ddjj-box">
+      <div class="ddjj-texto">
+        Declaro bajo juramento que se encuentra en perfecto estado de salud f&iacute;sica y/o mental para entrenamiento y/o competencia. Del mismo modo expreso no tener conocimiento a la fecha de ning&uacute;n impedimento f&iacute;sico o deficiencia en el que pudiera provocarle lesiones y cualquier otro da&ntilde;o corporal como consecuencia de la participaci&oacute;n en actividades deportivas.
+      </div>
+      <label class="ddjj-check" for="ddjj-check">
+        <input type="checkbox" id="ddjj-check" onchange="toggleDdjj()">
+        <span class="ddjj-check-label">He le&iacute;do y <b>acepto la declaraci&oacute;n jurada de salud</b>. Confirmo que los datos consignados son ver&iacute;dicos.</span>
+      </label>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarGuardar()" disabled>&#x1F4BE; ENVIAR DATOS</button>
   <button class="btn btn-outline" onclick="irPaso(4)" style="margin-top:10px;">&#x2190; Volver</button>
 </div>
 
@@ -300,7 +456,7 @@ video{width:100%;display:block;}
 
 <!-- TOAST -->
 <div id="toast"></div>
-<div id="version-badge">v1.0</div>
+<div id="version-badge">v1.2</div>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- FIREBASE SDK                                                   -->
@@ -321,10 +477,11 @@ var FIREBASE_CONFIG = {
   "projectId": "excursionistas-futsal",
   "storageBucket": "excursionistas-futsal.firebasestorage.app",
   "messagingSenderId": "729515294858",
-  "appId": "1:729515294858:web:5264a67291c5d649956d73"
+  "appId": "1:729515294858:web:5264a67291c5d649956d73",
+  "measurementId": "G-4TF8ZYXQ5R"
 };
-var GAS_URL        = '';       // URL del GAS compartido (OCR + Drive)
-var GAS_OCR_KEY    = '';   // pass compartida del GAS
+var GAS_URL        = 'https://script.google.com/macros/s/AKfycbxsBHnK0iyNJkBgeDYsDbzemV4uyzDJii5eeMT4O4xnTYTGLU8Y5HZMr7K5bvDDv4r-jA/exec';       // URL del GAS compartido (OCR + Drive)
+var GAS_OCR_KEY    = 'sgd2026';   // pass compartida del GAS
 
 // ══════════════════════════════════════════════════════════════════
 // INIT FIREBASE
@@ -359,6 +516,23 @@ var CAMPOS = [
   {key:'c1tel',    label:'Contacto 1 - Tel',    tipo:'tel',  editable:true},
   {key:'c2nombre', label:'Contacto 2 - Nombre', tipo:'text', editable:true},
   {key:'c2tel',    label:'Contacto 2 - Tel',    tipo:'tel',  editable:true}
+];
+
+var CATEGORIAS = [];  // cargadas desde config_categorias
+
+// Campos médicos (opcionales). Se guardan como objeto `medico` en Firestore.
+var MEDICO_CAMPOS = [
+  {key:'grupoSangre',  label:'Grupo sanguíneo', tipo:'select',
+    opciones:['','No sabe','A+','A-','B+','B-','AB+','AB-','0+','0-']},
+  {key:'obraSocial',   label:'Obra social',     tipo:'text'},
+  {key:'nroAfiliado',  label:'N° afiliado',     tipo:'text'},
+  {key:'alergias',     label:'Alergias (medicamentos, alimentos, otros)', tipo:'textarea'},
+  {key:'medicacion',   label:'Medicación habitual',                        tipo:'textarea'},
+  {key:'cronicas',     label:'Enfermedades crónicas (asma, diabetes, etc.)', tipo:'textarea'},
+  {key:'cirugias',     label:'Cirugías previas (con año aprox.)',          tipo:'textarea'},
+  {key:'lesiones',     label:'Lesiones deportivas previas',                tipo:'textarea'},
+  {key:'antecedentes', label:'Antecedentes familiares (muerte súbita, cardiopatías)', tipo:'textarea'},
+  {key:'obsMedicas',   label:'Observaciones médicas',                      tipo:'textarea'}
 ];
 
 // ══════════════════════════════════════════════════════════════════
@@ -426,6 +600,39 @@ function cargarInstitucion() {
     .catch(function(e) { console.warn('Sin config institución:', e); });
 }
 
+function cargarCategorias() {
+  return db.collection('config_categorias').get()
+    .then(function(snap) {
+      CATEGORIAS = [];
+      snap.forEach(function(d) {
+        var f = d.data() || {};
+        CATEGORIAS.push({
+          id:     d.id,
+          nombre: f.nombre || '',
+          genero: f.genero || 'Mixto',
+          desde:  parseInt(f.edadDesde, 10) || 0,
+          hasta:  parseInt(f.edadHasta, 10) || 0
+        });
+      });
+    })
+    .catch(function(e) { console.warn('Sin categorias:', e); });
+}
+
+// Sugiere categoría en base al año de nacimiento y sexo del OCR.
+// edadDesde/edadHasta en config_categorias son AÑOS de nacimiento.
+function sugerirCategoriaPorEdad(fechaNac, sexo) {
+  if (!fechaNac || !CATEGORIAS.length) return '';
+  var anio = parseInt((fechaNac || '').substring(0, 4), 10);
+  if (!anio) return '';
+  var sexoNorm = normalizarSexo(sexo);
+  var match = CATEGORIAS.find(function(c) {
+    if (anio < c.desde || anio > c.hasta) return false;
+    if (c.genero === 'Mixto') return true;
+    return c.genero === sexoNorm;
+  });
+  return match ? match.nombre : '';
+}
+
 // ══════════════════════════════════════════════════════════════════
 // FIRESTORE — buscar socio por DNI
 // ══════════════════════════════════════════════════════════════════
@@ -452,7 +659,7 @@ function guardarSocioFirestore(dni, campos, esNuevo) {
       nombre:      (campos.nombre   || '').toUpperCase(),
       email:       campos.email     || '',
       celular:     campos.celular   || '',
-      activo:      true,
+      activo:      false, // auto-registros pendientes de activaci\u00f3n por el admin
       tipoDoc:     'DNI',
       dni:         dniNorm,
       fechaNac:    campos.fechaNac  || '',
@@ -463,15 +670,18 @@ function guardarSocioFirestore(dni, campos, esNuevo) {
       vencimiento: '',
       fechaIngreso:hoy,
       creador:     'App',
-      categoriaApp:'',
+      categoriaApp:campos.categoriaApp || '',
       plan:        '',
       foto:        campos.fotoUrl     || '',
       dniFoto:     campos.dniFotoUrl  || '',
+      dniDorso:    campos.dniDorsoUrl || '',
       apto:        campos.aptoUrl     || '',
       actividades: '',
       catSecundaria:'',
       contacto1:   campos.contacto1  || '',
-      contacto2:   campos.contacto2  || ''
+      contacto2:   campos.contacto2  || '',
+      medico:      campos.medico     || {},
+      ddjjSalud:   campos.ddjjSalud  || null
     };
     return ref.set(doc).then(function(){ return {ok: true}; });
   } else {
@@ -486,6 +696,9 @@ function guardarSocioFirestore(dni, campos, esNuevo) {
     if (campos.aptoUrl)    upd.apto      = campos.aptoUrl;
     if (campos.contacto1)  upd.contacto1 = campos.contacto1;
     if (campos.contacto2)  upd.contacto2 = campos.contacto2;
+    if (campos.categoriaApp) upd.categoriaApp = campos.categoriaApp;
+    if (campos.medico)     upd.medico    = campos.medico;
+    if (campos.ddjjSalud)  upd.ddjjSalud = campos.ddjjSalud;
     return ref.update(upd).then(function(){ return {ok: true}; });
   }
 }
@@ -493,7 +706,8 @@ function guardarSocioFirestore(dni, campos, esNuevo) {
 // ══════════════════════════════════════════════════════════════════
 // GAS — OCR (único endpoint que queda en GAS)
 // ══════════════════════════════════════════════════════════════════
-function callOCR(imgFront, imgBack, cb, cbErr) {
+function callOCR(imgFront, imgBack, cb, cbErr, intento) {
+  intento = intento || 1;
   var body = {
     action:   'ocrDocumento',
     token:    GAS_OCR_KEY,
@@ -501,6 +715,7 @@ function callOCR(imgFront, imgBack, cb, cbErr) {
     imgBack:  imgBack  || null,
     tipoDoc:  'DNI argentino'
   };
+  if (intento > 1) mostrarLoader('Reintentando... (' + intento + '/3)');
   fetch(GAS_URL, {
     method:  'POST',
     headers: {'Content-Type': 'text/plain'},
@@ -512,7 +727,14 @@ function callOCR(imgFront, imgBack, cb, cbErr) {
     if(d && d.error){ if(cbErr) cbErr(d.error); else toast(d.error,'err'); }
     else { if(cb) cb(d); }
   })
-  .catch(function(){ if(cbErr) cbErr('Sin conexión con el servidor OCR'); });
+  .catch(function(){
+    // Red movil puede cortar en OCR largo (cold start Gemini) — reintento hasta 3
+    if (intento < 3) {
+      setTimeout(function() { callOCR(imgFront, imgBack, cb, cbErr, intento + 1); }, 1500);
+    } else {
+      if (cbErr) cbErr('Sin conexión con el servidor OCR');
+    }
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -520,6 +742,7 @@ function callOCR(imgFront, imgBack, cb, cbErr) {
 // ══════════════════════════════════════════════════════════════════
 function callUploadDrive(dniNorm, cb, cbErr) {
   if (!S.imgFront && !S.foto && !S.apto) { cb({}); return; }
+  if (!INST.driveFolder) { if (cbErr) cbErr('Drive no configurado &mdash; ped&iacute;le al admin que reinstale la app'); return; }
   mostrarLoader('Subiendo imágenes...');
   var body = {
     action:    'saveFotosDrive',
@@ -572,7 +795,7 @@ function irPaso(n) {
   document.getElementById('step' + n).classList.add('activo');
   window.scrollTo(0, 0);
   if (n === 4) inicializarPaso4();
-  if (n === 5) renderResumen();
+  if (n === 5) { renderResumen(); inicializarDdjj(); }
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -604,12 +827,24 @@ function detenerCam(n) {
 function capturar(n) {
   var video = document.getElementById('cam'+n+'-video');
   var vw = video.videoWidth || 640, vh = video.videoHeight || 480;
-  var cropW = Math.round(vw * 0.85), cropH = Math.round(vh * 0.65);
-  var cropX = Math.round((vw-cropW)/2), cropY = Math.round((vh-cropH)/2);
+  // DNI aspect ratio ~1.585:1 — extraer el rect\u00e1ngulo m\u00e1s grande posible
+  // con esa proporci\u00f3n centrado en el frame del video.
+  var targetRatio = 1.585;
+  var vRatio = vw / vh;
+  var cropW, cropH;
+  if (vRatio >= targetRatio) {
+    cropH = Math.round(vh * 0.90);
+    cropW = Math.round(cropH * targetRatio);
+  } else {
+    cropW = Math.round(vw * 0.94);
+    cropH = Math.round(cropW / targetRatio);
+  }
+  var cropX = Math.round((vw - cropW) / 2);
+  var cropY = Math.round((vh - cropH) / 2);
   var canvas = document.createElement('canvas');
   canvas.width = cropW; canvas.height = cropH;
   canvas.getContext('2d').drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-  setImagen(n, canvas.toDataURL('image/jpeg', 0.90));
+  setImagen(n, canvas.toDataURL('image/jpeg', 0.92));
   detenerCam(n);
 }
 
@@ -633,7 +868,7 @@ function comprimirImagen(dataUrl, maxW, maxH, calidad, cb) {
 }
 
 function setImagen(n, data) {
-  comprimirImagen(data, 1200, 1200, 0.75, function(compressed) {
+  comprimirImagen(data, 900, 900, 0.6, function(compressed) {
     if (n === 1) S.imgFront = compressed;
     else         S.imgBack  = compressed;
 
@@ -745,6 +980,7 @@ function inicializarPaso4() {
     + '</div></div>';
 
   // Campos editables
+  var sugerida = S.esNuevo ? sugerirCategoriaPorEdad(ocr.fechaNac, ocr.sexo) : '';
   CAMPOS.forEach(function(c) {
     var val = sis[c.key] || '';
     // Separar contacto1/2 del formato "Nombre|Tel"
@@ -752,10 +988,25 @@ function inicializarPaso4() {
     if (c.key === 'c1tel'    && sis.contacto1) val = sis.contacto1.split('|')[1] || '';
     if (c.key === 'c2nombre' && sis.contacto2) val = sis.contacto2.split('|')[0] || '';
     if (c.key === 'c2tel'    && sis.contacto2) val = sis.contacto2.split('|')[1] || '';
+    // Pre-llenar domicilio con lo leido del DNI si es socio nuevo
+    if (c.key === 'domicilio' && S.esNuevo && !val && ocr.domicilio) val = ocr.domicilio;
 
     html += '<div class="field"><label>' + c.label + '</label>'
       + '<input type="' + c.tipo + '" id="edit-' + c.key + '" value="' + escHtml(val) + '"></div>';
   });
+
+  // Select de categoría (auto-sugerida por edad + sexo del DNI)
+  var catActual = sis.categoriaApp || sugerida || '';
+  var catHtml = '<div class="field"><label>Categoría'
+    + (sugerida && catActual === sugerida ? ' <span style="color:var(--secondary);font-size:11px;font-weight:normal;">&#x2728; Sugerida por edad</span>' : '')
+    + '</label><select id="edit-categoriaApp" style="width:100%;padding:12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:14px;">';
+  catHtml += '<option value="">— Sin categoría —</option>';
+  CATEGORIAS.forEach(function(c) {
+    var sel = (c.nombre === catActual) ? ' selected' : '';
+    catHtml += '<option value="' + escHtml(c.nombre) + '"' + sel + '>' + escHtml(c.nombre) + '</option>';
+  });
+  catHtml += '</select></div>';
+  html += catHtml;
 
   document.getElementById('campos-editables').innerHTML = html;
 
@@ -855,7 +1106,7 @@ function renderResumen() {
   var tSocio = INST.terminologiaSocio || 'Socio';
 
   var html = '<div class="resumen-section"><div class="resumen-title">Datos personales</div>';
-  var labels = {apellido:'Apellido',nombre:'Nombre',dni:'DNI',fechaNac:'Fecha Nac.',sexo:'Sexo',domicilio:'Domicilio',email:'Email',celular:'Celular'};
+  var labels = {apellido:'Apellido',nombre:'Nombre',dni:'DNI',fechaNac:'Fecha Nac.',sexo:'Sexo',domicilio:'Domicilio',email:'Email',celular:'Celular',categoriaApp:'Categoría',contacto1:'Contacto 1',contacto2:'Contacto 2'};
   var todos = Object.assign({}, {apellido:ocr.apellido,nombre:ocr.nombre,dni:ocr.dni,fechaNac:ocr.fechaNac,sexo:ocr.sexo}, campos);
   Object.keys(labels).forEach(function(k) {
     if (todos[k]) html += '<div class="resumen-row"><span class="resumen-label">'+labels[k]+'</span><span class="resumen-val">'+escHtml(todos[k])+'</span></div>';
@@ -955,6 +1206,12 @@ function reiniciar() {
   document.getElementById('prev-foto-wrap').style.display='none';
   var zonaLabel = document.querySelector('.upload-zone-label-apto');
   if (zonaLabel) zonaLabel.innerText='Subir imagen o PDF del certificado';
+  var ddjjChk = document.getElementById('ddjj-check');
+  if (ddjjChk) ddjjChk.checked = false;
+  var ddjjBox = document.getElementById('ddjj-box');
+  if (ddjjBox) ddjjBox.classList.remove('firmada');
+  var btnConf = document.getElementById('btn-confirmar');
+  if (btnConf) btnConf.disabled = true;
 
   // Ir al paso 1 sin animar progress (reset total)
   for (var i=1; i<=5; i++){
@@ -994,6 +1251,8 @@ function getCamposEditados() {
   });
   out.contacto1 = [out.c1nombre||'', out.c1tel||''].filter(Boolean).join('|');
   out.contacto2 = [out.c2nombre||'', out.c2tel||''].filter(Boolean).join('|');
+  var catEl = document.getElementById('edit-categoriaApp');
+  if (catEl) out.categoriaApp = catEl.value;
   out.dni = normalizarDni((S.ocrData && S.ocrData.dni) || '');
   if (S.esNuevo) {
     if (!out.apellido) out.apellido = (S.ocrData && S.ocrData.apellido) || '';
@@ -1002,7 +1261,103 @@ function getCamposEditados() {
     out.sexo     = (S.ocrData && S.ocrData.sexo)     || '';
     out.domicilio= out.domicilio || (S.ocrData && S.ocrData.domicilio) || '';
   }
+  out.medico = getMedico();
+  var _ddjjChk = document.getElementById('ddjj-check');
+  if (_ddjjChk && _ddjjChk.checked) {
+    out.ddjjSalud = {firmado: true, fecha: new Date().toISOString()};
+  }
   return out;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// DATOS MÉDICOS (colapsable, opcional)
+// ══════════════════════════════════════════════════════════════════
+function renderMedico() {
+  var sis = S.sistemaData || {};
+  var med = sis.medico || {};
+  var html = '';
+  MEDICO_CAMPOS.forEach(function(c) {
+    var val = med[c.key] || '';
+    html += '<div class="field"><label>' + c.label + '</label>';
+    if (c.tipo === 'select') {
+      html += '<select id="med-' + c.key + '" style="width:100%;padding:12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:14px;">';
+      c.opciones.forEach(function(o) {
+        var sel = (o === val) ? ' selected' : '';
+        html += '<option value="' + escHtml(o) + '"' + sel + '>' + (o || '— Seleccionar —') + '</option>';
+      });
+      html += '</select>';
+    } else if (c.tipo === 'textarea') {
+      html += '<textarea id="med-' + c.key + '" rows="2" style="width:100%;padding:10px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:14px;resize:vertical;font-family:inherit;">' + escHtml(val) + '</textarea>';
+    } else {
+      html += '<input type="text" id="med-' + c.key + '" value="' + escHtml(val) + '">';
+    }
+    html += '</div>';
+  });
+  document.getElementById('medico-body').innerHTML = html;
+}
+
+function toggleDdjj() {
+  var chk = document.getElementById('ddjj-check');
+  var btn = document.getElementById('btn-confirmar');
+  var box = document.getElementById('ddjj-box');
+  if (btn) btn.disabled = !chk.checked;
+  if (box) box.classList.toggle('firmada', chk.checked);
+}
+
+function inicializarDdjj() {
+  var chk = document.getElementById('ddjj-check');
+  var btn = document.getElementById('btn-confirmar');
+  var box = document.getElementById('ddjj-box');
+  var yaFirmado = S.sistemaData && S.sistemaData.ddjjSalud && S.sistemaData.ddjjSalud.firmado;
+  if (chk) {
+    chk.checked = !!yaFirmado;
+    if (btn) btn.disabled = !chk.checked;
+    if (box) box.classList.toggle('firmada', chk.checked);
+  }
+}
+
+function toggleAyuda() {
+  var ov = document.getElementById('ayuda-overlay');
+  if (ov.classList.contains('open')) {
+    ov.classList.remove('open');
+    document.body.style.overflow = '';
+  } else {
+    ov.classList.add('open');
+    ov.scrollTop = 0;
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function toggleMedico() {
+  var body = document.getElementById('medico-body');
+  var chev = document.getElementById('medico-chev');
+  var abierto = body.style.display !== 'none';
+  if (abierto) {
+    body.style.display = 'none';
+    chev.innerHTML = '&#x25BC;';
+  } else {
+    if (!body.innerHTML) renderMedico();
+    body.style.display = 'block';
+    chev.innerHTML = '&#x25B2;';
+  }
+}
+
+function getMedico() {
+  var med = {};
+  var tocado = false;
+  MEDICO_CAMPOS.forEach(function(c) {
+    var el = document.getElementById('med-' + c.key);
+    if (!el) return;
+    var v = (el.value || '').trim();
+    med[c.key] = v;
+    if (v) tocado = true;
+  });
+  // Si el usuario no abrió la sección, no hay inputs → devolvemos lo que ya había (se conserva)
+  if (!document.getElementById('med-' + MEDICO_CAMPOS[0].key)) {
+    var sis = S.sistemaData || {};
+    return sis.medico || null;
+  }
+  return tocado ? med : null;
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1012,7 +1367,7 @@ window.onload = function() {
   // Auth anónimo — necesario para acceder a Firestore
   auth.signInAnonymously()
     .then(function() {
-      return cargarInstitucion();
+      return Promise.all([cargarInstitucion(), cargarCategorias()]);
     })
     .then(function() {
       ocultarLoader();
