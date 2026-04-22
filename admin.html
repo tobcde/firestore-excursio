@@ -182,6 +182,13 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 .r-card{background:var(--surface);border-radius:10px;padding:14px 16px;text-align:center;border:1px solid var(--border);}
 .r-card-val{font-size:22px;font-weight:800;font-family:'Barlow Condensed',sans-serif;}
 .r-card-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+/* Pills de reportes */
+.r-pill-cat{background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:22px;padding:9px 18px;cursor:pointer;font-size:13px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.05em;font-weight:600;transition:all .15s;}
+.r-pill-cat:hover{border-color:var(--secondary);color:var(--text);}
+.r-pill-cat.active{background:var(--secondary);color:#0a0d0a;border-color:var(--secondary);font-weight:800;box-shadow:0 2px 8px rgba(26,122,60,.35);}
+.r-pill-sub{background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:14px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:'Barlow',sans-serif;transition:all .15s;}
+.r-pill-sub:hover{color:var(--text);border-color:var(--secondary);}
+.r-pill-sub.active{background:rgba(26,122,60,.18);color:var(--secondary);border-color:var(--secondary);font-weight:700;}
 
 /* INSTITUCION */
 .inst-field{margin-bottom:14px;}
@@ -263,6 +270,21 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 .emoji-cat-btn:hover,.emoji-cat-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
 .emoji-opt:hover{background:var(--primary-dark);}
 .emoji-opt.selected{background:var(--primary);box-shadow:0 0 0 2px var(--secondary);}
+
+<style>
+.ayuda-seccion { background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px; }
+.ayuda-titulo { font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:var(--primary);text-transform:uppercase;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:10px; }
+.ayuda-subtitulo { font-weight:700;color:var(--text);font-size:14px;margin:14px 0 6px; }
+.ayuda-p { font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:8px; }
+.ayuda-nota { background:rgba(201,162,39,.1);border-left:3px solid var(--secondary);border-radius:4px;padding:10px 14px;font-size:12px;color:#c9a227;margin:10px 0; }
+.ayuda-tabla { border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:10px 0; }
+.ayuda-fila-h { display:grid;grid-template-columns:1fr 2fr;background:var(--primary);padding:8px 12px;font-size:12px;font-weight:700;color:white; }
+.ayuda-fila { display:grid;grid-template-columns:1fr 2fr;padding:8px 12px;font-size:12px;color:var(--muted);border-top:1px solid var(--border); }
+.ayuda-fila:nth-child(odd) { background:var(--bg); }
+.ayuda-lista { font-size:13px;color:var(--muted);line-height:1.8;padding-left:20px;margin:6px 0; }
+.ayuda-lista li { margin-bottom:2px; }
+.ayuda-lista code { background:var(--surface);padding:1px 6px;border-radius:4px;font-size:11px; }
+</style>
 </style>
 <link rel="manifest" href="manifest_admin.json">
 <meta name="theme-color" id="meta-theme-color" content="#1a7a3c">
@@ -300,10 +322,10 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   </div>
   <div id="carga-progreso" style="display:none;flex:1;align-items:center;gap:8px;margin:0 12px;"></div>
   <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
-    <a id="fs-counter" href="https://console.firebase.google.com/project/excursionistas-futsal/firestore/databases/-default-/usage/last-24h" target="_blank"
-      style="font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;text-decoration:none;cursor:pointer;" title="Ver uso en Firebase Console">
+    <span id="fs-counter"
+      style="font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;" title="Lecturas/escrituras sesión">
       &#x1F4D6; 0 | &#x270F; 0
-    </a>
+    </span>
     <button class="btn btn-secondary" onclick="refrescarDatos()" style="padding:6px 10px;font-size:12px;" title="Refrescar datos">&#x21BB;</button>
     <button class="btn btn-save" id="btn-nuevo-socio" onclick="abrirNuevoSocio()" style="padding:6px 12px;font-size:12px;">&#x2B; <span id="lbl-nuevo-socio">Socio</span></button>
   </div>
@@ -318,6 +340,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   <div class="tab" onclick="cambiarTab(event,'admin')">ADMINISTRACION</div>
   <div class="tab" onclick="cambiarTab(event,'reportes')">REPORTES</div>
   <div class="tab" onclick="cambiarTab(event,'institucion')" style="color:var(--secondary);">&#x2699; INSTITUCION</div>
+  <div class="tab" onclick="cambiarTab(event,'ayuda')" style="color:#6de097;">&#x2753; AYUDA</div>
 </div>
 
 <!-- TAB SOCIOS -->
@@ -330,7 +353,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         <option value="">Todos</option><option value="Activos" selected>Solo Activos</option><option value="Inactivos">Solo Inactivos</option></select></div>
     <div class="filter-group"><label class="filter-label">Genero</label>
       <select id="fGen" class="filter-select" onchange="renderPlayers()">
-        <option value="">Todos</option><option>Masculino</option></select></div>
+        <option value="">Todos</option><option>Masculino</option><option>Femenino</option></select></div>
     <div class="filter-group"><label class="filter-label" id="lbl-filtro-categoria">Categoria</label>
       <select id="fCat" class="filter-select" onchange="renderPlayers()"><option value="">Todas</option></select></div>
     <div class="filter-group"><label class="filter-label">Cuota</label>
@@ -361,6 +384,9 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <div class="filter-group" style="flex:1;min-width:200px;">
         <label class="filter-label">Turno</label>
         <select id="asistTurno" class="filter-select" onchange="onCambioTurnoAsist()"><option value="">-- Seleccionar turno --</option></select>
+        <div id="asist-sin-turnos" style="display:none;background:rgba(201,162,39,.1);border:1px solid var(--secondary);border-radius:8px;padding:10px 14px;font-size:12px;color:#c9a227;margin-top:8px;">
+          &#x26A0; No hay horarios configurados para este día. Creá uno en <strong>ADMINISTRACIÓN → Horarios</strong>.
+        </div>
       </div>
       <button class="btn btn-save" onclick="guardarAsist()">GUARDAR ASISTENCIA</button>
     </div>
@@ -519,8 +545,8 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div><label class="filter-label">Nombre</label><input id="cNom" class="edit-input" style="width:100%;margin-top:4px;"></div>
         <div><label class="filter-label">Color</label><input id="cCol" type="color" class="edit-input" value="#1a7a3c" style="width:100%;margin-top:4px;height:37px;padding:2px;"></div>
-        <div><label class="filter-label">Anio desde</label><input id="cMin" type="number" class="edit-input" style="width:100%;margin-top:4px;" placeholder="ej: 2010"></div>
-        <div><label class="filter-label">Anio hasta</label><input id="cMax" type="number" class="edit-input" style="width:100%;margin-top:4px;" placeholder="ej: 2014"></div>
+        <div><label class="filter-label">A&ntilde;o desde</label><input id="cMin" type="number" class="edit-input" style="width:100%;margin-top:4px;" placeholder="ej: 2010"></div>
+        <div><label class="filter-label">A&ntilde;o hasta</label><input id="cMax" type="number" class="edit-input" style="width:100%;margin-top:4px;" placeholder="ej: 2014"></div>
         <div><label class="filter-label">Genero</label>
           <select id="cGen" class="edit-input" style="width:100%;margin-top:4px;">
             <option>Masculino</option><option>Femenino</option><option>Mixto</option></select></div>
@@ -533,6 +559,20 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       </div>
       <button class="btn btn-save" id="btnCat" onclick="guardarCat()" style="margin-top:10px;">GUARDAR CATEGORIA</button>
       <div class="item-list" id="listCat"></div>
+
+      <!-- Botón recategorizar -->
+      <div style="margin-top:16px;padding:14px;background:rgba(201,162,39,.07);border:1px solid rgba(201,162,39,.3);border-radius:10px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <span style="font-size:20px;">&#x1F501;</span>
+          <div>
+            <div style="font-weight:800;color:var(--secondary);font-size:14px;">Actualización anual de categorías</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">Suma 1 año a los rangos y reasigna todos los alumnos automáticamente</div>
+          </div>
+        </div>
+        <button onclick="previsualizarRecategorizacion()" class="btn" style="background:rgba(201,162,39,.15);color:var(--secondary);border:1px solid rgba(201,162,39,.4);width:100%;padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;">
+          &#x1F50D; PREVISUALIZAR CAMBIO DE AÑO
+        </button>
+      </div>
     </div>
 
     <!-- Precios por Actividad x Categoria -->
@@ -583,7 +623,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       </div>
       <div style="margin-bottom:10px;">
         <label class="filter-label">Observacion (opcional)</label>
-        <input id="masiva-obs" class="edit-input" maxlength="500" style="width:100%;margin-top:4px;" placeholder="ej: Cuota abril 2025">
+        <input id="masiva-obs" class="edit-input" style="width:100%;margin-top:4px;" placeholder="ej: Cuota mayo 2026">
       </div>
       <div id="masiva-preview" style="display:none;background:var(--bg);border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;border:1px solid var(--border);"></div>
       <button class="btn btn-save" onclick="ejecutarMasiva()" id="btn-masiva" style="width:100%;">GENERAR INSCRIPCIONES</button>
@@ -609,12 +649,12 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <div class="admin-title">Periodos de pago</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px;">
         <div><label class="filter-label">Mes (1-12)</label><input id="pMes" type="number" min="1" max="12" class="edit-input" style="width:100%;margin-top:4px;"></div>
-        <div><label class="filter-label">Anio inicio</label><input id="pAnioD" type="number" class="edit-input" style="width:100%;margin-top:4px;" value="2025"></div>
+        <div><label class="filter-label">A&ntilde;o inicio</label><input id="pAnioD" type="number" class="edit-input" style="width:100%;margin-top:4px;" value="2025"></div>
         <div><label class="filter-label">Dia inicio</label><input id="pDiaD" type="number" class="edit-input" style="width:100%;margin-top:4px;" value="1"></div>
-        <div><label class="filter-label">Anio fin</label><input id="pAnioH" type="number" class="edit-input" style="width:100%;margin-top:4px;"></div>
+        <div><label class="filter-label">A&ntilde;o fin</label><input id="pAnioH" type="number" class="edit-input" style="width:100%;margin-top:4px;"></div>
         <div><label class="filter-label">Dia fin (0=ultimo)</label><input id="pDiaH" type="number" class="edit-input" style="width:100%;margin-top:4px;" value="0"></div>
         <div><label class="filter-label">Dias gracia</label><input id="pGracia" type="number" class="edit-input" style="width:100%;margin-top:4px;" value="5"></div>
-        <div style="grid-column:1/-1;"><label class="filter-label">Descripcion</label><input id="pDesc" class="edit-input" style="width:100%;margin-top:4px;" placeholder="ej: Enero 2025"></div>
+        <div style="grid-column:1/-1;"><label class="filter-label">Descripcion</label><input id="pDesc" class="edit-input" style="width:100%;margin-top:4px;" placeholder="ej: Enero 2026"></div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-save" onclick="agregarPeriodo()">AGREGAR PERIODO</button>
@@ -696,7 +736,9 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <input id="inpPDNI" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="DNI">
       <input id="inpPFecha" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="Fecha de nacimiento (ej: 01/05/1990)">
       <input id="inpPEmail" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="Email">
-      <input id="inpPPass" type="password" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="Contrasena (para login)" autocomplete="new-password">
+      <input id="inpPPass" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="Contrasena (para login)">
+      <input id="inpPTgUser" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="Usuario Telegram (sin @) - opcional">
+      <input id="inpPTgChatId" class="edit-input" style="width:100%;margin-bottom:6px;background:var(--bg);color:var(--muted);" placeholder="Telegram Chat ID (se autocompleta)" readonly>
       <div style="display:flex;gap:8px;">
         <button id="btnProfesor" class="btn btn-save" style="flex:1;" onclick="guardarProfesor()">AGREGAR</button>
         <button id="btnCancelProfesor" class="btn" style="display:none;background:var(--muted);color:#fff;" onclick="cancelarEditProfesor()">CANCELAR</button>
@@ -732,22 +774,30 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 <!-- TAB REPORTES -->
 <div id="tab-reportes" class="tab-content" style="display:none;">
   <div style="padding:20px;max-width:1200px;margin:0 auto;">
+    <!-- Pills por categoría -->
+    <div id="r-pills-cat" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+      <button type="button" class="r-pill-cat active" data-cat="pagos" onclick="selectRptCat('pagos')">&#x1F4B0; Pagos &amp; cuotas</button>
+      <button type="button" class="r-pill-cat" data-cat="asist" onclick="selectRptCat('asist')">&#x1F4CB; Asistencias</button>
+      <button type="button" class="r-pill-cat" data-cat="socios" onclick="selectRptCat('socios')">&#x1F465; Socios</button>
+    </div>
+    <!-- Pills de sub-reportes -->
+    <div id="r-pills-sub" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;"></div>
+
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;align-items:flex-end;">
-      <div class="filter-group">
-        <label class="filter-label">Reporte</label>
-        <select id="rTipo" class="filter-select" onchange="renderReporte()">
-          <option value="pagos_mes">Pagos del periodo</option>
-          <option value="deudores">Deben cuota</option>
-          <option value="al_dia">Al dia</option>
-          <option value="tipo_pago">Por tipo de pago</option>
-          <option value="asistencia">Asistencia</option>
-            <option value="asist_matriz">Matriz de asistencia</option>
-            <option value="asist_por_dia">Asistencia por d&iacute;a</option>
-          <option value="ranking_asist">Ranking asistencia</option>
-          <option value="jugadores">Listado completo</option>
-          <option value="caja_dia">Caja del dia</option>
-        <option value="auditoria">Auditoría de pagos</option>
-</select></div>
+      <!-- Select oculto: mantiene compat con renderReporte() -->
+      <select id="rTipo" style="display:none;" onchange="renderReporte()">
+        <option value="pagos_mes">Pagos del periodo</option>
+        <option value="deudores">Deben cuota</option>
+        <option value="al_dia">Al dia</option>
+        <option value="tipo_pago">Por tipo de pago</option>
+        <option value="caja_dia">Caja del dia</option>
+        <option value="auditoria">Auditoria de pagos</option>
+        <option value="asistencia">Asistencia</option>
+        <option value="asist_matriz">Matriz de asistencia</option>
+        <option value="asist_por_dia">Asistencia por dia</option>
+        <option value="ranking_asist">Ranking asistencia</option>
+        <option value="jugadores">Listado completo</option>
+      </select>
       <div class="filter-group" id="r-filter-mes">
         <label class="filter-label">Mes</label><select id="rMes" class="filter-select" onchange="renderReporte()"></select></div>
       <div class="filter-group" id="r-filter-desde" style="display:none;">
@@ -759,6 +809,9 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <div class="filter-group" id="r-filter-cat">
         <label class="filter-label" id="lbl-r-categoria">Categoria</label>
         <select id="rCat" class="filter-select" onchange="renderReporte()"><option value="">Todas</option></select></div>
+      <div class="filter-group" id="r-filter-plan">
+        <label class="filter-label">Plan / Inscripci&oacute;n</label>
+        <select id="rPlan" class="filter-select" onchange="renderReporte()"><option value="">Todos</option></select></div>
       <button class="btn btn-secondary" onclick="exportarReporteCSV()" style="height:36px;">&#x2193; CSV</button>
     </div>
     <div id="r-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;"></div>
@@ -798,6 +851,11 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
           <div class="inst-label">URL del logo (Google Drive)</div>
           <input id="inst-logoUrl" class="inst-input" placeholder="https://drive.google.com/...">
           <p style="font-size:10px;color:var(--muted);margin-top:4px;">Compartir imagen como "cualquiera con el link puede ver"</p>
+        </div>
+        <div class="inst-field" style="grid-column:1/-1;">
+          <div class="inst-label">Carpeta de Drive para documentos (DNI, fotos, aptos)</div>
+          <input id="inst-driveFolder" class="inst-input" placeholder="ID de la carpeta de Drive">
+          <p style="font-size:10px;color:var(--muted);margin-top:4px;">En la URL <code>drive.google.com/drive/folders/<b>ID</b></code>, copi&aacute; solo el ID. La carpeta debe tener permisos para la cuenta de servicio del GAS.</p>
         </div>
         <div class="inst-field">
           <div class="inst-label">Color primario <span id="inst-color1-preview" class="color-preview" style="background:#1a7a3c;"></span></div>
@@ -866,6 +924,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         <div class="modal-subtitle" id="m-dni-sub"></div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn-editar" id="btn-convertir-profe" onclick="convertirSocioAProfe()" title="Crear profesor con el mismo DNI">&#x1F464; A Profesor</button>
         <button class="btn-editar" id="btn-editar-ficha" onclick="toggleEditarFicha()">&#x270F; Editar</button>
         <button class="modal-close" onclick="cerrarModal()">&#x2715;</button>
       </div>
@@ -874,7 +933,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <div class="modal-section">
         <div class="modal-section-title">Datos personales</div>
         <div class="modal-grid">
-          <div class="modal-field"><span class="modal-field-label">Edad / Anio nac.</span><div class="modal-field-value" id="m-edad"></div></div>
+          <div class="modal-field"><span class="modal-field-label">Edad / A&ntilde;o nac.</span><div class="modal-field-value" id="m-edad"></div></div>
           <div class="modal-field"><span class="modal-field-label">Email</span><div class="modal-field-value" id="m-email"></div><input class="modal-field-input" id="mi-email" type="email" placeholder="Email"></div>
           <div class="modal-field"><span class="modal-field-label">Telefono</span><div class="modal-field-value" id="m-celular"></div><input class="modal-field-input" id="mi-celular" type="tel" placeholder="Tel&eacute;fono"></div>
           <div class="modal-field"><span class="modal-field-label">Domicilio</span><div class="modal-field-value" id="m-domicilio"></div><input class="modal-field-input" id="mi-domicilio" type="text" placeholder="Domicilio"></div>
@@ -884,10 +943,18 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <div class="modal-section">
         <div class="modal-section-title">Contactos de emergencia</div>
         <div class="modal-grid">
-          <div class="modal-field"><span class="modal-field-label">Contacto 1</span><div class="modal-field-value" id="m-contacto1"></div><input class="modal-field-input" id="mi-c1nombre" type="text" placeholder="Nombre contacto 1"></div>
-          <div class="modal-field"><span class="modal-field-label">Tel&eacute;fono C1</span><div class="modal-field-value" id="m-contacto1-tel"></div><input class="modal-field-input" id="mi-c1tel" type="tel" placeholder="Tel&eacute;fono contacto 1"></div>
-          <div class="modal-field"><span class="modal-field-label">Contacto 2</span><div class="modal-field-value" id="m-contacto2"></div><input class="modal-field-input" id="mi-c2nombre" type="text" placeholder="Nombre contacto 2"></div>
-          <div class="modal-field"><span class="modal-field-label">Tel&eacute;fono C2</span><div class="modal-field-value" id="m-contacto2-tel"></div><input class="modal-field-input" id="mi-c2tel" type="tel" placeholder="Tel&eacute;fono contacto 2"></div>
+          <div class="modal-field"><span class="modal-field-label">Contacto 1</span>
+            <div class="modal-field-value" id="m-contacto1"></div>
+            <input class="modal-field-input" id="mi-c1nombre" type="text" placeholder="Nombre">
+            <input class="modal-field-input" id="mi-c1tel" type="tel" placeholder="Teléfono" style="margin-top:4px;">
+          </div>
+
+          <div class="modal-field"><span class="modal-field-label">Contacto 2</span>
+            <div class="modal-field-value" id="m-contacto2"></div>
+            <input class="modal-field-input" id="mi-c2nombre" type="text" placeholder="Nombre">
+            <input class="modal-field-input" id="mi-c2tel" type="tel" placeholder="Teléfono" style="margin-top:4px;">
+          </div>
+
         </div>
       </div>
       <div class="modal-section">
@@ -905,8 +972,8 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
           <div class="modal-field"><span class="modal-field-label">Categoria secundaria</span>
             <select id="m-cat-sec" class="edit-input" style="width:100%;"><option value="">Ninguna</option></select>
           </div>
-          <div class="modal-field"><span class="modal-field-label">Membresia</span><div class="modal-field-value" id="m-membresia"></div></div>
-          <div class="modal-field"><span class="modal-field-label">Vencimiento (planilla)</span><div class="modal-field-value" id="m-venc-planilla"></div></div>
+
+
         </div>
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-save" id="btn-guardar-ficha" onclick="guardarJ()" style="display:none;">&#x1F4BE; GUARDAR FICHA</button>
@@ -969,6 +1036,13 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         </div>
         <input type="file" id="fileInput" accept="image/*,.pdf" style="display:none;" onchange="procesarArchivo(event)">
       </div>
+      <div class="modal-section">
+        <div class="modal-section-title" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;" onclick="toggleMedicoAdmin()">
+          <span>&#x1FA7A; Datos médicos</span>
+          <span id="med-chev-adm" style="font-size:12px;color:var(--muted);">&#x25BC;</span>
+        </div>
+        <div id="med-body-adm" style="display:none;margin-top:12px;"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1000,7 +1074,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         </div>
         <div class="filter-group full" style="grid-column:1/-1;">
           <label class="filter-label">Observaciones</label>
-          <input id="mi-obs" class="edit-input" maxlength="500" style="width:100%;" placeholder="ej: baja programada junio">
+          <input id="mi-obs" class="edit-input" style="width:100%;" placeholder="ej: baja programada junio">
         </div>
         <div class="filter-group full" style="grid-column:1/-1;">
           <label class="filter-label" style="color:var(--secondary);">&#x1F46A; Hermano de (DNI)</label>
@@ -1046,12 +1120,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-        <div class="filter-group full" style="grid-column:1/-1;">
-          <label class="filter-label">Monto total a cobrar</label>
-          <div id="mp-monto-display" style="font-size:20px;font-weight:800;color:#6de097;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-align:center;">$0</div>
-          <input id="mp-monto" type="number" style="display:none;">
-          <div style="font-size:11px;color:var(--muted);margin-top:4px;text-align:center;">Se cobra la suma de los planes marcados arriba</div>
-        </div>
+        <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Monto total ($)</label><input id="mp-monto" type="number" class="edit-input" style="width:100%;font-size:16px;padding:12px;" oninput="sincronizarMontoManual()"></div>
         <div class="filter-group"><label class="filter-label">Desde</label><input id="mp-desde" type="date" class="edit-input" style="width:100%;"></div>
         <div class="filter-group"><label class="filter-label">Hasta</label><input id="mp-hasta" type="date" class="edit-input" style="width:100%;"></div>
         <div class="filter-group"><label class="filter-label">Metodo de pago</label>
@@ -1060,7 +1129,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         <div class="filter-group"><label class="filter-label">Fecha de pago</label><input id="mp-fecha" type="date" class="edit-input" style="width:100%;"></div>
         <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Cobrador</label>
           <select id="mp-cobrador" class="edit-input" style="width:100%;"></select></div>
-        <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Observaciones</label><input id="mp-obs" class="edit-input" style="width:100%;" maxlength="500" placeholder="Opcional"></div>
+        <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Observaciones</label><input id="mp-obs" class="edit-input" style="width:100%;"></div>
       </div>
       <button class="btn btn-save" onclick="confirmarPago()" style="width:100%;padding:14px;font-size:14px;">CONFIRMAR PAGO</button>
     </div>
@@ -1088,7 +1157,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Domicilio</label><input id="ns-domicilio" class="edit-input" style="width:100%;"></div>
         <div class="filter-group"><label class="filter-label" id="lbl-ns-categoria">Categoria</label>
           <select id="ns-categoria" class="edit-input" style="width:100%;"></select></div>
-        <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Observaciones</label><input id="ns-obs" class="edit-input" maxlength="500" style="width:100%;"></div>
+        <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Observaciones</label><input id="ns-obs" class="edit-input" style="width:100%;"></div>
         <div style="grid-column:1/-1;border-top:1px solid var(--border);margin-top:6px;padding-top:12px;">
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Contactos de emergencia</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -1131,8 +1200,282 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   </div>
 </div>
 
+<!-- TAB AYUDA -->
+<div id="tab-ayuda" class="tab-content" style="display:none;">
+<div style="padding:20px;max-width:960px;margin:0 auto;">
+
+<!-- Header -->
+<div style="background:linear-gradient(135deg,var(--primary-dark),#0a1a0a);border:1px solid var(--primary);border-radius:12px;padding:24px;margin-bottom:20px;text-align:center;">
+  <div style="font-size:32px;margin-bottom:8px;">&#x1F4D6;</div>
+  <div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:2px;" id="ayuda-titulo-main">Manual de Usuario</div>
+  <div style="font-size:13px;color:var(--muted);margin-top:6px;">SGD — Sistema de Gestión Digital</div>
+</div>
+
+<!-- Índice -->
+<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;">
+  <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--text);text-transform:uppercase;margin-bottom:12px;">Contenido</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px;">
+    <a href="#ayuda-socios" onclick="event.preventDefault();document.getElementById('ayuda-socios').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;" id="ayuda-idx-socios">1. Miembros</a>
+    <a href="#ayuda-inscripciones" onclick="event.preventDefault();document.getElementById('ayuda-inscripciones').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;">2. Inscripciones</a>
+    <a href="#ayuda-cobros" onclick="event.preventDefault();document.getElementById('ayuda-cobros').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;">3. Cobros y pagos</a>
+    <a href="#ayuda-cuotas" onclick="event.preventDefault();document.getElementById('ayuda-cuotas').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;">4. Cuotas</a>
+    <a href="#ayuda-asistencias" onclick="event.preventDefault();document.getElementById('ayuda-asistencias').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;">5. Asistencias</a>
+    <a href="#ayuda-admin" onclick="event.preventDefault();document.getElementById('ayuda-admin').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;">6. Administración</a>
+    <a href="#ayuda-reportes" onclick="event.preventDefault();document.getElementById('ayuda-reportes').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;">7. Reportes</a>
+    <a href="#ayuda-inst" onclick="event.preventDefault();document.getElementById('ayuda-inst').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;">8. Institución</a>
+  </div>
+</div>
+
+<!-- 1. SOCIOS -->
+<div id="ayuda-socios" class="ayuda-seccion">
+  <div class="ayuda-titulo">&#x1F465; 1. Socios</div>
+  <p class="ayuda-p">El tab <strong>SOCIOS</strong> es la pantalla principal. Muestra todos los socios activos con su estado de cuota en tiempo real.</p>
+
+  <div class="ayuda-subtitulo">Filtros disponibles</div>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Filtro</div><div>Descripción</div></div>
+    <div class="ayuda-fila"><div>Nombre o documento</div><div>Busca por apellido, nombre o DNI</div></div>
+    <div class="ayuda-fila"><div>Categoría</div><div>Filtra por categoría asignada</div></div>
+    <div class="ayuda-fila"><div>Género</div><div>Masculino / Femenino / Todos</div></div>
+    <div class="ayuda-fila"><div>Estado</div><div>Activos / Inactivos / Todos</div></div>
+    <div class="ayuda-fila"><div>Cuota</div><div>Al día / Debe / Parcial / Sin plan</div></div>
+  </div>
+
+  <div class="ayuda-subtitulo">Estados de cuota</div>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;gap:10px;"><span style="background:rgba(26,122,60,.2);color:#6de097;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:700;min-width:80px;text-align:center;">AL DÍA</span><span class="ayuda-p" style="margin:0;">Tiene todos los pagos del período cubiertos.</span></div>
+    <div style="display:flex;align-items:center;gap:10px;"><span style="background:rgba(255,193,7,.15);color:#ffc107;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:700;min-width:80px;text-align:center;">PARCIAL</span><span class="ayuda-p" style="margin:0;">Pagó una parte del período — debe la diferencia.</span></div>
+    <div style="display:flex;align-items:center;gap:10px;"><span style="background:rgba(220,53,69,.15);color:#dc3545;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:700;min-width:80px;text-align:center;">DEBE</span><span class="ayuda-p" style="margin:0;">Sin pagos registrados para el período actual.</span></div>
+    <div style="display:flex;align-items:center;gap:10px;"><span style="background:var(--surface);color:var(--muted);border-radius:6px;padding:3px 10px;font-size:12px;font-weight:700;min-width:80px;text-align:center;">SIN PLAN</span><span class="ayuda-p" style="margin:0;">No tiene inscripción activa en ningún plan.</span></div>
+  </div>
+
+  <div class="ayuda-subtitulo">Alta de nuevo socio</div>
+  <p class="ayuda-p">Usar el botón <strong>+ NUEVO</strong> en el tab SOCIOS. Campos obligatorios: apellido, nombre y DNI. Los demás son opcionales pero recomendados para comunicación.</p>
+
+  <div class="ayuda-subtitulo">Ficha del socio</div>
+  <p class="ayuda-p">Al hacer click en una card se abre la ficha completa con: datos personales, estado de cuota detallado, inscripciones activas, historial de pagos, asistencias y archivos (foto, DNI, apto médico).</p>
+</div>
+
+<!-- 2. INSCRIPCIONES -->
+<div id="ayuda-inscripciones" class="ayuda-seccion">
+  <div class="ayuda-titulo">&#x1F4CB; 2. Inscripciones</div>
+  <p class="ayuda-p">Las inscripciones vinculan a un socio con un plan de cobro. <strong>Sin inscripción activa no se generan cuotas.</strong></p>
+
+  <div class="ayuda-subtitulo">¿Qué es una inscripción?</div>
+  <p class="ayuda-p">Es el registro que dice: <em>"Este socio paga $X por mes desde [fecha] hasta [fecha o indefinido]"</em>. Cada inscripción tiene un plan (el nombre del cobro), un monto y un período de vigencia.</p>
+
+  <div class="ayuda-subtitulo">Agregar inscripción</div>
+  <p class="ayuda-p">Desde la ficha del socio → sección <strong>INSCRIPCIONES ACTIVAS</strong> → botón <strong>+ AGREGAR INSCRIPCIÓN</strong>. Completar:</p>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Campo</div><div>Descripción</div></div>
+    <div class="ayuda-fila"><div>Plan</div><div>Nombre del cobro (ej: Cuota Social, Fútbol, Natación)</div></div>
+    <div class="ayuda-fila"><div>Monto</div><div>Importe mensual en pesos</div></div>
+    <div class="ayuda-fila"><div>Desde</div><div>Fecha de inicio de la inscripción</div></div>
+    <div class="ayuda-fila"><div>Hasta</div><div>Fecha de fin (dejar vacío si es indefinida)</div></div>
+    <div class="ayuda-fila"><div>Descuento hermano</div><div>Monto a descontar si corresponde</div></div>
+  </div>
+
+  <div class="ayuda-subtitulo">Dar de baja una inscripción</div>
+  <p class="ayuda-p">Desde la ficha del socio → INSCRIPCIONES ACTIVAS → botón <strong>BAJA</strong>. Registra la fecha de hoy como fecha de fin. El estado de cuota se recalcula automáticamente.</p>
+
+  <div class="ayuda-nota">Un socio puede tener múltiples inscripciones activas simultáneas (ej: Cuota Social + Fútbol). El estado muestra la suma de todas.</div>
+</div>
+
+<!-- 3. COBROS -->
+<div id="ayuda-cobros" class="ayuda-seccion">
+  <div class="ayuda-titulo">&#x1F4B0; 3. Cobros y pagos</div>
+  <p class="ayuda-p">Para registrar un pago: abrir la ficha del socio → botón <strong>COBRAR</strong>.</p>
+
+  <div class="ayuda-subtitulo">Modal de pago</div>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Campo</div><div>Descripción</div></div>
+    <div class="ayuda-fila"><div>Planes a cobrar</div><div>Checkboxes con las inscripciones activas del socio. Cada plan genera un registro separado.</div></div>
+    <div class="ayuda-fila"><div>Cobro extraordinario</div><div>Para cobros que no son cuota mensual (matrícula, torneo, uniforme, etc.)</div></div>
+    <div class="ayuda-fila"><div>Período desde/hasta</div><div>Mes que se está pagando</div></div>
+    <div class="ayuda-fila"><div>Fecha de pago</div><div>Fecha real del cobro (no puede ser más de 7 días en el futuro)</div></div>
+    <div class="ayuda-fila"><div>Método</div><div>Efectivo, transferencia, débito, etc.</div></div>
+    <div class="ayuda-fila"><div>Cobrador</div><div>Instructor que recibió el pago</div></div>
+  </div>
+
+  <div class="ayuda-subtitulo">Comprobante por email</div>
+  <p class="ayuda-p">Después de confirmar el pago, el sistema ofrece enviar un comprobante al email del socio. Requiere que el campo "Email para envío de comprobantes" esté configurado en INSTITUCIÓN.</p>
+
+  <div class="ayuda-subtitulo">Editar o eliminar un pago</div>
+  <p class="ayuda-p">Desde la ficha del socio → HISTORIAL DE PAGOS → íconos ✏ (editar) o ✕ (eliminar). <strong>Siempre requiere un motivo obligatorio</strong> que queda registrado en auditoría.</p>
+
+  <div class="ayuda-nota">Los pagos históricos migrados aparecen con el prefijo "Histórico" y se aplican como crédito del mes de su fecha de pago.</div>
+</div>
+
+<!-- 4. CUOTAS -->
+<div id="ayuda-cuotas" class="ayuda-seccion">
+  <div class="ayuda-titulo">&#x1F4C5; 4. Tab Cuotas</div>
+  <p class="ayuda-p">Vista del historial de pagos del período seleccionado. Permite buscar, filtrar y exportar.</p>
+
+  <div class="ayuda-subtitulo">Funciones</div>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Función</div><div>Descripción</div></div>
+    <div class="ayuda-fila"><div>Filtro por período</div><div>Muestra los pagos del mes/año seleccionado</div></div>
+    <div class="ayuda-fila"><div>Buscar</div><div>Filtra por nombre o DNI del socio</div></div>
+    <div class="ayuda-fila"><div>Exportar CSV</div><div>Descarga el historial de pagos en formato planilla</div></div>
+    <div class="ayuda-fila"><div>Auditoría de pagos</div><div>Reporte de todas las ediciones y eliminaciones realizadas</div></div>
+  </div>
+</div>
+
+<!-- 5. ASISTENCIAS -->
+<div id="ayuda-asistencias" class="ayuda-seccion">
+  <div class="ayuda-titulo">&#x1F4CB; 5. Asistencias</div>
+  <p class="ayuda-p">Registro de presencias por turno. Se accede desde el tab <strong>ASISTENCIAS</strong>.</p>
+
+  <div class="ayuda-subtitulo">Tomar asistencia</div>
+  <ol class="ayuda-lista">
+    <li>Seleccionar la <strong>fecha</strong></li>
+    <li>Seleccionar el <strong>turno/horario</strong></li>
+    <li>Marcar los socios <strong>presentes</strong></li>
+    <li>Click en <strong>GUARDAR ASISTENCIA</strong></li>
+  </ol>
+  <div class="ayuda-nota">El sistema muestra solo los socios de la categoría correspondiente al turno seleccionado.</div>
+
+  <div class="ayuda-subtitulo">Porcentaje de asistencia</div>
+  <p class="ayuda-p">En la ficha de cada socio se muestra el porcentaje de asistencia del mes actual. También disponible en el reporte de Asistencias del tab REPORTES.</p>
+</div>
+
+<!-- 6. ADMINISTRACIÓN -->
+<div id="ayuda-admin" class="ayuda-seccion">
+  <div class="ayuda-titulo">&#x2699; 6. Administración</div>
+  <p class="ayuda-p">Configuración del funcionamiento del sistema. Todos los cambios se aplican inmediatamente sin necesidad de recargar.</p>
+
+  <div class="ayuda-subtitulo">Categorías</div>
+  <p class="ayuda-p">Agrupan a los socios por rango de años de nacimiento. El sistema asigna automáticamente la categoría según la fecha de nacimiento del socio.</p>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Campo</div><div>Descripción</div></div>
+    <div class="ayuda-fila"><div>Nombre</div><div>Ej: Sub-7, Infantil, Juvenil, Adultos</div></div>
+    <div class="ayuda-fila"><div>Color</div><div>Color de identificación visual en la grilla de socios</div></div>
+    <div class="ayuda-fila"><div>Año desde / Año hasta</div><div>Rango de años de nacimiento incluidos. Ej: 2018-2020</div></div>
+    <div class="ayuda-fila"><div>Género</div><div>Masculino, Femenino o Mixto</div></div>
+    <div class="ayuda-fila"><div>Actividades ligadas</div><div>Actividades disponibles para esta categoría</div></div>
+  </div>
+
+  <div class="ayuda-subtitulo">Actividades</div>
+  <p class="ayuda-p">Son los planes de cobro disponibles (ej: Cuota Social, Fútbol, Natación, Comedia Musical). Cada actividad tiene un nombre, ícono (emoji) y color de identificación.</p>
+  <div class="ayuda-nota">Las actividades se usan como nombres de plan en las inscripciones. El nombre debe coincidir exactamente con el que se usa al cobrar.</div>
+
+  <div class="ayuda-subtitulo">Precios</div>
+  <p class="ayuda-p">Define el monto sugerido para cada combinación de <strong>Actividad × Categoría</strong>. Al inscribir un socio o hacer cobro masivo, el sistema usa este precio como valor por defecto.</p>
+
+  <div class="ayuda-subtitulo">Sedes</div>
+  <p class="ayuda-p">Lugares donde se desarrollan las actividades. Se usan al crear horarios.</p>
+
+  <div class="ayuda-subtitulo">Horarios</div>
+  <p class="ayuda-p">Define los turnos de actividad. Cada horario tiene: día, hora, sede, instructores, categoría, actividad y modalidad (Mixto/Masculino/Femenino).</p>
+  <div class="ayuda-nota">Los horarios definen qué socios aparecen al tomar asistencia — el filtro usa la categoría del turno.</div>
+
+  <div class="ayuda-subtitulo">Instructores</div>
+  <p class="ayuda-p">Personal que dicta clases. Aparecen como opciones de "Cobrador" al registrar pagos y como instructores al crear horarios. Cada instructor tiene usuario y contraseña para acceder a la app de profes.</p>
+</div>
+
+<!-- 7. REPORTES -->
+<div id="ayuda-reportes" class="ayuda-seccion">
+  <div class="ayuda-titulo">&#x1F4CA; 7. Reportes</div>
+  <p class="ayuda-p">Todos los reportes se generan desde datos en memoria — sin costo adicional de lecturas a la base de datos. Todos son exportables a CSV.</p>
+
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Reporte</div><div>¿Qué muestra?</div></div>
+    <div class="ayuda-fila"><div>Deudores</div><div>Socios con estado DEBE o PARCIAL, con monto adeudado</div></div>
+    <div class="ayuda-fila"><div>Al día</div><div>Socios que tienen el período cubierto</div></div>
+    <div class="ayuda-fila"><div>Socios</div><div>Listado completo con datos de contacto</div></div>
+    <div class="ayuda-fila"><div>Pagos del período</div><div>Todos los cobros realizados en el rango de fechas</div></div>
+    <div class="ayuda-fila"><div>Tipo de pago</div><div>Totales por método (efectivo, transferencia, etc.)</div></div>
+    <div class="ayuda-fila"><div>Caja del día</div><div>Cobros realizados en una fecha específica</div></div>
+    <div class="ayuda-fila"><div>Asistencia</div><div>Porcentaje de presencia por socio en un período</div></div>
+    <div class="ayuda-fila"><div>Ranking asistencia</div><div>Socios ordenados por mayor presencia</div></div>
+    <div class="ayuda-fila"><div>Auditoría de pagos</div><div>Historial de ediciones y eliminaciones con motivo</div></div>
+  </div>
+</div>
+
+<!-- 8. INSTITUCIÓN -->
+<div id="ayuda-inst" class="ayuda-seccion">
+  <div class="ayuda-titulo">&#x1F3E2; 8. Institución</div>
+  <p class="ayuda-p">Configuración general de la organización. Los cambios se aplican en toda la app al guardar.</p>
+
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Campo</div><div>Descripción</div></div>
+    <div class="ayuda-fila"><div>Nombre completo</div><div>Aparece en emails y comprobantes</div></div>
+    <div class="ayuda-fila"><div>Nombre corto</div><div>Aparece en el header de la app</div></div>
+    <div class="ayuda-fila"><div>Logo</div><div>URL de Google Drive (compartir con "cualquiera con el link")</div></div>
+    <div class="ayuda-fila"><div>Color primario</div><div>Color principal de la interfaz</div></div>
+    <div class="ayuda-fila"><div>Color secundario</div><div>Color de acentos y badges</div></div>
+    <div class="ayuda-fila"><div>Email remitente</div><div>Email desde donde se envían los comprobantes</div></div>
+    <div class="ayuda-fila"><div>Terminología</div><div>Personaliza "Socio", "Categoría", etc. para adaptar al tipo de organización</div></div>
+    <div class="ayuda-fila"><div>Carpeta Drive</div><div>ID de la carpeta donde se guardan fotos y documentos</div></div>
+    <div class="ayuda-fila"><div>Campos extra</div><div>Campos personalizados para datos adicionales de socios</div></div>
+  </div>
+
+  <div class="ayuda-subtitulo">Cómo obtener el ID de carpeta de Google Drive</div>
+  <ol class="ayuda-lista">
+    <li>Abrir Google Drive y crear o seleccionar la carpeta</li>
+    <li>Hacer click derecho → <strong>Compartir</strong> → activar "Cualquiera con el enlace"</li>
+    <li>La URL tiene el formato: <code>drive.google.com/drive/folders/<strong>ID_ACA</strong></code></li>
+    <li>Copiar solo el ID (la parte después de /folders/)</li>
+  </ol>
+</div>
+
+</div>
+</div>
+
+
+<!-- MODAL RECATEGORIZAR -->
+<div id="modalRecat" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9000;overflow-y:auto;padding:20px;">
+  <div style="background:var(--surface);border:1px solid var(--secondary);border-radius:14px;max-width:760px;margin:0 auto;padding:24px;">
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:var(--secondary);text-transform:uppercase;">&#x1F501; Actualización anual de categorías</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;" id="recat-subtitulo"></div>
+      </div>
+      <button onclick="cerrarRecat()" style="background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;">&#x2715;</button>
+    </div>
+
+    <!-- Explicación -->
+    <div style="background:rgba(201,162,39,.08);border:1px solid rgba(201,162,39,.25);border-radius:8px;padding:14px;margin-bottom:20px;font-size:13px;color:var(--muted);line-height:1.6;">
+      <strong style="color:var(--secondary);">¿Cómo funciona?</strong><br>
+      Cada categoría tiene un rango de años de nacimiento. Al avanzar el año calendario, ese rango se corre 1 año hacia adelante para incluir a los nacidos en el nuevo año y excluir a los que "ascendieron".<br><br>
+      <strong style="color:var(--text);">Ejemplo:</strong> Sexta A (2013 al 2013) → pasa a Sexta A (2014 al 2014). Un alumno nacido en 2014 que estaba sin categoría ahora queda en Sexta A.
+    </div>
+
+    <!-- Tabla de cambios en categorías -->
+    <div style="margin-bottom:20px;">
+      <div style="font-weight:800;color:var(--text);font-size:14px;margin-bottom:10px;">Cambios en rangos de categorías</div>
+      <div id="recat-tabla-cats" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:13px;"></div>
+    </div>
+
+    <!-- Resumen de alumnos afectados -->
+    <div style="margin-bottom:20px;">
+      <div style="font-weight:800;color:var(--text);font-size:14px;margin-bottom:10px;">Alumnos que cambian de categoría <span id="recat-count-badge" style="background:var(--surface2);color:var(--secondary);font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px;"></span></div>
+      <div id="recat-tabla-alumnos" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:12px;max-height:280px;overflow-y:auto;"></div>
+      <div id="recat-sin-cambios" style="display:none;font-size:12px;color:var(--muted);padding:12px;text-align:center;">&#x2705; Todos los alumnos ya tienen la categoría correcta</div>
+    </div>
+
+    <!-- Alumnos que quedan sin categoría -->
+    <div id="recat-sin-cat-wrap" style="margin-bottom:20px;display:none;">
+      <div style="font-weight:800;color:var(--orange);font-size:14px;margin-bottom:10px;">&#x26A0; Alumnos que quedarán sin categoría <span id="recat-sincat-badge" style="background:rgba(255,152,0,.15);color:var(--orange);font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px;"></span></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Estos alumnos no entran en ningún rango con los nuevos valores. Verificar manualmente.</div>
+      <div id="recat-tabla-sincat" style="border:1px solid rgba(255,152,0,.3);border-radius:8px;overflow:hidden;font-size:12px;max-height:180px;overflow-y:auto;"></div>
+    </div>
+
+    <!-- Botones -->
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button onclick="cerrarRecat()" class="btn btn-secondary" style="flex:1;">CANCELAR</button>
+      <button onclick="ejecutarRecategorizacion()" id="btn-ejecutar-recat" class="btn btn-save" style="flex:2;background:var(--secondary);color:#000;font-weight:900;">
+        &#x2713; CONFIRMAR Y APLICAR CAMBIOS
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.14</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.29</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -1152,15 +1495,15 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 // ---------------------------------------------------------------
 // ── CONFIG — inyectada por el installer ──────────────────────────
 var FIREBASE_CONFIG = {
-  "apiKey": "AIzaSyCu3bFKHz3r0GY0gvGoVSQEoUO8VWqax7o",
-  "authDomain": "excursionistas-futsal.firebaseapp.com",
-  "projectId": "excursionistas-futsal",
-  "storageBucket": "excursionistas-futsal.firebasestorage.app",
-  "messagingSenderId": "729515294858",
-  "appId": "1:729515294858:web:5264a67291c5d649956d73"
+  "apiKey": "AIzaSyDT3dsUMNTMBKwHbmwu3SIYcaL6znQ1K6c",
+  "authDomain": "sgd-demo.firebaseapp.com",
+  "projectId": "sgd-demo",
+  "storageBucket": "sgd-demo.firebasestorage.app",
+  "messagingSenderId": "486153791045",
+  "appId": "1:486153791045:web:81bf466e0d1453590c652c"
 };
-var GAS_URL         = 'https://script.google.com/macros/s/AKfycbydNyAvnZJ8B991qmEDo2MFYCI2oDDrYIdTKI02vD0VX-CRWyWnq4IToqKmSepCU7E7/exec';
-var GAS_OCR_KEY     = ''; // deprecated — se usa Firebase ID token
+var GAS_URL         = 'https://script.google.com/macros/s/AKfycbx4kVBNBGsnlYtWqbeZMKjC7tLcjGOHsYB-IUs5j-3T_2P95vyIMlOPL-FW9pBHTokeQQ/exec';
+var GAS_OCR_KEY     = ''; // deprecated
 var ADMIN_EMAIL     = 'admin@sgd.app';
 
 firebase.initializeApp(FIREBASE_CONFIG);
@@ -1174,7 +1517,7 @@ document.body.style.visibility='visible';
 var DB = {jugadores:[], profesores:[], sedes:[], categorias:[], horarios:[], configPagos:[], institucion:{}, actividades:[], inscripciones:[], precios:[]};
 var CUOTAS_DB = {planes:[], cuotas:[]};
 // Flags de carga lazy — evitan recargar datos que ya están en memoria
-var _cargado = {cuotas: false, asistencias: false, inscripciones: false, citaciones: false, inactivos: false};
+var _cargado = {cuotas: false, asistencias: false, inscripciones: false, citaciones: false, inactivos: true};
 
 // ── CONTADOR DE LECTURAS ──────────────────────────────────────────
 var _lecturas = parseInt(sessionStorage.getItem('fs_lecturas')||'0');
@@ -1197,7 +1540,7 @@ var WA_CRED_KEY = 'sgd_wa_cred';
 var DESCUENTO_HNO_SUGERIDO = 0;
 var CARGA_COMPLETA = false; // descuento sugerido para hermanos en $
 
-// Columnas de la hoja (igual que excursionistas para compatibilidad)
+// Columnas de la hoja
 var COL = {
   APELLIDO:0, NOMBRE:1, EMAIL:2, TARJETA:3, TEL:4, CELULAR:5,
   ACTIVO:6, TIPO_DOC:7, DNI:8, FECHA_NAC:9, SEXO:10,
@@ -1349,31 +1692,14 @@ function horarioToRow(doc) {
   return [d.dia||'', d.hora||'', d.sede||'', d.profesores||'', d.grupo||'', d.liga||d.extra||'', d.modalidad||'Mixto', doc.id];
 }
 
-function _normalizarFechaDisplay(f) {
-  // Convierte cualquier formato de fecha a dd/MM/yyyy para display consistente
-  if (!f) return '';
-  var s = f.toString().trim();
-  // Si ya es dd/MM/yyyy → dejar igual
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
-  // Si es yyyy-MM-dd → convertir
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-    var p = s.substring(0,10).split('-');
-    return p[2] + '/' + p[1] + '/' + p[0];
-  }
-  return s;
-}
-
 function cuotaToRow(d, fsId) {
-  // formato: [dni, nombre, plan, periodoDesde, periodoHasta, fechaPago, monto, metodo, cobrador, obs]
-  // Normalizar fechas a dd/MM/yyyy para que calcularEstadoTiempoReal funcione siempre
+  // formato: [dni, nombre, plan, periodoDesde, periodoHasta, fechaPago, monto, metodo, cobrador, obs, _fsId]
   var row = [
     d.dni||d.doc||'', d.nombre||'',
     d.plan||d.concepto||'',
-    _normalizarFechaDisplay(d.periodoDesde||''),
-    _normalizarFechaDisplay(d.periodoHasta||''),
-    _normalizarFechaDisplay(d.fechaPago||''),
-    d.monto||0,
-    d.metodo||'', d.cobrador||d.obs||'', d.obs||''
+    d.periodoDesde||'', d.periodoHasta||'',
+    d.fechaPago||'', d.monto||0,
+    d.metodo||'', d.cobrador||'', d.obs||''
   ];
   row._fsId = fsId || d._fsId || '';
   return row;
@@ -1438,7 +1764,7 @@ function refrescarDatos() {
   // Cuotas: 2 meses atrás para capturar históricos del mes anterior
   var corteFecha = new Date(yyyy, hoy.getMonth()-1, 1).toLocaleDateString('sv');
   Promise.all([
-    db.collection('socios').where('activo','==',true).get(),  // ~350
+    db.collection('socios').get(), // todos — incluye auto-registros pendientes (activo:false)
     db.collection('cuotas').where('fechaPago','>=', corteFecha).get() // ~350-700
   ]).then(function(results) {
     // Socios
@@ -1476,7 +1802,7 @@ function inicializar(passReal) {
     db.collection('config_periodos').get(),             // ~12
     db.collection('config_actividades').get(),          // ~2
     db.collection('config_precios').get(),              // ~8
-    db.collection('socios').where('activo','==',true).get(), // solo activos ~90
+    db.collection('socios').get(), // todos — incluye auto-registros pendientes (activo:false)
     db.collection('inscripciones').get(), // necesario para calcular estado cuota
     // Cuotas del mes actual — filtrar por fechaPago (formato yyyy-MM-dd)
     (function(){
@@ -1517,7 +1843,7 @@ function inicializar(passReal) {
 
     // Profesores
     DB.profesores = [];
-    profSnap.forEach(function(doc){ var d=doc.data(); DB.profesores.push([d.nombre||'',d.dni||doc.id,d.fechaNac||'',d.email||'',d.contrasena||'',doc.id]); });
+    profSnap.forEach(function(doc){ var d=doc.data(); DB.profesores.push([d.nombre||'',d.dni||doc.id,d.fechaNac||'',d.email||'',d.contrasena||'',doc.id,d.telegramUsername||'',d.telegramChatId||'']); });
 
     // Sedes
     DB.sedes = [];
@@ -1525,7 +1851,13 @@ function inicializar(passReal) {
 
     // Categorías
     DB.categorias = [];
-    catSnap.forEach(function(doc){ var d=doc.data(); DB.categorias.push([d.nombre||doc.id, d.edadDesde||'', d.edadHasta||'', d.color||'', doc.id]); });
+    catSnap.forEach(function(doc){
+      var d = doc.data();
+      // Soportar formato viejo (edadMin/edadMax) y nuevo (edadDesde/edadHasta)
+      var desde = d.edadDesde || d.edadMin || '';
+      var hasta  = d.edadHasta  || d.edadMax  || '';
+      DB.categorias.push([d.nombre||doc.id, d.color||'#1a7a3c', desde.toString(), hasta.toString(), d.genero||'Mixto', d.actividades||'', doc.id]);
+    });
 
     // Períodos de pago
     DB.configPagos = [];
@@ -1604,30 +1936,44 @@ function callScript(payload, onSuccess, onError, _retry) {
 function callScriptPost(payload, onSuccess, onError) {
   var action = payload.action || '';
   if (action === 'uploadFile') {
-    // Obtener Firebase ID token — más seguro que contraseña fija
     var user = auth.currentUser;
     if (!user) { if(onError) onError('Sin sesión activa'); return; }
     user.getIdToken(false).then(function(idToken) {
-      var body = Object.assign({}, payload, {idToken: idToken});
-      // Eliminar campos legacy innecesarios
-      delete body.token; delete body.pass;
-      // Mandar idToken como query param — sobrevive el redirect 302 de GAS
-      var _gasUrl = GAS_URL + '?idToken=' + encodeURIComponent(body.idToken) + '&firebaseApiKey=' + encodeURIComponent(FIREBASE_CONFIG.apiKey||'');
-      var _bodyNoToken = Object.assign({}, body); delete _bodyNoToken.idToken;
-      fetch(_gasUrl, {
-        method: 'POST',
-        redirect: 'follow',
-        headers: {'Content-Type': 'text/plain'},
-        body: JSON.stringify(_bodyNoToken)
-      })
+      var apiKey = FIREBASE_CONFIG.apiKey || '';
+      // Paso 1: GET para verificar token y obtener nonce (no sufre el redirect)
+      var getUrl = GAS_URL + '?idToken=' + encodeURIComponent(idToken)
+        + '&firebaseApiKey=' + encodeURIComponent(apiKey);
+      fetch(getUrl, {method: 'GET', redirect: 'follow'})
       .then(function(r){ return r.text(); })
-      .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={error:'Respuesta inválida'};} if(d&&d.error){if(onError)onError(d.error);}else{if(onSuccess)onSuccess(d);} })
+      .then(function(t) {
+        var resp; try { resp = JSON.parse(t); } catch(e) { resp = {error: 'Respuesta inválida'}; }
+        if (!resp.ok || !resp.nonce) {
+          if(onError) onError(resp.error || 'Error de autenticación');
+          return;
+        }
+        // Paso 2: POST con el nonce (token ya verificado en el GET)
+        var body = Object.assign({}, payload);
+        body.nonce = resp.nonce;
+        delete body.token; delete body.pass; delete body.idToken;
+        fetch(GAS_URL, {
+          method: 'POST',
+          redirect: 'follow',
+          headers: {'Content-Type': 'text/plain'},
+          body: JSON.stringify(body)
+        })
+        .then(function(r){ return r.text(); })
+        .then(function(t2){ var d; try{d=JSON.parse(t2);}catch(e){d={error:'Respuesta inválida'};} if(d&&d.error){if(onError)onError(d.error);}else{if(onSuccess)onSuccess(d);} })
+        .catch(function(){ if(onError) onError('Sin conexión'); });
+      })
       .catch(function(){ if(onError) onError('Sin conexión'); });
-    }).catch(function(e){ if(onError) onError('Error de autenticación'); });
+    }).catch(function(){ if(onError) onError('Error de autenticación'); });
     return;
   }
   _fsDispatch(action, payload, onSuccess, onError);
 }
+
+
+
 
 // ── Dispatch central Firestore ────────────────────────────────────
 function _fsDispatch(action, p, ok, err) {
@@ -1642,7 +1988,7 @@ function _fsDispatch(action, p, ok, err) {
       var dniNorm = normDoc(c.dni || c.DNI || c.doc || '');
       if (!dniNorm){ cbErr('DNI requerido'); return; }
       // Verificar duplicado antes de escribir
-      var dup = DB.jugadores.slice(1).find(function(jj){ return (jj[COL.DNI]||jj[COL.TARJETA]||'').toString().replace(/[^0-9]/g,'') === dniNorm; });
+      var dup = DB.jugadores.slice(1).find(function(f){ return (f[COL.DNI]||'').toString() === dniNorm; });
       if (dup){ cbErr('Ya existe un jugador con DNI ' + dniNorm + ' (' + (dup[COL.APELLIDO]||'') + ', ' + (dup[COL.NOMBRE]||'') + ')'); return; }
       var hoy = new Date().toLocaleDateString('sv');
       var doc = {
@@ -1669,8 +2015,8 @@ function _fsDispatch(action, p, ok, err) {
       var upd = {};
       var fieldMap = {
         apellido:'apellido', nombre:'nombre', email:'email', celular:'celular',
-        telefono:'telefono', fechaNac:'fechaNac', sexo:'sexo', domicilio:'domicilio',
-        obs:'obs', categoriaApp:'categoriaApp', catSecundaria:'catSecundaria',
+        telefono:'telefono', fechaNac:'fechaNac', sexo:'sexo', genero:'sexo', domicilio:'domicilio',
+        obs:'obs', categoriaApp:'categoriaApp', categoria:'categoriaApp', catSecundaria:'catSecundaria',
         plan:'plan', membresia:'membresia', vencimiento:'vencimiento',
         foto:'foto', dniFoto:'dniFoto', apto:'apto', dniDorso:'dniDorso',
         actividades:'actividades', activo:'activo',
@@ -1841,7 +2187,9 @@ function _fsDispatch(action, p, ok, err) {
       };
       var col = tabMap[p.tabName] || p.tabName.toLowerCase().replace(/[^a-z0-9]/g,'_');
       var docId = (p.rowIndex||'').toString();
-      db.collection(col).doc(docId).set(_rowToDoc(p.tabName, p.rowArray||[]))
+      // merge:true preserva campos escritos por otros procesos (ej: bot Telegram
+      // persiste telegramChatId en profesores al recibir /start)
+      db.collection(col).doc(docId).set(_rowToDoc(p.tabName, p.rowArray||[]), {merge:true})
         .then(function(){ cb({ok:true}); })
         .catch(function(e){ cbErr(e.message); });
       break;
@@ -1964,24 +2312,33 @@ function _fsDispatch(action, p, ok, err) {
 
     // ── EMAIL (via GAS) ───────────────────────────────────────────
     case 'sendEmail': {
-      var _user = auth.currentUser;
-      if (!_user) { cbErr('Sin sesión activa'); break; }
-      _user.getIdToken(false).then(function(_idTok) {
-        var _emailBody = {action:'sendEmail', idToken:_idTok, to:p.to, subject:p.subject, body:p.body,
+      var _emailUser = auth.currentUser;
+      if (!_emailUser) { cbErr('Sin sesión activa'); break; }
+      _emailUser.getIdToken(false).then(function(_idTok) {
+        var _emailBody = {action:'sendEmail', idToken:_idTok, to:p.to||p.emailDest, subject:p.subject||p.asunto, body:p.body||p.htmlBody,
           colorPrimario: INST.colorPrimario||'#1a7a3c', nombreOrg:INST.nombre||'SGD',
           emailRemit: INST.emailRemitente||''};
-        var _gasUrlEmail = GAS_URL + '?idToken=' + encodeURIComponent(_emailBody.idToken)
-                               + '&firebaseApiKey=' + encodeURIComponent(FIREBASE_CONFIG.apiKey||'');
-        var _emailBodyNoToken = Object.assign({}, _emailBody); delete _emailBodyNoToken.idToken;
-        fetch(_gasUrlEmail, {
-          method: 'POST',
-          redirect: 'follow',
-          headers: {'Content-Type': 'text/plain'},
-          body: JSON.stringify(_emailBodyNoToken)
-        })
+        var _apiKeyE = FIREBASE_CONFIG.apiKey || '';
+        var _getUrlE = GAS_URL + '?idToken=' + encodeURIComponent(_idTok)
+          + '&firebaseApiKey=' + encodeURIComponent(_apiKeyE);
+        fetch(_getUrlE, {method: 'GET', redirect: 'follow'})
         .then(function(r){ return r.text(); })
-        .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={ok:true};} cb(d); })
-        .catch(function(){ cbErr('Sin conexión para enviar email'); });
+        .then(function(t) {
+          var resp; try { resp = JSON.parse(t); } catch(e) { resp = {error:'inválido'}; }
+          if (!resp.ok || !resp.nonce) { cbErr(resp.error || 'Error auth'); return; }
+          _emailBody.nonce = resp.nonce;
+          delete _emailBody.idToken;
+          fetch(GAS_URL, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: {'Content-Type': 'text/plain'},
+            body: JSON.stringify(_emailBody)
+          })
+          .then(function(r){ return r.text(); })
+          .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={ok:true};} cb(d); })
+          .catch(function(){ cbErr('Sin conexión para enviar email'); });
+        })
+        .catch(function(){ cbErr('Sin conexión'); });
       }).catch(function(){ cbErr('Error de autenticación'); });
       break;
     }
@@ -2023,9 +2380,14 @@ function _rowToDoc(tabName, row) {
         auth.createUserWithEmailAndPassword(dniP+'@sgd.app', row[4]||dniP)
           .catch(function(e){ if(e.code!=='auth/email-already-in-use') console.warn('Profe auth:', e.message); });
       }
-      return {nombre:row[0]||'',dni:dniP,fechaNac:row[2]||'',email:row[3]||'',contrasena:row[4]||dniP,esPrimerLogin:!row[4]};
+      return {
+        nombre:row[0]||'', dni:dniP, fechaNac:row[2]||'',
+        email:row[3]||'', contrasena:row[4]||dniP, esPrimerLogin:!row[4],
+        telegramUsername: (row[5]||'').replace(/^@/, ''),
+        telegramChatId:   row[6]||''
+      };
     }
-    case 'Config_Categorias': return {nombre:row[0]||'',edadDesde:row[1]||'',edadHasta:row[2]||'',color:row[3]||''};
+    case 'Config_Categorias': return {nombre:row[0]||'',color:row[1]||'',edadDesde:String(row[2]||''),edadHasta:String(row[3]||''),genero:row[4]||'Mixto',actividades:row[5]||''};
     case 'Sedes': return {nombre:row[0]||''};
     case 'Config_Periodos': return {mes:row[0]||1,anioD:row[1]||2025,diaD:row[2]||1,anioH:row[3]||row[1]||2025,diaH:row[4]||0,gracia:row[5]||5,desc:row[6]||''};
     case 'Actividades': return {nombre:row[0]||'',icono:row[1]||'',color:row[2]||'#555',monto:Number(row[3])||0};
@@ -2140,7 +2502,7 @@ function renderInscripcionesModal(dni) {
 function abrirModalInscripcion() {
   if(!itemSel) return;
   var f = DB.jugadores[itemSel.arrIdx];
-  document.getElementById('mi-sub').innerText = esc(f[COL.APELLIDO]||'') + ' ' + esc(f[COL.NOMBRE]||'');
+  document.getElementById('mi-sub').innerText = (f[COL.APELLIDO]||'') + ' ' + (f[COL.NOMBRE]||'');
   // Poblar select de planes
   var sel = document.getElementById('mi-plan');
   sel.innerHTML = '<option value="">-- Seleccionar --</option>'
@@ -2344,7 +2706,7 @@ function renderPlayers() {
     lazyCargarInactivos(function(){ renderPlayers(); });
     return;
   }
-  var busq = (document.getElementById('busq').value||'').trim().toLowerCase();
+  var busq = document.getElementById('busq').value.toLowerCase();
   var genF = document.getElementById('fGen').value, catF = document.getElementById('fCat').value;
   var estF = document.getElementById('fEstado').value, cuotaF = document.getElementById('fCuota').value;
   var grid = document.getElementById('gridJugadores');
@@ -2403,7 +2765,7 @@ function renderPlayers() {
     var catSecCard = (f[COL.CAT_SECUNDARIA]||'').toString().trim();
     var catSecBadge = catSecCard ? '<span style="background:rgba(201,162,39,.2);color:var(--secondary);font-size:10px;font-weight:800;padding:1px 7px;border-radius:8px;margin-left:6px;font-family:\'Barlow Condensed\',sans-serif;">+' + catSecCard + '</span>' : '';
     html += '<h4 class="card-nombre" style="margin:0 0 2px 0;">' + esc(apellido) + catSecBadge + '<br><span style="font-size:12px;color:var(--muted);">' + esc(nombre) + '</span></h4>';
-    html += '<p class="card-info" style="margin:0 0 6px 0;">Doc: ' + esc(dni) + (anioNac ? ' | Nac. ' + anioNac : '') + '</p>';
+    html += '<p class="card-info" style="margin:0 0 6px 0;">Doc: ' + dni + (anioNac ? ' | Nac. ' + anioNac : '') + '</p>';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
     html += '<div><span class="status-dot ' + (act ? 'active-dot' : 'inactive-dot') + '"></span>';
     html += '<span style="font-size:11px;font-weight:600;text-transform:uppercase;">' + (act ? 'ACTIVO' : 'INACTIVO') + '</span></div>';
@@ -2529,7 +2891,7 @@ function renderCuotas() {
     var lb = it.est==='ok'?'Al dia':it.est==='debe'?'DEBE':it.est==='vence'?'POR VENCER':it.est==='parcial'?'PARCIAL':'Sin plan';
     var _vigente = it.hastaStr ? formatDate(it.hastaStr) : it.hasta ? formatDate(it.hasta) : '-';
     html += '<div class="ct-row">';
-    html += '<div><div class="ct-nombre">' + esc(f[COL.APELLIDO]||'') + ', ' + esc(f[COL.NOMBRE]||'') + '</div><div class="ct-sub">Doc: ' + esc(f[COL.DNI]||f[COL.TARJETA]||'') + ' | ' + esc(f[COL.CATEGORIA_APP]||'Sin ' + T('grupo')) + '</div></div>';
+    html += '<div><div class="ct-nombre">' + (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'') + '</div><div class="ct-sub">Doc: ' + (f[COL.DNI]||f[COL.TARJETA]||'') + ' | ' + (f[COL.CATEGORIA_APP]||'Sin ' + T('grupo')) + '</div></div>';
     html += '<div><span class="cuota-pill ' + cl + '">' + lb + '</span></div>';
     var _chipExtras = it.extraConceptos && it.extraConceptos.length ?
       it.extraConceptos.map(function(x){ return '<span style="background:rgba(201,162,39,.2);color:var(--secondary);font-size:10px;padding:1px 6px;border-radius:8px;margin-top:3px;display:inline-block;">+' + x + '</span>'; }).join(' ') : '';
@@ -2603,8 +2965,6 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
   document.getElementById('mp-desde').value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
   document.getElementById('mp-hasta').value = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().split('T')[0];
   document.getElementById('mp-monto').value = _moSugerido || '';
-  var _disp = document.getElementById('mp-monto-display');
-  if(_disp) _disp.innerText = '$' + Number(_moSugerido||0).toLocaleString('es-AR');
   document.getElementById('mp-obs').value = '';
   document.getElementById('mp-cobrador').innerHTML = DB.profesores.map(function(p){ return '<option>' + p[0] + '</option>'; }).join('') || '<option>Sin especificar</option>';
   // Poblar planes vigentes del socio
@@ -2652,6 +3012,8 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
   } else if(wrapEl) {
     wrapEl.style.display = 'none';
   }
+  var _mpErr = document.getElementById('mp-error') || document.getElementById('pago-error');
+  if(_mpErr){ _mpErr.style.display='none'; _mpErr.innerText=''; }
   document.getElementById('modalPago').classList.add('open');
 }
 function cerrarModalPago(){ document.getElementById('modalPago').classList.remove('open'); pagoCtx = null; }
@@ -2668,8 +3030,6 @@ function recalcularTotalPago() {
   var calcEl = document.getElementById('mp-total-calc');
   if(calcEl) calcEl.innerText = '$' + total.toLocaleString('es-AR');
   document.getElementById('mp-monto').value = total || '';
-  var disp = document.getElementById('mp-monto-display');
-  if(disp) disp.innerText = '$' + Number(total||0).toLocaleString('es-AR');
 }
 
 function togglePagoExtra() {
@@ -2695,17 +3055,11 @@ function confirmarPago() {
   var _cobrador = document.getElementById('mp-cobrador').value;
   var _obs = document.getElementById('mp-obs').value;
   var _fecha = document.getElementById('mp-fecha').value;
-  if(!_fecha || !desde || !hasta) { pagoCtx._enviando = false; return alert('Completa fecha y periodo'); }
-  // H-006: desde <= hasta
-  if(desde > hasta) { pagoCtx._enviando = false; return alert('La fecha DESDE no puede ser posterior a HASTA'); }
-  // H-007: fecha de pago no puede ser futura (máximo 7 días adelante)
-  var _hoy = new Date(); _hoy.setHours(0,0,0,0);
-  var _maxFecha = new Date(_hoy); _maxFecha.setDate(_maxFecha.getDate() + 7);
-  var _fechaObj = new Date(_fecha);
-  if(_fechaObj > _maxFecha) { pagoCtx._enviando = false; return alert('La fecha de pago no puede ser más de 7 días en el futuro'); }
-  // H-008: fecha de pago no puede ser anterior a 5 años
-  var _minFecha = new Date(_hoy); _minFecha.setFullYear(_minFecha.getFullYear() - 5);
-  if(_fechaObj < _minFecha) { pagoCtx._enviando = false; return alert('La fecha de pago parece incorrecta (más de 5 años atrás)'); }
+  if(!_fecha || !desde || !hasta) { pagoCtx._enviando = false; return alert('Completá fecha y período'); }
+  if(desde > hasta) { pagoCtx._enviando = false; return alert('La fecha "Desde" no puede ser posterior a "Hasta"'); }
+  var _hoy = new Date().toISOString().split('T')[0];
+  var _limite = new Date(new Date().setDate(new Date().getDate()+7)).toISOString().split('T')[0];
+  if(_fecha > _limite) { pagoCtx._enviando = false; return alert('La fecha de pago no puede ser más de 7 días en el futuro'); }
 
   var periodo = periodoLabel(document.getElementById('cPeriodo') ? document.getElementById('cPeriodo').value : '');
 
@@ -2727,9 +3081,12 @@ function confirmarPago() {
 
   if(pagos.length === 0) {
     var _monto = Number(document.getElementById('mp-monto').value)||0;
-    if(!_monto) { pagoCtx._enviando = false; return alert('Ingresa un monto'); }
+    if(!_monto || _monto <= 0) { pagoCtx._enviando = false; return alert('El monto debe ser mayor a cero'); }
     pagos.push({plan: pagoCtx.planNom || 'Actividad', monto: _monto});
   }
+  // Verificar que ningún pago tenga monto negativo o cero
+  var _montoInvalido = pagos.find(function(p){ return !p.monto || p.monto <= 0; });
+  if(_montoInvalido) { pagoCtx._enviando = false; return alert('Todos los montos deben ser mayores a cero'); }
 
   var moTotal = pagos.reduce(function(s, p){ return s + p.monto; }, 0);
   if(!moTotal) { pagoCtx._enviando = false; return alert('El monto total no puede ser cero'); }
@@ -2796,15 +3153,9 @@ function _marcarTodosMesConfirmado() {
 
 function exportarCSV() {
   var rows = [T('socio') + ',Nombre,Documento,' + T('grupo') + ',Plan,Estado,Vigente Hasta'];
-  function _csvCell(v) {
-    var s = String(v||'').replace(/"/g,'""');
-    if (/^[=+\-@	]/.test(s)) s = "'" + s;
-    return '"' + s + '"';
-  }
   DB.jugadores.slice(1).filter(function(f){ var a = f[COL.ACTIVO]; return a===true||String(a).toLowerCase()==='si'; }).forEach(function(f){
     var cv = estadoCuotaV2(f);
-    var vigenteHasta = (function(){ var ins = (DB.inscripciones||[]).filter(function(ii){ return (ii.dni||'').toString()===((f[COL.DNI]||f[COL.TARJETA]||'').toString()); }); var v = ins.find(function(ii){ return !ii.hasta; }); return v ? 'indefinida' : (ins.length ? ins[0].hasta||'-' : '-'); })();
-    rows.push([_csvCell(f[COL.APELLIDO]),_csvCell(f[COL.NOMBRE]),f[COL.DNI]||f[COL.TARJETA],_csvCell(f[COL.CATEGORIA_APP]),_csvCell(cv.planNom),cv.estado,vigenteHasta].join(','));
+    rows.push(['"'+(f[COL.APELLIDO]||'')+'"','"'+(f[COL.NOMBRE]||'')+'"',f[COL.DNI]||f[COL.TARJETA],'"'+(f[COL.CATEGORIA_APP]||'')+'"','"'+(cv.planNom||'')+'"',cv.estado,cv.hasta?formatDate(cv.hasta):''].join(','));
   });
   var blob = new Blob(['\uFEFF'+rows.join('\n')], {type:'text/csv;charset=utf-8;'});
   var url = URL.createObjectURL(blob), a = document.createElement('a');
@@ -2817,7 +3168,7 @@ function agregarPeriodo() {
   var diaD = document.getElementById('pDiaD').value, anioH = document.getElementById('pAnioH').value||anioD;
   var diaH = document.getElementById('pDiaH').value, gracia = document.getElementById('pGracia').value;
   var desc = document.getElementById('pDesc').value.trim();
-  if(!mes || !anioD) return alert('Completa mes y anio de inicio');
+  if(!mes || !anioD) return alert('Completa mes y a\u00f1o de inicio');
   PERIODOS_EDIT.push({mes:mes, anioD:anioD, diaD:diaD, anioH:parseInt(anioH), diaH:diaH, gracia:gracia, desc:desc});
   renderPeriodosAdmin();
 }
@@ -2837,7 +3188,7 @@ function renderPeriodosAdmin() {
   if(!el) return;
   el.innerHTML = !PERIODOS_EDIT.length ? '<p style="color:var(--muted);font-size:12px;padding:8px;">Sin periodos definidos</p>' :
     PERIODOS_EDIT.map(function(p, i){
-      return '<div class="item-row"><span>' + esc(nombreMes(p.mes)) + ' ' + p.anioD + (p.desc ? ' - ' + esc(p.desc) : '') + '</span>'
+      return '<div class="item-row"><span>' + nombreMes(p.mes) + ' ' + p.anioD + (p.desc ? ' - ' + p.desc : '') + '</span>'
         + '<button class="icon-btn" style="color:var(--red);" onclick="eliminarPeriodoEdit(' + i + ')">X</button></div>';
     }).join('');
 }
@@ -2876,6 +3227,7 @@ function onCambioTurnoAsist() {
 function poblarTurnosAsist() {
   var fecha = document.getElementById('asistFecha').value;
   if(!fecha) return;
+  var _hayTurnos = false;
   var d = new Date(fecha + 'T12:00:00');
   var dias = ['Domingo','Lunes','Martes','Miercoles','Jueves','Viernes','Sabado'];
   var diaSel = dias[d.getDay()];
@@ -2889,8 +3241,12 @@ function poblarTurnosAsist() {
       var ligaLabel = (liga && liga !== 'Ambas') ? ' [' + liga + ']' : '';
       var lbl = diaSel + ' ' + hora + ' hs - ' + cat + ligaLabel + (sede ? ' (' + sede + ')' : '');
       sel.innerHTML += '<option value="' + tid + '">' + lbl + '</option>';
+      _hayTurnos = true;
     }
   });
+  // Mostrar aviso si no hay turnos configurados para ese día
+  var _asistBanner = document.getElementById('asist-sin-turnos');
+  if(_asistBanner) _asistBanner.style.display = (!DB.horarios.length || !_hayTurnos) ? '' : 'none';
 }
 
 // matcheaTurno: determina si la categoria de un jugador matchea el turno segun liga
@@ -2996,6 +3352,7 @@ function toggleAsist(dni, total) {
 
 function guardarAsist() {
   var turnoId = document.getElementById('asistTurno').value;
+  if(!turnoId) return toast('Seleccioná un turno antes de guardar', 'warn');
   var fecha = document.getElementById('asistFecha').value;
   if(!turnoId || !fecha) return alert('Selecciona fecha y turno');
   var partes = turnoId.split('_');
@@ -3030,10 +3387,10 @@ function abrirM(ai) {
   var dni = (f[COL.DNI]||f[COL.TARJETA]||'').toString();
   var sheet = f[f.length-2], row = f[f.length-1];
   itemSel = {sheet:sheet, row:row, dni:dni, arrIdx:ai};
-  document.getElementById('m-nombre').innerText = esc(f[COL.APELLIDO]||'') + ', ' + esc(f[COL.NOMBRE]||'');
+  document.getElementById('m-nombre').innerText = (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'');
   document.getElementById('m-dni-sub').innerText = 'Doc: ' + dni + (f[COL.FECHA_NAC] ? ' | Nac: ' + f[COL.FECHA_NAC] : '');
   var anioNac = extraerAnioNac(f[COL.FECHA_NAC]);
-  document.getElementById('m-edad').innerText = anioNac ? anioNac + ' (' + calcularEdad(f[COL.FECHA_NAC]) + ' anios)' : '-';
+  document.getElementById('m-edad').innerText = anioNac ? anioNac + ' (' + calcularEdad(f[COL.FECHA_NAC]) + ' a\u00f1os)' : '-';
   document.getElementById('m-genero').value = f[COL.SEXO]||'Masculino';
   document.getElementById('m-cat-m').value = f[COL.CATEGORIA_APP]||'';
   // Poblar y cargar categoría secundaria
@@ -3053,11 +3410,11 @@ function abrirM(ai) {
   var c1p = c1raw.split('|');
   var c2p = c2raw.split('|');
   document.getElementById('m-contacto1').innerHTML = btnContactoEmergencia(c1p[0]||'', c1p[1]||'');
-  document.getElementById('m-contacto1-tel').innerHTML = '';
   document.getElementById('m-contacto2').innerHTML = btnContactoEmergencia(c2p[0]||'', c2p[1]||'');
-  document.getElementById('m-contacto2-tel').innerHTML = '';
-  document.getElementById('m-membresia').innerText = f[COL.MEMBRESIA]||'-';
-  document.getElementById('m-venc-planilla').innerText = f[COL.VENCIMIENTO]||'-';
+  if(document.getElementById('mi-c1nombre')) document.getElementById('mi-c1nombre').value = c1p[0]||'';
+  if(document.getElementById('mi-c1tel'))    document.getElementById('mi-c1tel').value    = c1p[1]||'';
+  if(document.getElementById('mi-c2nombre')) document.getElementById('mi-c2nombre').value = c2p[0]||'';
+  if(document.getElementById('mi-c2tel'))    document.getElementById('mi-c2tel').value    = c2p[1]||'';
   mostrarFotoInline('l-perfil', f[COL.FOTO], false);
   mostrarFotoInline('l-dni-frente', f[COL.DNI_FOTO] ? f[COL.DNI_FOTO].toString().trim() : '', false);
   mostrarFotoInline('l-dni-dorso', f[COL.DNI_DORSO] ? f[COL.DNI_DORSO].toString().trim() : '', false);
@@ -3137,7 +3494,91 @@ function abrirM(ai) {
     document.getElementById('btn-guardar-actividades').style.display = 'none';
   }
   document.getElementById('modalEdicion').classList.add('open');
+  // Datos médicos — reset + fetch async desde Firestore
+  _medicoActual = null;
+  document.getElementById('med-body-adm').innerHTML = '';
+  document.getElementById('med-body-adm').style.display = 'none';
+  document.getElementById('med-chev-adm').innerHTML = '&#x25BC;';
+  db.collection('socios').doc(dni).get().then(function(d) {
+    _medicoActual = (d.exists && d.data().medico) ? d.data().medico : {};
+  }).catch(function(){ _medicoActual = {}; });
 }
+
+// ══════════════════════════════════════════════════════════════════
+// DATOS MÉDICOS — ficha admin (colapsable)
+// ══════════════════════════════════════════════════════════════════
+var MEDICO_CAMPOS_ADM = [
+  {key:'grupoSangre',  label:'Grupo sanguíneo', tipo:'select',
+    opciones:['','No sabe','A+','A-','B+','B-','AB+','AB-','0+','0-']},
+  {key:'obraSocial',   label:'Obra social',     tipo:'text'},
+  {key:'nroAfiliado',  label:'N° afiliado',     tipo:'text'},
+  {key:'alergias',     label:'Alergias',                    tipo:'textarea'},
+  {key:'medicacion',   label:'Medicación habitual',         tipo:'textarea'},
+  {key:'cronicas',     label:'Enfermedades crónicas',       tipo:'textarea'},
+  {key:'cirugias',     label:'Cirugías previas',            tipo:'textarea'},
+  {key:'lesiones',     label:'Lesiones deportivas previas', tipo:'textarea'},
+  {key:'antecedentes', label:'Antecedentes familiares',     tipo:'textarea'},
+  {key:'obsMedicas',   label:'Observaciones médicas',       tipo:'textarea'}
+];
+var _medicoActual = null;
+
+function renderMedicoAdmin() {
+  var med = _medicoActual || {};
+  var html = '';
+  MEDICO_CAMPOS_ADM.forEach(function(c) {
+    var val = med[c.key] || '';
+    html += '<div class="modal-field full" style="margin-bottom:8px;"><span class="modal-field-label">' + c.label + '</span>';
+    if (c.tipo === 'select') {
+      html += '<select class="edit-input med-adm-inp" data-k="' + c.key + '" style="width:100%;">';
+      c.opciones.forEach(function(o) {
+        var sel = (o === val) ? ' selected' : '';
+        html += '<option value="' + o + '"' + sel + '>' + (o || '— Seleccionar —') + '</option>';
+      });
+      html += '</select>';
+    } else if (c.tipo === 'textarea') {
+      html += '<textarea class="edit-input med-adm-inp" data-k="' + c.key + '" rows="2" style="width:100%;resize:vertical;font-family:inherit;">' + (val || '').replace(/</g,'&lt;') + '</textarea>';
+    } else {
+      html += '<input type="text" class="edit-input med-adm-inp" data-k="' + c.key + '" value="' + (val || '').replace(/"/g,'&quot;') + '" style="width:100%;">';
+    }
+    html += '</div>';
+  });
+  html += '<button class="btn btn-save" onclick="guardarMedicoAdmin()" style="width:100%;margin-top:8px;">&#x1F4BE; Guardar datos médicos</button>';
+  document.getElementById('med-body-adm').innerHTML = html;
+}
+
+function toggleMedicoAdmin() {
+  var body = document.getElementById('med-body-adm');
+  var chev = document.getElementById('med-chev-adm');
+  var abierto = body.style.display !== 'none';
+  if (abierto) {
+    body.style.display = 'none';
+    chev.innerHTML = '&#x25BC;';
+  } else {
+    renderMedicoAdmin();
+    body.style.display = 'block';
+    chev.innerHTML = '&#x25B2;';
+  }
+}
+
+function guardarMedicoAdmin() {
+  if (!itemSel) return;
+  var med = {};
+  document.querySelectorAll('.med-adm-inp').forEach(function(el) {
+    med[el.getAttribute('data-k')] = (el.value || '').trim();
+  });
+  mostrarLoader('Guardando datos médicos...');
+  db.collection('socios').doc(itemSel.dni).update({medico: med})
+    .then(function() {
+      _medicoActual = med;
+      ocultarLoader();
+      toast('Datos médicos guardados', 'ok');
+    })
+    .catch(function(e) {
+      ocultarLoader();
+      alert('Error: ' + (e.message || e));
+    });
+}
+
 function toggleEditarFicha() {
   var modal = document.querySelector('#modalEdicion .modal');
   var btn = document.getElementById('btn-editar-ficha');
@@ -3185,7 +3626,7 @@ function autoCat() {
   if(!anioNac) return alert('Sin fecha de nacimiento registrada');
   var s = DB.categorias.find(function(c){ return anioNac>=parseInt(c[2]) && anioNac<=parseInt(c[3]) && (c[4]===gen||c[4]==='Mixto'); });
   if(s) document.getElementById('m-cat-m').value = s[0];
-  else alert('Sin ' + T('grupo') + ' para anio ' + anioNac + ' / ' + gen);
+  else alert('Sin ' + T('grupo') + ' para a\u00f1o ' + anioNac + ' / ' + gen);
 }
 
 function guardarJ() {
@@ -3263,6 +3704,7 @@ function procesarArchivo(event) {
         if(window._tipoArchivo === 'dni')       mostrarFotoInline('l-dni-frente',r.url, false);
         if(window._tipoArchivo === 'dni-dorso') mostrarFotoInline('l-dni-dorso', r.url, false);
         if(window._tipoArchivo === 'apto')      mostrarFotoInline('l-apto',      r.url, file.type.includes('pdf'));
+        // Persistir URL en Firestore
         var _dniUp = (DB.jugadores[itemSel.arrIdx][COL.DNI]||DB.jugadores[itemSel.arrIdx][COL.TARJETA]||'').toString();
         var _campoMap = {foto:'foto', dni:'dniFoto', 'dni-dorso':'dniDorso', apto:'apto'};
         var _campoUp = _campoMap[window._tipoArchivo];
@@ -3270,8 +3712,10 @@ function procesarArchivo(event) {
           var _upd = {}; _upd[_campoUp] = r.url;
           db.collection('socios').doc(_dniUp).update(_upd)
             .then(function(){ _contarEscrituras(1); })
-            .catch(function(e){ console.error('Error guardando URL:', e); });
+            .catch(function(e){ console.error('Error guardando URL foto:', e); });
         }
+        // Actualizar card en la grilla
+        renderPlayers();
         toast('Archivo subido correctamente', 'ok');
       }
     }, function(e){ ocultarLoader(); alert('Error: ' + e); });
@@ -3320,30 +3764,41 @@ function abrirNuevoSocio() {
     var el = document.getElementById(id); if(el) el.value = '';
   });
   document.getElementById('ns-sexo').value = 'Masculino';
-  document.getElementById('ns-error').style.display = 'none';
+  var _nsErr = document.getElementById('ns-error');
+  if(_nsErr){ _nsErr.style.display = 'none'; _nsErr.innerText = ''; }
   var selCat = document.getElementById('ns-categoria');
   selCat.innerHTML = '<option value="">-- Sin asignar --</option>';
   (DB.categorias||[]).forEach(function(c){ selCat.innerHTML += '<option value="' + c[0] + '">' + c[0] + '</option>'; });
   document.getElementById('modalNuevoSocio').classList.add('open');
 }
-function cerrarNuevoSocio(){ document.getElementById('modalNuevoSocio').classList.remove('open'); }
+function cerrarNuevoSocio(){
+  document.getElementById('modalNuevoSocio').classList.remove('open');
+  // Limpiar error al cerrar
+  var _e = document.getElementById('ns-error');
+  if(_e){ _e.style.display='none'; _e.innerText=''; }
+}
 
 function guardarNuevoSocio() {
-  // H-016: sanitizar entrada — remover tags HTML antes de guardar
-  var apellido = document.getElementById('ns-apellido').value.trim().replace(/<[^>]*>/g, '');
-  var nombre = document.getElementById('ns-nombre').value.trim().replace(/<[^>]*>/g, '');
+  var apellido = document.getElementById('ns-apellido').value.trim();
+  var nombre = document.getElementById('ns-nombre').value.trim();
   var dni = document.getElementById('ns-dni').value.trim();
   var errEl = document.getElementById('ns-error');
-  function _err(msg){ errEl.innerText = msg; errEl.style.display = ''; return; }
+  function _err(msg){
+    errEl.innerText = msg; errEl.style.display = '';
+    errEl.scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
   if(!apellido) return _err('El apellido es obligatorio');
   if(!nombre) return _err('El nombre es obligatorio');
-  if(!dni || dni.length < 4) return _err('Documento invalido');
+  if(!dni || dni.length < 4) return _err('Documento inválido');
+  var _fnac = document.getElementById('ns-fnac').value;
+  if(_fnac && _fnac > new Date().toISOString().split('T')[0]) return _err('La fecha de nacimiento no puede ser futura');
+  var _email = document.getElementById('ns-email').value.trim();
+  if(_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(_email)) return _err('El email ingresado no es válido');
+  var _cel = document.getElementById('ns-celular').value.trim();
+  if(_cel && !/^[\d\s\-\+\(\)]{6,20}$/.test(_cel)) return _err('El teléfono solo puede contener números');
   var dup = DB.jugadores.slice(1).find(function(f){ return f && (f[COL.DNI]||f[COL.TARJETA]||'').toString() === dni; });
   if(dup) return _err('Ya existe un ' + T('socio') + ' con documento ' + dni);
-  var _emailVal = document.getElementById('ns-email').value.trim();
-  if(_emailVal && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(_emailVal)) return _err('El email no tiene formato válido');
-  var _celVal = document.getElementById('ns-celular').value.trim();
-  if(_celVal && !/^[0-9+\s\-]{6,20}$/.test(_celVal)) return _err('El celular debe contener solo números (6-20 dígitos)');
   errEl.style.display = 'none';
   var jug = {
     apellido:apellido.toUpperCase(), nombre:nombre.toUpperCase(), doc:dni,
@@ -3369,15 +3824,7 @@ function guardarNuevoSocio() {
     if(r && r.ok === false){ _err(r.error||'Error al guardar'); return; }
     cerrarNuevoSocio();
     toast(apellido + ', ' + nombre + ' agregado correctamente', 'ok');
-    var nf = new Array(26).fill('');
-    nf[COL.APELLIDO]=jug.apellido; nf[COL.NOMBRE]=jug.nombre; nf[COL.DNI]=jug.doc;
-    nf[COL.EMAIL]=jug.email; nf[COL.CELULAR]=jug.celular; nf[COL.FECHA_NAC]=jug.fechaNac;
-    nf[COL.SEXO]=jug.sexo; nf[COL.DOMICILIO]=jug.domicilio; nf[COL.ACTIVO]=true;
-    nf[COL.CATEGORIA_APP]=jug.categoria; nf[COL.PLAN]=jug.plan;
-    nf[COL.CONTACTO1] = jug.contacto1||'';
-    nf[COL.CONTACTO2] = jug.contacto2||'';
-    nf.push('Hoja 1'); nf.push(r.fila||999);
-    DB.jugadores.push(nf); renderPlayers();
+    // El adapter (addSocio) ya hizo push a DB.jugadores y renderPlayers() — no repetir
   }, function(e){ ocultarLoader(); _err('Error: ' + e); });
 }
 
@@ -3403,8 +3850,8 @@ function enviarComprobanteEmail() {
   callScript({action:'sendEmail', emailDest:email, logoUrl:(INST.logoUrl||''), asunto:'Comprobante de pago - ' + (INST.nombre||''), htmlBody:
     (function(){
       var _logo = '<img src="cid:logo" style="width:80px;height:80px;object-fit:contain;background:white;border-radius:10px;padding:6px;" alt="">';
-      var _nombre = esc(INST.nombre || 'Club Atletico Excursionistas');
-      var _plan = esc((datos.planAct||'') + (datos.plSoc ? ' + ' + datos.plSoc : ''));
+      var _nombre = INST.nombre || INST.nombreCorto || 'SGD';
+      var _plan = (datos.planAct||'') + (datos.plSoc ? ' + ' + datos.plSoc : '');
       var _monto = '$' + Number(datos.moTotal||0).toLocaleString('es-AR');
       var _row = function(lbl, val) {
         return '<tr><td style="padding:10px 16px;color:#888;font-size:13px;border-bottom:1px solid #2a2a2a;white-space:nowrap;">'+lbl+'</td>'
@@ -3422,19 +3869,19 @@ function enviarComprobanteEmail() {
         +'</td></tr>'
         // Saludo
         +'<tr><td style="padding:24px 32px 8px;">'
-        +'<p style="color:#e8f0e8;font-size:15px;margin:0;">Hola <b style="color:#c9a227;">'+esc(datos.nombre||'')+'</b>,</p>'
+        +'<p style="color:#e8f0e8;font-size:15px;margin:0;">Hola <b style="color:#c9a227;">'+datos.nombre+'</b>,</p>'
         +'<p style="color:#7a927a;font-size:13px;margin:8px 0 0;">Registramos tu pago correctamente. Aca tenes el detalle:</p>'
         +'</td></tr>'
         // Tabla de detalle
         +'<tr><td style="padding:8px 32px 24px;">'
         +'<table width="100%" cellpadding="0" cellspacing="0" style="background:#121812;border-radius:10px;border:1px solid #253025;overflow:hidden;color:#e8f0e8;">'
-        +_row('Plan', esc(_plan))
+        +_row('Plan', _plan)
         +'<tr><td style="padding:10px 16px;color:#888;font-size:13px;border-bottom:1px solid #2a2a2a;">Monto</td>'
         +'<td style="padding:10px 16px;font-size:20px;font-weight:800;color:#c9a227;border-bottom:1px solid #2a2a2a;text-align:right;">'+_monto+'</td></tr>'
-        +_row('Periodo', esc(datos.periodo||'-'))
-        +_row('Vigente hasta', esc((function(v){ if(!v||v==='-')return '-'; var p=v.split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:v; })(datos.vigente)))
-        +_row('Metodo', esc(datos.metodo||'Efectivo'))
-        +_row('Cobrado por', esc(datos.cobrador||'-'))
+        +_row('Periodo', datos.periodo||'-')
+        +_row('Vigente hasta', (function(v){ if(!v||v==='-')return '-'; var p=v.split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:v; })(datos.vigente))
+        +_row('Metodo', datos.metodo||'Efectivo')
+        +_row('Cobrado por', datos.cobrador||'-')
         +'</table>'
         +'</td></tr>'
         // Badge verde AL DIA
@@ -3657,20 +4104,20 @@ function renderListActividades() {
       return '<div class="item-row">'
         + '<span style="display:flex;align-items:center;gap:8px;">'
         + '<span class="emoji" style="font-size:20px;">' + (a.icono||'') + '</span>'
-        + '<strong>' + esc(a.nombre) + '</strong>'
+        + '<strong>' + a.nombre + '</strong>'
         + '<span style="width:14px;height:14px;border-radius:50%;background:' + (a.color||'#888') + ';display:inline-block;"></span>'
         + '</span>'
-        + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Actividades" data-row="' + (i+2) + '">X</button>'
+        + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Actividades" data-row="' + a._row + '">X</button>'
         + '</div>';
     }).join('');
-  el.addEventListener('click', function(e){
+  el.onclick = function(e){
     var btn = e.target.closest('[data-action="borrar"]');
     if(btn) {
       sgdConfirm('Eliminar esta actividad?', function() {
-        borrar(btn.dataset.tabla, parseInt(btn.dataset.row));
+        borrar(btn.dataset.tabla, btn.dataset.row);
       }, 'ELIMINAR');
     }
-  });
+  };
   poblarSelectActividad();
 }
 
@@ -3688,6 +4135,8 @@ function guardarActividad() {
     if(disp) disp.textContent = '\u26BD';
     renderEmojiGrid(_emojiTodos);
     renderListActividades();
+    poblarSelects(); poblarSelectActividad(); poblarSelectsPrecios();
+    poblarSelectMasiva(); renderCatActsCheckboxes('');
     ocultarLoader();
     toast('Actividad agregada', 'ok');
   }, function(e){ ocultarLoader(); alert('Error: '+e); });
@@ -3722,17 +4171,27 @@ function guardarActividadesJ() {
 function renderList(id, data, tabla) {
   var el = document.getElementById(id); if(!el) return;
   el.innerHTML = data.map(function(item){
-    return '<div class="item-row"><span>' + esc(item[0]) + '</span>'
+    return '<div class="item-row"><span>' + item[0] + '</span>'
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="' + tabla + '" data-row="' + item[item.length-1] + '">X</button></div>';
   }).join('');
-  el.addEventListener('click', function(e){ var btn = e.target.closest('[data-action="borrar"]'); if(btn) borrar(btn.dataset.tabla, parseInt(btn.dataset.row)); });
+  el.onclick = function(e){ var btn = e.target.closest('[data-action="borrar"]'); if(btn) borrar(btn.dataset.tabla, btn.dataset.row); };
 }
 
 function crearSimple(t, id) {
   var v = document.getElementById(id).value.trim(); if(!v) return alert('Ingresa un valor');
   document.getElementById(id).value = '';
   mostrarLoader('Guardando...');
-  callScript({action:'addComplexItem', tabName:t, rowArray:[v], pass:TOKEN, _noRetry:true}, inicializar, function(e){ ocultarLoader(); alert('Error: '+e); });
+  callScript({action:'addComplexItem', tabName:t, rowArray:[v], pass:TOKEN, _noRetry:true}, function(r){
+    // Actualizar en memoria según el tipo
+    if(t === 'Sedes') {
+      DB.sedes.push([v, r.fila||v]);
+      renderList('listS', DB.sedes.map(function(s){ return [s[0], s[1]]; }), 'Sedes');
+      var hSede = document.getElementById('hSede');
+      if(hSede) hSede.innerHTML = '<option value="">Sin sede</option>' + DB.sedes.map(function(s){ return '<option value="' + s[0] + '">' + s[0] + '</option>'; }).join('');
+    }
+    ocultarLoader();
+    toast(v + ' agregado', 'ok');
+  }, function(e){ ocultarLoader(); alert('Error: '+e); });
 }
 
 // â�?��?�â�?��?� ABM PROFESORES â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�
@@ -3742,9 +4201,11 @@ function renderListProfesores() {
   var el = document.getElementById('listP'); if(!el) return;
   el.innerHTML = DB.profesores.map(function(p, i) {
     var nombre = p[0] || '';
-    var dni = p[1] ? (' &bull; DNI: ' + esc(p[1])) : '';
-    var email = p[3] ? (' &bull; ' + esc(p[3])) : '';
-    var row = p[p.length - 1];
+    var dni = p[1] ? (' &bull; DNI: ' + p[1]) : '';
+    var email = p[3] ? (' &bull; ' + p[3]) : '';
+    var tgChip = p[7] ? ' &bull; <span style="color:var(--secondary);">TG:&nbsp;' + esc(p[7]) + '</span>'
+                      : (p[6] ? ' &bull; <span style="color:var(--muted);">@' + esc(p[6]) + '</span>' : '');
+    var row = p[5];
     return '<div class="item-row" style="flex-direction:column;align-items:flex-start;gap:4px;">'
       + '<div style="display:flex;width:100%;justify-content:space-between;align-items:center;">'
       + '<span style="font-weight:600;">' + esc(nombre) + '</span>'
@@ -3752,26 +4213,28 @@ function renderListProfesores() {
       + '<button class="icon-btn" style="color:var(--muted);font-size:13px;" data-action="editprof" data-idx="' + i + '">editar</button>'
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Profesores" data-row="' + row + '">X</button>'
       + '</div></div>'
-      + '<span style="font-size:12px;color:var(--muted);">' + dni + email + '</span>'
+      + '<span style="font-size:12px;color:var(--muted);">' + dni + email + tgChip + '</span>'
       + '</div>';
   }).join('');
-  el.addEventListener('click', function(e) {
+  el.onclick = function(e) {
     var btn = e.target.closest('[data-action]'); if(!btn) return;
-    if(btn.dataset.action === 'borrar') borrar(btn.dataset.tabla, parseInt(btn.dataset.row));
+    if(btn.dataset.action === 'borrar') borrar(btn.dataset.tabla, btn.dataset.row);
     if(btn.dataset.action === 'editprof') {
       var p = DB.profesores[parseInt(btn.dataset.idx)];
-      cargarEditProfesor(p[p.length-1], p[0], p[1], p[2], p[3], p[4]);
+      cargarEditProfesor(p[5], p[0], p[1], p[2], p[3], p[4], p[6], p[7]);
     }
-  });
+  };
 }
 
-function cargarEditProfesor(idx, nombre, dni, fecha, email, pass) {
+function cargarEditProfesor(idx, nombre, dni, fecha, email, pass, tgUser, tgChatId) {
   profEditIdx = idx;
   document.getElementById('inpPNombre').value = nombre || '';
   document.getElementById('inpPDNI').value = dni || '';
   document.getElementById('inpPFecha').value = fecha || '';
   document.getElementById('inpPEmail').value = email || '';
   document.getElementById('inpPPass').value = pass || '';
+  document.getElementById('inpPTgUser').value = tgUser || '';
+  document.getElementById('inpPTgChatId').value = tgChatId || '';
   document.getElementById('btnProfesor').innerText = 'ACTUALIZAR';
   document.getElementById('btnProfesor').style.background = 'var(--orange)';
   document.getElementById('cardProfesor').style.borderColor = 'var(--orange)';
@@ -3786,24 +4249,102 @@ function cancelarEditProfesor() {
   document.getElementById('inpPFecha').value = '';
   document.getElementById('inpPEmail').value = '';
   document.getElementById('inpPPass').value = '';
+  document.getElementById('inpPTgUser').value = '';
+  document.getElementById('inpPTgChatId').value = '';
   document.getElementById('btnProfesor').innerText = 'AGREGAR';
   document.getElementById('btnProfesor').style.background = '';
   document.getElementById('cardProfesor').style.borderColor = '';
   document.getElementById('btnCancelProfesor').style.display = 'none';
 }
 
+function convertirSocioAProfe() {
+  if (!itemSel || !itemSel.dni) return alert('Abr\u00ed primero la ficha de un jugador');
+  var dni = itemSel.dni.toString();
+  var f = DB.jugadores[itemSel.arrIdx]; if (!f) return;
+  var nombreCompleto = (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'');
+  if (DB.profesores.some(function(p){ return (p[5]||'').toString() === dni || (p[1]||'').toString() === dni; })) {
+    return alert('Ya existe un profesor con DNI ' + dni);
+  }
+  sgdConfirm('Convertir a <b>' + nombreCompleto + '</b> (DNI ' + dni + ') en profesor?<br><br>El socio se mantiene en la base. Vas a necesitar definir una contrase\u00f1a para que pueda entrar en la app de personal.', function() {
+    var pass = prompt('Contrase\u00f1a para el profesor (m\u00ednimo 6 caracteres):', dni);
+    if (!pass) return;
+    if (pass.length < 6) return alert('La contrase\u00f1a debe tener al menos 6 caracteres');
+    _convertirSocioAProfeConfirmado(dni, nombreCompleto, pass, f);
+  }, 'CONVERTIR');
+}
+
+function _convertirSocioAProfeConfirmado(dni, nombreCompleto, pass, f) {
+  mostrarLoader('Creando profesor...');
+  var apiKey = FIREBASE_CONFIG.apiKey || '';
+  fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + apiKey, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({email: dni + '@sgd.app', password: pass, returnSecureToken: false})
+  })
+  .then(function(r){ return r.json().then(function(d){ return {status:r.status, data:d}; }); })
+  .then(function(res) {
+    var errCode = res.data && res.data.error && res.data.error.message;
+    if (res.status !== 200 && errCode !== 'EMAIL_EXISTS') {
+      throw new Error(errCode || ('HTTP ' + res.status));
+    }
+    var doc = {
+      nombre: nombreCompleto,
+      dni: dni,
+      fechaNac: f[COL.FECHA_NAC] || '',
+      email: f[COL.EMAIL] || '',
+      contrasena: pass,
+      esPrimerLogin: false,
+      telegramUsername: '',
+      telegramChatId: ''
+    };
+    return db.collection('profesores').doc(dni).set(doc);
+  })
+  .then(function() {
+    _contarEscrituras(1);
+    DB.profesores.push([nombreCompleto, dni, f[COL.FECHA_NAC]||'', f[COL.EMAIL]||'', pass, dni, '', '']);
+    renderListProfesores();
+    poblarSelects();
+    poblarTurnosAsist();
+    ocultarLoader();
+    toast('Convertido en profesor. Ya puede entrar a la app de personal.', 'ok');
+  })
+  .catch(function(e) {
+    ocultarLoader();
+    alert('Error al convertir: ' + (e.message || e));
+  });
+}
+
 function guardarProfesor() {
   var nombre = document.getElementById('inpPNombre').value.trim();
   if(!nombre) return alert('El nombre es obligatorio');
+  var tgUser = document.getElementById('inpPTgUser').value.trim().replace(/^@/, '');
+  var tgChatId = document.getElementById('inpPTgChatId').value.trim();
   var rowArray = [
     nombre,
     document.getElementById('inpPDNI').value.trim(),
     document.getElementById('inpPFecha').value.trim(),
     document.getElementById('inpPEmail').value.trim(),
-    document.getElementById('inpPPass').value.trim()
+    document.getElementById('inpPPass').value.trim(),
+    tgUser,
+    tgChatId
   ];
   mostrarLoader('Guardando...');
-  var cb = function() { cancelarEditProfesor(); renderListProfesores(); poblarSelects(); toast('Instructor guardado', 'ok'); };
+  var editing = profEditIdx;
+  var cb = function(r) {
+    // Reflejar el cambio en DB.profesores sin releer Firestore
+    var dniN = (rowArray[1]||'').toString();
+    var nuevo = [rowArray[0], dniN, rowArray[2], rowArray[3], rowArray[4],
+                 editing || (r && r.fila) || dniN, rowArray[5], tgChatId];
+    if (editing) {
+      for (var i=0; i<DB.profesores.length; i++) {
+        if (DB.profesores[i][5] === editing) { DB.profesores[i] = nuevo; break; }
+      }
+    } else {
+      DB.profesores.push(nuevo);
+    }
+    cancelarEditProfesor(); renderListProfesores(); poblarSelects(); poblarTurnosAsist();
+    ocultarLoader(); toast('Instructor guardado', 'ok');
+  };
   var err = function(e) { ocultarLoader(); alert('Error: ' + e); };
   if(profEditIdx) {
     callScript({action:'updateAdminItem', tabName:'Profesores', rowIndex:profEditIdx, rowArray:rowArray, pass:TOKEN, _noRetry:true}, cb, err);
@@ -3818,7 +4359,7 @@ function guardarProfesor() {
 function _actualizarEnMemoria(tabName, rowIndex) {
   switch(tabName) {
     case 'Config_Categorias':
-      DB.categorias = DB.categorias.filter(function(c){ return c[c.length-1] !== rowIndex && c[4] !== rowIndex; });
+      DB.categorias = DB.categorias.filter(function(c){ return c[c.length-1] !== rowIndex; });
       renderListCat(); poblarSelects(); poblarSelectMasiva();
       break;
     case 'Actividades':
@@ -3889,19 +4430,19 @@ function renderListCat() {
     var acts = getCatActs(c);
     var actsHtml = acts ? (' <span style="font-size:11px;color:var(--muted);">[' + acts + ']</span>') : '';
     return '<div class="item-row"><span style="border-left:6px solid ' + c[1] + ';padding-left:10px;flex:1;">'
-      + '<strong>' + esc(c[0]) + '</strong> (' + esc(c[2]) + ' al ' + esc(c[3]) + ') - ' + esc(c[4])
+      + '<strong>' + esc(c[0]) + '</strong> (' + esc(c[2]) + ' - ' + esc(c[3]) + ' años)'
       + actsHtml + '</span>'
       + '<div style="display:flex;gap:4px;"><button class="icon-btn" style="color:var(--muted);" data-action="editcat" data-idx="' + i + '">editar</button>'
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Config_Categorias" data-row="' + c[c.length-1] + '">X</button></div></div>';
   }).join('');
-  el.addEventListener('click', function(e){
+  el.onclick = function(e){
     var btn = e.target.closest('[data-action]'); if(!btn) return;
-    if(btn.dataset.action === 'borrar') borrar(btn.dataset.tabla, parseInt(btn.dataset.row));
+    if(btn.dataset.action === 'borrar') borrar(btn.dataset.tabla, btn.dataset.row);
     if(btn.dataset.action === 'editcat'){
       var c = DB.categorias[parseInt(btn.dataset.idx)];
-      cargarEditCat(c[c.length-1], c[0], c[1], c[2], c[3], c[4], getCatActs(c));
+      cargarEditCat(c[c.length-1], c[0], c[1], c[2], c[3], c[4]||'Mixto', getCatActs(c));
     }
-  });
+  };
 }
 
 function cargarEditCat(idx, n, co, mi, ma, g, acts) {
@@ -3937,10 +4478,11 @@ function guardarCat() {
     limpiarFormCat();
     poblarSelectMasiva();
   };
-  var cb = function(){ reset(); renderListCat(); poblarSelects(); ocultarLoader(); toast(T('grupo') + ' guardada', 'ok'); };
+  var cb = function(){ reset(); renderListCat(); poblarSelects(); poblarSelectMasiva(); renderPlayers(); ocultarLoader(); toast(T('grupo') + ' guardada', 'ok'); };
   if(catEditIdx) callScript({action:'updateAdminItem', tabName:'Config_Categorias', rowIndex:catEditIdx, rowArray:d, pass:TOKEN, _noRetry:true}, cb, function(e){ reset(); ocultarLoader(); alert('Error: '+e); });
   else callScript({action:'addComplexItem', tabName:'Config_Categorias', rowArray:d, pass:TOKEN, _noRetry:true}, function(r){
-    DB.categorias.push(d.concat([DB.categorias.length+2]));
+    var _newId = r && r.fila ? r.fila.toString() : ('cat_' + Date.now());
+    DB.categorias.push(d.concat([_newId]));
     cb();
   }, function(e){ reset(); ocultarLoader(); alert('Error: '+e); });
 }
@@ -3984,8 +4526,8 @@ function renderListPrecios() {
     return '<div class="item-row">'
       + '<span style="flex:1;">'
       + '<span class="emoji" style="font-size:15px;">' + icono + '</span> '
-      + '<strong>' + esc(p.actividad) + '</strong>'
-      + ' <span style="color:var(--muted);font-size:12px;">/ ' + esc(p.categoria) + '</span>'
+      + '<strong>' + p.actividad + '</strong>'
+      + ' <span style="color:var(--muted);font-size:12px;">/ ' + p.categoria + '</span>'
       + ' &nbsp;<span style="color:#6de097;font-weight:700;">$' + Number(p.monto).toLocaleString('es-AR') + '</span>'
       + '</span>'
       + '<div style="display:flex;gap:4px;">'
@@ -3993,10 +4535,10 @@ function renderListPrecios() {
       + '<button class="icon-btn" style="color:var(--red);" data-action="delprecio" data-row="' + p._row + '">X</button>'
       + '</div></div>';
   }).join('');
-  el.addEventListener('click', function(e) {
+  el.onclick = function(e) {
     var btn = e.target.closest('[data-action]'); if(!btn) return;
     if(btn.dataset.action === 'delprecio') {
-      var _rowDel = parseInt(btn.dataset.row);
+      var _rowDel = btn.dataset.row;
       sgdConfirm('Eliminar este precio?', function() {
         mostrarLoader('Eliminando...');
         callScript({action:'deletePrecio', rowIndex:_rowDel, pass:TOKEN, _noRetry:true}, function(){
@@ -4019,7 +4561,7 @@ function renderListPrecios() {
       document.getElementById('cardPrecios').style.borderColor = 'var(--orange)';
       document.getElementById('btn-cancel-precio').style.display = '';
     }
-  });
+  };
 }
 
 function cancelarEditPrecio() {
@@ -4049,6 +4591,7 @@ function guardarPrecio() {
     }
     cancelarEditPrecio();
     renderListPrecios();
+    poblarSelectsPrecios();
     toast('Precio guardado', 'ok');
   }, function(e){ ocultarLoader(); alert('Error: '+e); });
 }
@@ -4176,11 +4719,11 @@ function renderHorarios() {
   var el = document.getElementById('listH'); if(!el) return;
   el.innerHTML = DB.horarios.map(function(h){
     return '<div class="item-row" style="border-left:4px solid var(--secondary);flex-direction:column;align-items:flex-start;">'
-      + '<div style="display:flex;justify-content:space-between;width:100%;margin-bottom:4px;"><strong>' + esc(h[0]) + ' ' + esc(h[1]) + ' hs</strong>'
+      + '<div style="display:flex;justify-content:space-between;width:100%;margin-bottom:4px;"><strong>' + h[0] + ' ' + h[1] + ' hs</strong>'
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Horarios" data-row="' + h[h.length-1] + '">X</button></div>'
-      + '<small style="color:var(--muted);">Sede: ' + esc(h[2]||'-') + ' | Instructores: ' + esc(h[3]||'-') + ' | ' + T('grupo') + ': ' + esc(h[4]||'-') + (h[5] ? ' | Actividad: ' + esc(h[5]) : '') + ' | Modalidad: ' + esc(h[6]||'Mixto') + '</small></div>';
+      + '<small style="color:var(--muted);">Sede: ' + (h[2]||'-') + ' | Instructores: ' + (h[3]||'-') + ' | ' + T('grupo') + ': ' + (h[4]||'-') + (h[5] ? ' | Actividad: ' + h[5] : '') + ' | Modalidad: ' + (h[6]||'Mixto') + '</small></div>';
   }).join('');
-  el.addEventListener('click', function(e){ var btn = e.target.closest('[data-action="borrar"]'); if(btn) borrar(btn.dataset.tabla, parseInt(btn.dataset.row)); });
+  el.onclick = function(e){ var btn = e.target.closest('[data-action="borrar"]'); if(btn) borrar(btn.dataset.tabla, btn.dataset.row); };
 }
 
 function crearHorario() {
@@ -4188,7 +4731,22 @@ function crearHorario() {
   var row = [document.getElementById('hDia').value, document.getElementById('hHora').value, document.getElementById('hSede').value, profSel, document.getElementById('hCat').value, document.getElementById('hActividad').value || '', document.getElementById('hModalidad').value || 'Mixto'];
   if(!row[0] || !row[1]) return alert('Completa dia y hora');
   mostrarLoader('Guardando...');
-  callScript({action:'addComplexItem', tabName:'Horarios', rowArray:row, pass:TOKEN}, inicializar, function(e){ ocultarLoader(); alert('Error: '+e); });
+  callScript({action:'addComplexItem', tabName:'Horarios', rowArray:row, pass:TOKEN, _noRetry:true}, function(r){
+    // Agregar a DB.horarios en memoria
+    var newH = row.concat([r.fila||Date.now()]);
+    DB.horarios.push(newH);
+    DB.horarios.sort(function(a,b){
+      var dias=['Lunes','Martes','Miercoles','Jueves','Viernes','Sabado','Domingo'];
+      return dias.indexOf(a[0])-dias.indexOf(b[0]);
+    });
+    renderHorarios();
+    poblarTurnosAsist();
+    // Limpiar formulario
+    document.getElementById('hDia').value = 'Lunes';
+    document.getElementById('hHora').value = '';
+    ocultarLoader();
+    toast('Horario agregado', 'ok');
+  }, function(e){ ocultarLoader(); alert('Error: '+e); });
 }
 
 function poblarSelects() {
@@ -4229,7 +4787,7 @@ function aplicarBrandingPreview(primario, secundario) {
 }
 
 function cargarFormInstitucion() {
-  var campos = ['nombre','nombreCorto','logoUrl','colorPrimario','colorSecundario','terminologiaSocio','terminologiaSocios','terminologiaGrupo','terminologiaGrupos','emailRemitente'];
+  var campos = ['nombre','nombreCorto','logoUrl','driveFolder','colorPrimario','colorSecundario','terminologiaSocio','terminologiaSocios','terminologiaGrupo','terminologiaGrupos','emailRemitente'];
   campos.forEach(function(c){
     var el = document.getElementById('inst-' + c); if(!el) return;
     el.value = INST[c] || '';
@@ -4241,15 +4799,11 @@ function cargarFormInstitucion() {
 }
 
 function guardarInstitucion() {
-  var _logoRaw = document.getElementById('inst-logoUrl').value.trim();
-  // H-028: bloquear javascript: en logoUrl
-  if (_logoRaw && /^javascript:/i.test(_logoRaw)) {
-    return alert('URL de logo inválida');
-  }
   var campos = {
     nombre: document.getElementById('inst-nombre').value.trim(),
     nombreCorto: document.getElementById('inst-nombreCorto').value.trim(),
-    logoUrl: _logoRaw,
+    logoUrl: document.getElementById('inst-logoUrl').value.trim(),
+    driveFolder: document.getElementById('inst-driveFolder').value.trim(),
     colorPrimario: document.getElementById('inst-colorPrimario').value,
     colorSecundario: document.getElementById('inst-colorSecundario').value,
     terminologiaSocio: document.getElementById('inst-terminologiaSocio').value.trim() || 'Socio',
@@ -4277,7 +4831,7 @@ function cargarCamposExtra() {
   var el = document.getElementById('lista-campos-extra'); if(!el) return;
   el.innerHTML = !campos.length ? '<p style="color:var(--muted);font-size:12px;">Sin campos personalizados</p>' :
     campos.map(function(c){
-      return '<div class="campo-extra-row"><span><strong>' + esc(c.nombre) + '</strong> (' + esc(c.tipo) + ')</span>'
+      return '<div class="campo-extra-row"><span><strong>' + c.nombre + '</strong> (' + c.tipo + ')</span>'
         + '<button class="icon-btn" style="color:var(--red);" onclick="eliminarCampoExtra(\'' + c.nombre + '\')">X</button></div>';
     }).join('');
 }
@@ -4297,7 +4851,7 @@ function agregarCampoExtra() {
 }
 
 function eliminarCampoExtra(nombre) {
-  sgdConfirm('Eliminar el campo <b>' + esc(nombre) + '</b>?', function() { _eliminarCampoExtraConfirmado(nombre); }, 'ELIMINAR');
+  sgdConfirm('Eliminar el campo <b>' + nombre + '</b>?', function() { _eliminarCampoExtraConfirmado(nombre); }, 'ELIMINAR');
 }
 function _eliminarCampoExtraConfirmado(nombre) {
   mostrarLoader('Eliminando...');
@@ -4320,21 +4874,40 @@ function iniciarReportes() {
   sel.innerHTML = opts;
   var rCat = document.getElementById('rCat');
   if(rCat) rCat.innerHTML = '<option value="">Todas</option>' + DB.categorias.map(function(c){ return '<option value="' + c[0] + '">' + c[0] + '</option>'; }).join('');
+  var rPlan = document.getElementById('rPlan');
+  if(rPlan){
+    var planSet = {};
+    (DB.inscripciones||[]).forEach(function(i){ var p = (i.plan||'').trim(); if(p) planSet[p] = true; });
+    (CUOTAS_DB.cuotas||[]).forEach(function(c){ var p = (c[2]||'').trim(); if(p) planSet[p] = true; });
+    var planes = Object.keys(planSet).sort();
+    rPlan.innerHTML = '<option value="">Todos</option>' + planes.map(function(p){ return '<option value="'+esc(p)+'">'+esc(p)+'</option>'; }).join('');
+  }
   document.getElementById('rDesde').value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
   document.getElementById('rHasta').value = now.toISOString().split('T')[0];
   document.getElementById('rCajaFecha').value = now.toISOString().split('T')[0];
-  renderReporte();
+  selectRptCat('pagos');
 }
 
 function renderReporte() {
   var tipo = document.getElementById('rTipo').value;
+  // Limpiar notas/extras del reporte anterior antes de renderizar el nuevo
+  var _notaPrev = document.getElementById('r-nota');
+  if (_notaPrev) _notaPrev.remove();
+  // La matriz sobrescribe todo el contenido de r-tabla — restauramos la estructura
+  // para que los demas reportes encuentren r-thead/r-tbody donde escribir.
+  var _rTabla = document.getElementById('r-tabla');
+  if (_rTabla && !document.getElementById('r-thead')) {
+    _rTabla.innerHTML = '<thead id="r-thead" style="background:var(--bg);"></thead><tbody id="r-tbody"></tbody>';
+  }
+  // Destruir chart previo y ocultar wrap — cada reporte que quiera chart lo re-crea
+  hideRptChart();
   var _sd = function(id,v){ var e = document.getElementById(id); if(e) e.style.display = v; };
   _sd('r-filter-mes', tipo === 'tipo_pago' ? '' : 'none');
   _sd('r-filter-desde', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz'].includes(tipo) ? '' : 'none');
   _sd('r-filter-hasta', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz'].includes(tipo) ? '' : 'none');
   _sd('r-filter-caja-fecha', tipo === 'caja_dia' ? '' : 'none');
-  _sd('r-filter-cat', ['deudores','al_dia','jugadores','asist_matriz'].includes(tipo) ? '' : 'none');
-  toast('Generando reporte...', '');
+  _sd('r-filter-cat', ['deudores','al_dia','jugadores','asist_matriz','asistencia','asist_por_dia','ranking_asist','pagos_mes','caja_dia'].includes(tipo) ? '' : 'none');
+  _sd('r-filter-plan', ['pagos_mes','deudores','al_dia','tipo_pago','caja_dia','jugadores'].includes(tipo) ? '' : 'none');
   if(tipo === 'deudores') rptDeudores();
   else if(tipo === 'al_dia') rptAlDia();
   else if(tipo === 'jugadores') rptJugadores();
@@ -4348,10 +4921,73 @@ function renderReporte() {
   else if(tipo === 'auditoria') rptAuditoria();
 }
 
+// ── Pills + charts ───────────────────────────────────────────────
+var R_CAT_MAP = {
+  pagos:  [
+    {v:'pagos_mes',  l:'Pagos del periodo'},
+    {v:'deudores',   l:'Deben cuota'},
+    {v:'al_dia',     l:'Al d\u00EDa'},
+    {v:'tipo_pago',  l:'Por tipo de pago'},
+    {v:'caja_dia',   l:'Caja del d\u00EDa'},
+    {v:'auditoria',  l:'Auditor\u00EDa'}
+  ],
+  asist:  [
+    {v:'asistencia',    l:'Asistencia'},
+    {v:'asist_matriz',  l:'Matriz'},
+    {v:'asist_por_dia', l:'Por d\u00EDa'},
+    {v:'ranking_asist', l:'Ranking'}
+  ],
+  socios: [
+    {v:'jugadores', l:'Listado completo'}
+  ]
+};
+function selectRptCat(cat){
+  var btns = document.querySelectorAll('#r-pills-cat .r-pill-cat');
+  for(var i=0;i<btns.length;i++) btns[i].classList.toggle('active', btns[i].getAttribute('data-cat') === cat);
+  var subs = R_CAT_MAP[cat] || [];
+  var wrap = document.getElementById('r-pills-sub');
+  wrap.innerHTML = subs.map(function(s,i){
+    return '<button type="button" class="r-pill-sub'+(i===0?' active':'')+'" data-v="'+s.v+'" onclick="selectRptSub(\''+s.v+'\')">'+s.l+'</button>';
+  }).join('');
+  if(subs.length){ document.getElementById('rTipo').value = subs[0].v; renderReporte(); }
+}
+function selectRptSub(v){
+  var btns = document.querySelectorAll('#r-pills-sub .r-pill-sub');
+  for(var i=0;i<btns.length;i++) btns[i].classList.toggle('active', btns[i].getAttribute('data-v') === v);
+  document.getElementById('rTipo').value = v;
+  renderReporte();
+}
+
+var _rptChart = null;
+function hideRptChart(){
+  if(_rptChart){ try{ _rptChart.destroy(); }catch(e){} _rptChart = null; }
+  var w = document.getElementById('r-grafico-wrap'); if(w) w.style.display = 'none';
+}
+function showRptChart(cfg){
+  if(typeof Chart === 'undefined') return;
+  var w = document.getElementById('r-grafico-wrap'); if(!w) return;
+  w.style.display = '';
+  var ctx = document.getElementById('rChart').getContext('2d');
+  if(_rptChart){ try{ _rptChart.destroy(); }catch(e){} _rptChart = null; }
+  _rptChart = new Chart(ctx, cfg);
+}
+function _rptChartColors(n){
+  var base = ['#1a7a3c','#c9a227','#6de097','#e07a5f','#5f8de0','#b45f9e','#e0c25f','#5fe0c2','#e05f8d','#8d5fe0','#5fe08d','#c25fe0'];
+  var out = []; for(var i=0;i<n;i++) out.push(base[i % base.length]); return out;
+}
+
 function setTablaHeaders(cols){ document.getElementById('r-thead').innerHTML = '<tr>' + cols.map(function(c){ return '<th>' + c + '</th>'; }).join('') + '</tr>'; }
 function setTablaRows(rows){ document.getElementById('r-tbody').innerHTML = rows.join(''); document.getElementById('r-empty').style.display = rows.length ? 'none' : ''; }
 function setCards(cards){ document.getElementById('r-cards').innerHTML = cards.map(function(c){ return '<div class="r-card"><div class="r-card-val" style="color:' + (c.color||'var(--secondary)') + ';">' + c.val + '</div><div class="r-card-lbl">' + c.lbl + '</div></div>'; }).join(''); }
 function getMesSeleccionado(){ return document.getElementById('rMes').value; }
+function getPlanFiltro(){ var e = document.getElementById('rPlan'); return e ? (e.value||'').trim() : ''; }
+function socioTienePlan(dni, plan){
+  if(!plan) return true;
+  var d = (dni||'').toString().trim();
+  return (DB.inscripciones||[]).some(function(i){
+    return (i.dni||'').toString().trim() === d && String(i.plan||'').trim() === plan;
+  });
+}
 function td(txt, cls){ return '<td' + (cls?' class="'+cls+'"':'') + '>' + txt + '</td>'; }
 function getRangoFechas(){ return {desde:document.getElementById('rDesde').value, hasta:document.getElementById('rHasta').value}; }
 function periodoLabel(p){ var a = p.split('-'); var m = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']; return m[parseInt(a[1])-1] + ' ' + a[0]; }
@@ -4375,27 +5011,47 @@ function enRango(f, desde, hasta){ var fn = normFecha(f); return (!desde || fn >
 
 function rptDeudores() {
   var cat = document.getElementById('rCat').value;
+  var plan = getPlanFiltro();
   var rows = [];
   var total = 0;
   DB.jugadores.slice(1).filter(function(f){ var a = f[COL.ACTIVO]; return a===true||String(a).toLowerCase()==='si'; }).forEach(function(f){
     var cv = estadoCuotaV2(f);
     if(cv.estado !== 'debe' && cv.estado !== 'parcial') return;
     if(cat && String(f[COL.CATEGORIA_APP]||'').trim() !== String(cat).trim()) return;
+    if(plan && !socioTienePlan(f[COL.DNI]||f[COL.TARJETA]||'', plan)) return;
     total += cv.deuda;
     rows.push('<tr>' + td((f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'')) + td(f[COL.DNI]||f[COL.TARJETA]||'','muted') + td(f[COL.CATEGORIA_APP]||'','muted') + td(cv.planNom||'-','muted') + td('$'+Number(cv.deuda).toLocaleString('es-AR'),'debe num') + '</tr>');
   });
   setCards([{val:rows.length, lbl:'Deudores', color:'var(--red)'}, {val:'$'+total.toLocaleString('es-AR'), lbl:'Deuda total', color:'var(--red)'}]);
   setTablaHeaders([T('socio'),'Documento',T('grupo'),'Plan','Deuda']);
   setTablaRows(rows);
+  // Chart: donut deuda por categoria
+  var porCat = {};
+  DB.jugadores.slice(1).filter(function(f){ var a = f[COL.ACTIVO]; return a===true||String(a).toLowerCase()==='si'; }).forEach(function(f){
+    var cv = estadoCuotaV2(f);
+    if(cv.estado !== 'debe' && cv.estado !== 'parcial') return;
+    var c = f[COL.CATEGORIA_APP] || 'Sin categoria';
+    porCat[c] = (porCat[c]||0) + cv.deuda;
+  });
+  var labels = Object.keys(porCat);
+  if(labels.length){
+    showRptChart({
+      type:'doughnut',
+      data:{labels:labels, datasets:[{data:labels.map(function(k){return porCat[k];}), backgroundColor:_rptChartColors(labels.length), borderWidth:0}]},
+      options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right', labels:{color:'#ccc'}}, title:{display:true, text:'Deuda por '+T('grupo'), color:'#ccc'}}}
+    });
+  }
 }
 
 function rptAlDia() {
   var cat = document.getElementById('rCat').value;
+  var plan = getPlanFiltro();
   var rows = [];
   DB.jugadores.slice(1).filter(function(f){ var a = f[COL.ACTIVO]; return a===true||String(a).toLowerCase()==='si'; }).forEach(function(f){
     var cv = estadoCuotaV2(f);
     if(cv.estado !== 'ok' && cv.estado !== 'vence') return;
     if(cat && String(f[COL.CATEGORIA_APP]||'').trim() !== String(cat).trim()) return;
+    if(plan && !socioTienePlan(f[COL.DNI]||f[COL.TARJETA]||'', plan)) return;
     rows.push('<tr>' + td((f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'')) + td(f[COL.DNI]||f[COL.TARJETA]||'','muted') + td(f[COL.CATEGORIA_APP]||'','muted') + td(cv.planNom||'-','muted') + td(cv.hasta?formatDate(cv.hasta):'-','ok') + '</tr>');
   });
   setCards([{val:rows.length, lbl:'Al dia', color:'#6de097'}]);
@@ -4405,9 +5061,11 @@ function rptAlDia() {
 
 function rptJugadores() {
   var cat = document.getElementById('rCat').value;
+  var plan = getPlanFiltro();
   var rows = [];
   DB.jugadores.slice(1).filter(function(f){ var a = f[COL.ACTIVO]; return a===true||String(a).toLowerCase()==='si'; }).forEach(function(f){
     if(cat && String(f[COL.CATEGORIA_APP]||'').trim() !== String(cat).trim()) return;
+    if(plan && !socioTienePlan(f[COL.DNI]||f[COL.TARJETA]||'', plan)) return;
     var cv = estadoCuotaV2(f);
     var cl = cv.estado==='ok'||cv.estado==='vence'?'ok':cv.estado==='debe'||cv.estado==='parcial'?'debe':'muted';
     rows.push('<tr>' + td((f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'')) + td(f[COL.DNI]||f[COL.TARJETA]||'','muted') + td(f[COL.CATEGORIA_APP]||'','muted') + td(f[COL.EMAIL]||'-','muted') + td(f[COL.CELULAR]||'-','muted') + td(cv.estado,cl) + '</tr>');
@@ -4419,7 +5077,23 @@ function rptJugadores() {
 
 function rptPagosMes() {
   var rango = getRangoFechas();
-  var pagos = CUOTAS_DB.cuotas.filter(function(c){ return enRango(c[5]||'', rango.desde, rango.hasta); });
+  var cat = document.getElementById('rCat').value;
+  var plan = getPlanFiltro();
+  var dniByCat = null;
+  if(cat){
+    dniByCat = {};
+    DB.jugadores.slice(1).forEach(function(f){
+      if(String(f[COL.CATEGORIA_APP]||'').trim() === String(cat).trim()){
+        dniByCat[(f[COL.DNI]||f[COL.TARJETA]||'').toString().trim()] = true;
+      }
+    });
+  }
+  var pagos = CUOTAS_DB.cuotas.filter(function(c){
+    if(!enRango(c[5]||'', rango.desde, rango.hasta)) return false;
+    if(plan && String(c[2]||'').trim() !== plan) return false;
+    if(dniByCat && !dniByCat[(c[0]||'').toString().trim()]) return false;
+    return true;
+  });
   var total = pagos.reduce(function(s,c){ return s + Number(c[6]||0); }, 0);
   var rows = pagos.sort(function(a,b){ return (b[5]||'').localeCompare(a[5]||''); }).map(function(c){
     return '<tr>' + td(c[5]||'-','muted') + td(c[1]||c[0]||'-') + td(c[2]||'-','muted') + td(c[7]||'-','muted') + td('$'+Number(c[6]).toLocaleString('es-AR'),'ok num') + '</tr>';
@@ -4427,17 +5101,45 @@ function rptPagosMes() {
   setCards([{val:pagos.length, lbl:'Pagos'}, {val:'$'+total.toLocaleString('es-AR'), lbl:'Total recaudado', color:'#6de097'}]);
   setTablaHeaders(['Fecha',T('socio'),'Plan','Metodo','Monto']);
   setTablaRows(rows);
+  // Chart: barras por día en el rango
+  var porFecha = {};
+  pagos.forEach(function(c){
+    var f = normFecha(c[5]||''); if(!f) return;
+    porFecha[f] = (porFecha[f]||0) + Number(c[6]||0);
+  });
+  var labels = Object.keys(porFecha).sort();
+  if(labels.length){
+    showRptChart({
+      type:'bar',
+      data:{labels:labels, datasets:[{label:'Recaudado $', data:labels.map(function(k){return porFecha[k];}), backgroundColor:'#1a7a3c', borderRadius:4}]},
+      options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{color:'#aaa'}, grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#aaa'}, grid:{display:false}}}}
+    });
+  }
 }
 
 function rptTipoPago() {
   var mes = getMesSeleccionado();
-  var pagos = CUOTAS_DB.cuotas.filter(function(c){ return (c[5]||'').startsWith(mes.replace('-','/')||mes); });
+  var plan = getPlanFiltro();
+  var pagos = CUOTAS_DB.cuotas.filter(function(c){
+    if(!(c[5]||'').startsWith(mes.replace('-','/')||mes)) return false;
+    if(plan && String(c[2]||'').trim() !== plan) return false;
+    return true;
+  });
   var por = {};
   pagos.forEach(function(c){ var m = c[7]||'Sin especificar'; por[m] = (por[m]||0) + Number(c[6]||0); });
   var rows = Object.keys(por).map(function(m){ return '<tr>' + td(m) + td('$'+por[m].toLocaleString('es-AR'),'ok num') + '</tr>'; });
   setCards([{val:pagos.length, lbl:'Pagos del mes'}]);
   setTablaHeaders(['Metodo','Total']);
   setTablaRows(rows);
+  // Chart: pie por método
+  var labels = Object.keys(por);
+  if(labels.length){
+    showRptChart({
+      type:'doughnut',
+      data:{labels:labels, datasets:[{data:labels.map(function(k){return por[k];}), backgroundColor:_rptChartColors(labels.length), borderWidth:0}]},
+      options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right', labels:{color:'#ccc'}}}}
+    });
+  }
 }
 
 function rptAsistencia() {
@@ -4504,7 +5206,9 @@ function rptAsistenciaPorDia() {
   var rows = dias.map(function(d) {
     var pct = d.total > 0 ? Math.round(d.presentes/d.total*100) : 0;
     var cl  = pct>=75?'ok':pct>=50?'':'debe';
-    var turnoLabel = d.turnoId.replace(/_/g,' ');
+    // turnoId formato: "YYYY-MM-DD_timestamp_grupoKey" — mostramos solo el grupo
+    var tParts = (d.turnoId || '').split('_');
+    var turnoLabel = tParts.length >= 3 ? tParts[tParts.length - 1] : (d.turnoId || '-');
     // Tooltip con los nombres
     var titPres = d.listaPres.join(', ') || '-';
     var titAus  = d.listaAus.join(', ')  || '-';
@@ -4534,7 +5238,7 @@ function rptAsistenciaPorDia() {
   // Nota al pie
   var nota = document.getElementById('r-nota');
   if(!nota){ nota = document.createElement('div'); nota.id='r-nota'; nota.style.cssText='color:var(--muted);font-size:11px;margin-top:8px;padding:0 4px;'; var rTbl = document.getElementById('r-tabla') || document.getElementById('rTabla'); if(rTbl && rTbl.parentNode) rTbl.parentNode.appendChild(nota); }
-  nota.innerText = 'Hover sobre Presentes/Ausentes para ver los nombres del d&iacute;a';
+  nota.innerHTML = 'Hover sobre Presentes/Ausentes para ver los nombres del d&iacute;a';
 }
 
 function rptAsistenciaMatriz() {
@@ -4688,8 +5392,22 @@ function rptAsistenciaMatriz() {
 
 function rptRankingAsist() {
   var rango = getRangoFechas();
+  var cat = document.getElementById('rCat').value;
+  var dniByCat = null;
+  if(cat){
+    dniByCat = {};
+    DB.jugadores.slice(1).forEach(function(f){
+      if(String(f[COL.CATEGORIA_APP]||'').trim() === String(cat).trim()){
+        dniByCat[(f[COL.DNI]||f[COL.TARJETA]||'').toString().trim()] = true;
+      }
+    });
+  }
   var stats = {};
-  asistencias.filter(function(r){ return enRango(r[0], rango.desde, rango.hasta); }).forEach(function(r){
+  asistencias.filter(function(r){
+    if(!enRango(r[0], rango.desde, rango.hasta)) return false;
+    if(dniByCat && !dniByCat[(r[3]||'').toString().trim()]) return false;
+    return true;
+  }).forEach(function(r){
     var dni = r[3]; if(!stats[dni]) stats[dni] = {total:0, pres:0, nombre:r[4]||''};
     stats[dni].total++;
     if(r[5]===true||String(r[5]).toLowerCase()==='true') stats[dni].pres++;
@@ -4703,6 +5421,15 @@ function rptRankingAsist() {
   setCards([{val:arr.length, lbl:'Con registros'}, {val:arr[0]?arr[0].pres:0, lbl:'Mayor asistencia', color:'#6de097'}]);
   setTablaHeaders(['#','Nombre','Presentes','Clases','%']);
   setTablaRows(rows);
+  // Chart: barras horizontales top 10
+  var top = arr.slice(0,10);
+  if(top.length){
+    showRptChart({
+      type:'bar',
+      data:{labels:top.map(function(s){return s.nombre;}), datasets:[{label:'Presentes', data:top.map(function(s){return s.pres;}), backgroundColor:'#c9a227', borderRadius:4}]},
+      options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true, ticks:{color:'#aaa'}, grid:{color:'rgba(255,255,255,.05)'}}, y:{ticks:{color:'#ccc'}, grid:{display:false}}}}
+    });
+  }
 }
 
 function rptAuditoria() {
@@ -4736,10 +5463,25 @@ function rptAuditoria() {
 }
 
 function rptCajaDia() {
-  var fecha = document.getElementById('rCajaFecha') ? document.getElementById('rCajaFecha').value : '';
+  var fecha = document.getElementById('rCajaFecha').value;
   if(!fecha) return;
-  var cont = document.getElementById('r-tbody'); if(!cont) return;
-  var pagos = CUOTAS_DB.cuotas.filter(function(c){ return (c[5]||'') === fecha; });
+  var cat = document.getElementById('rCat').value;
+  var plan = getPlanFiltro();
+  var dniByCat = null;
+  if(cat){
+    dniByCat = {};
+    DB.jugadores.slice(1).forEach(function(f){
+      if(String(f[COL.CATEGORIA_APP]||'').trim() === String(cat).trim()){
+        dniByCat[(f[COL.DNI]||f[COL.TARJETA]||'').toString().trim()] = true;
+      }
+    });
+  }
+  var pagos = CUOTAS_DB.cuotas.filter(function(c){
+    if((c[5]||'') !== fecha) return false;
+    if(plan && String(c[2]||'').trim() !== plan) return false;
+    if(dniByCat && !dniByCat[(c[0]||'').toString().trim()]) return false;
+    return true;
+  });
   var total = pagos.reduce(function(s,c){ return s + Number(c[6]||0); }, 0);
   var rows = pagos.map(function(c){
     return '<tr>' + td(c[1]||c[0]||'-') + td(c[2]||'-','muted') + td(c[7]||'-','muted') + td(c[8]||'-','muted') + td('$'+Number(c[6]).toLocaleString('es-AR'),'ok num') + '</tr>';
@@ -4747,17 +5489,24 @@ function rptCajaDia() {
   setCards([{val:pagos.length, lbl:'Cobros'}, {val:'$'+total.toLocaleString('es-AR'), lbl:'Total del dia', color:'#6de097'}]);
   setTablaHeaders([T('socio'),'Plan','Metodo','Cobrador','Monto']);
   setTablaRows(rows);
+  // Chart: pie por método de cobro
+  var porMet = {};
+  pagos.forEach(function(c){ var m = c[7]||'Sin especificar'; porMet[m] = (porMet[m]||0) + Number(c[6]||0); });
+  var labels = Object.keys(porMet);
+  if(labels.length){
+    showRptChart({
+      type:'pie',
+      data:{labels:labels, datasets:[{data:labels.map(function(k){return porMet[k];}), backgroundColor:_rptChartColors(labels.length), borderWidth:0}]},
+      options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right', labels:{color:'#ccc'}}}}
+    });
+  }
 }
 
 function exportarReporteCSV() {
   var headers = Array.from(document.querySelectorAll('#r-thead th')).map(function(th){ return '"' + th.innerText + '"'; });
   var rows = [headers.join(',')];
   document.querySelectorAll('#r-tbody tr').forEach(function(tr){
-    rows.push(Array.from(tr.querySelectorAll('td')).map(function(td){
-      var s = td.innerText.replace(/"/g,'""');
-      if (/^[=+\-@	]/.test(s)) s = "'" + s;
-      return '"' + s + '"';
-    }).join(','));
+    rows.push(Array.from(tr.querySelectorAll('td')).map(function(td){ return '"' + td.innerText + '"'; }).join(','));
   });
   var blob = new Blob(['\uFEFF'+rows.join('\n')], {type:'text/csv;charset=utf-8;'});
   var url = URL.createObjectURL(blob), a = document.createElement('a');
@@ -5126,7 +5875,6 @@ function confirmarAuditoriaPago() {
   var motivo = document.getElementById('audit-motivo').value.trim();
   if(!motivo) {
     document.getElementById('audit-motivo-error').style.display = 'block';
-    toast('El motivo es obligatorio', 'err');
     return;
   }
   document.getElementById('audit-motivo-error').style.display = 'none';
@@ -5152,13 +5900,6 @@ function confirmarAuditoriaPago() {
 
   if(_auditCtx.tipo === 'EDITAR') {
     var nuevoMonto  = parseFloat(document.getElementById('audit-monto').value)||0;
-    if (nuevoMonto <= 0) {
-      ocultarLoader();
-      document.getElementById('audit-monto').style.borderColor = 'var(--red)';
-      setTimeout(function(){ document.getElementById('audit-monto').style.borderColor = ''; }, 3000);
-      toast('El monto debe ser mayor a $0', 'err');
-      return;
-    }
     var nuevoMetodo = document.getElementById('audit-metodo').value;
     var nuevaFecha  = document.getElementById('audit-fecha').value;
     var nuevaObs    = document.getElementById('audit-obs').value.trim();
@@ -5246,16 +5987,9 @@ function sgdConfirm(msg, onOk, btnOkLabel) {
 }
 
 window.onload = function() {
+  // Limpiar tokens viejos en localStorage
   localStorage.removeItem('sgd_token');
   localStorage.removeItem('sgd_admin_uid');
-  if (!GAS_URL || GAS_URL === '' || GAS_URL.trim() === '') {
-    console.warn('[SGD] GAS_URL no configurado');
-    setTimeout(function(){
-      document.querySelectorAll('[onclick^="subirArchivo"]').forEach(function(btn){
-        btn.disabled = true; btn.title = 'Subida no configurada'; btn.style.opacity = '0.4';
-      });
-    }, 1000);
-  }
   // B7: Forzar limpieza de sessionStorage en recarga forzada
   // Ctrl+F5 no siempre limpia sessionStorage en todos los browsers
   // Verificamos con performance.navigation para detectar recarga forzada
@@ -5559,7 +6293,7 @@ function citGenerarLista() {
 // --- RENDER PANTALLA IMPRESION ---
 function citMostrarPrint(jugadores, info) {
   var logoSrc = INST.logoUrl ? getDriveDisplay(INST.logoUrl) : '';
-  var clubNombre = INST.nombre || 'CA Excursionistas Futsal';
+  var clubNombre = INST.nombre || INST.nombreCorto || 'SGD';
   var fecha = new Date().toLocaleDateString('es-AR');
   var total = jugadores.length;
 
@@ -5655,7 +6389,7 @@ function citRenderHistorial() {
       + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:15px;font-weight:800;text-transform:uppercase;">'
       + citEsc(c.categoria) + ' &mdash; vs ' + citEsc(c.rival) + '</div>'
       + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + subtitulo
-      + (c.observaciones ? ' &middot; ' + esc(c.observaciones) : '') + '</div>'
+      + (c.observaciones ? ' &middot; ' + citEsc(c.observaciones) : '') + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:8px;align-items:center;">'
       + '<button onclick="citVerHistorico(\'' + c.rowIndex + '\')" style="font-size:11px;padding:5px 10px;background:var(--primary-dim);border:1px solid var(--primary-border);color:#6de097;border-radius:6px;cursor:pointer;font-family:\'Barlow Condensed\',sans-serif;">&#128424; Ver</button>'
@@ -5691,6 +6425,178 @@ function citBorrar(rowIndex) {
 // ═══════════════════════════════════════════════════════════
 // FIN MODULO CITACIONES
 // ═══════════════════════════════════════════════════════════
+
+// ── RECATEGORIZACIÓN ANUAL ────────────────────────────────────────
+var _recatPreview = null;
+
+function previsualizarRecategorizacion() {
+  var anioActual = new Date().getFullYear();
+
+  // Calcular nuevos rangos
+  var nuevasCats = DB.categorias.map(function(c) {
+    var desde = parseInt(c[2]) || 0;
+    var hasta  = parseInt(c[3]) || 0;
+    return {
+      id:       c[c.length-1],
+      nombre:   c[0],
+      color:    c[1],
+      genero:   c[4]||'Mixto',
+      desde:    desde,
+      hasta:    hasta,
+      nuevoDesde: desde + 1,
+      nuevoHasta: hasta + 1
+    };
+  });
+
+  // Calcular cambios de alumnos
+  var cambios = [];
+  var sinCategoria = [];
+
+  DB.jugadores.slice(1).forEach(function(f) {
+    if(!f) return;
+    var anioNac = extraerAnioNac(f[COL.FECHA_NAC]);
+    if(!anioNac) return;
+    var gen = f[COL.SEXO]||'Masculino';
+    var catActual = String(f[COL.CATEGORIA_APP]||'').trim();
+    var dni = (f[COL.DNI]||f[COL.TARJETA]||'').toString();
+    var nombre = esc((f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||''));
+
+    // Buscar categoría nueva según nuevos rangos
+    var catNueva = null;
+    for(var i=0; i<nuevasCats.length; i++) {
+      var nc = nuevasCats[i];
+      if(anioNac >= nc.nuevoDesde && anioNac <= nc.nuevoHasta && (nc.genero === gen || nc.genero === 'Mixto')) {
+        catNueva = nc.nombre;
+        break;
+      }
+    }
+
+    if(!catNueva) {
+      sinCategoria.push({nombre: nombre, dni: dni, anioNac: anioNac, catActual: catActual});
+    } else if(catNueva !== catActual) {
+      cambios.push({nombre: nombre, dni: dni, anioNac: anioNac, catActual: catActual||'Sin categoría', catNueva: catNueva});
+    }
+  });
+
+  _recatPreview = {nuevasCats: nuevasCats, cambios: cambios, sinCategoria: sinCategoria};
+
+  // Renderizar tabla de categorías
+  var htmlCats = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;background:var(--primary);padding:8px 12px;font-size:11px;font-weight:700;color:white;">'
+    + '<div>Categoría</div><div style="text-align:center;">Rango actual</div><div style="text-align:center;">&#x27A1;</div><div style="text-align:center;">Rango nuevo</div></div>';
+  nuevasCats.forEach(function(nc) {
+    htmlCats += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;padding:8px 12px;border-top:1px solid var(--border);background:var(--bg);">'
+      + '<div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:' + nc.color + ';display:inline-block;"></span><strong>' + esc(nc.nombre) + '</strong></div>'
+      + '<div style="text-align:center;color:var(--muted);">' + nc.desde + ' — ' + nc.hasta + '</div>'
+      + '<div style="text-align:center;color:var(--secondary);font-weight:900;">→</div>'
+      + '<div style="text-align:center;color:#6de097;font-weight:700;">' + nc.nuevoDesde + ' — ' + nc.nuevoHasta + '</div>'
+      + '</div>';
+  });
+  document.getElementById('recat-tabla-cats').innerHTML = htmlCats;
+
+  // Renderizar tabla de alumnos
+  if(cambios.length) {
+    var htmlAlumnos = '<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;background:var(--primary);padding:8px 12px;font-size:11px;font-weight:700;color:white;">'
+      + '<div>Alumno</div><div style="text-align:center;">Nac.</div><div style="text-align:center;">Categoría actual</div><div style="text-align:center;">Categoría nueva</div></div>';
+    cambios.forEach(function(c) {
+      htmlAlumnos += '<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;padding:7px 12px;border-top:1px solid var(--border);background:var(--bg);font-size:12px;">'
+        + '<div>' + c.nombre + '</div>'
+        + '<div style="text-align:center;color:var(--muted);">' + c.anioNac + '</div>'
+        + '<div style="text-align:center;color:var(--muted);">' + esc(c.catActual) + '</div>'
+        + '<div style="text-align:center;font-weight:700;color:#6de097;">' + esc(c.catNueva) + '</div>'
+        + '</div>';
+    });
+    document.getElementById('recat-tabla-alumnos').innerHTML = htmlAlumnos;
+    document.getElementById('recat-tabla-alumnos').style.display = '';
+    document.getElementById('recat-sin-cambios').style.display = 'none';
+  } else {
+    document.getElementById('recat-tabla-alumnos').innerHTML = '';
+    document.getElementById('recat-tabla-alumnos').style.display = 'none';
+    document.getElementById('recat-sin-cambios').style.display = '';
+  }
+  document.getElementById('recat-count-badge').innerText = cambios.length + ' alumnos';
+
+  // Renderizar sin categoría
+  if(sinCategoria.length) {
+    var htmlSinCat = '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;background:rgba(255,152,0,.2);padding:8px 12px;font-size:11px;font-weight:700;color:var(--orange);">'
+      + '<div>Alumno</div><div style="text-align:center;">Nac.</div><div style="text-align:center;">Cat. actual</div></div>';
+    sinCategoria.forEach(function(s) {
+      htmlSinCat += '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;padding:7px 12px;border-top:1px solid rgba(255,152,0,.2);background:var(--bg);font-size:12px;">'
+        + '<div>' + s.nombre + '</div>'
+        + '<div style="text-align:center;color:var(--muted);">' + s.anioNac + '</div>'
+        + '<div style="text-align:center;color:var(--muted);">' + esc(s.catActual||'Sin cat.') + '</div>'
+        + '</div>';
+    });
+    document.getElementById('recat-tabla-sincat').innerHTML = htmlSinCat;
+    document.getElementById('recat-sin-cat-wrap').style.display = '';
+    document.getElementById('recat-sincat-badge').innerText = sinCategoria.length;
+  } else {
+    document.getElementById('recat-sin-cat-wrap').style.display = 'none';
+  }
+
+  document.getElementById('recat-subtitulo').innerText = 'Avance de ' + anioActual + ' → ' + (anioActual+1) + ' · ' + nuevasCats.length + ' categorías · ' + cambios.length + ' alumnos a reasignar';
+  document.getElementById('modalRecat').style.display = '';
+}
+
+function cerrarRecat() {
+  document.getElementById('modalRecat').style.display = 'none';
+  _recatPreview = null;
+}
+
+function ejecutarRecategorizacion() {
+  if(!_recatPreview) return;
+  var btn = document.getElementById('btn-ejecutar-recat');
+  btn.disabled = true; btn.innerText = 'Aplicando...';
+  mostrarLoader('Actualizando categorías...');
+
+  var total = _recatPreview.nuevasCats.length + _recatPreview.cambios.length;
+  var done = 0;
+  var errores = 0;
+
+  function checkDone() {
+    done++;
+    if(done >= total) {
+      // Actualizar DB en memoria
+      _recatPreview.nuevasCats.forEach(function(nc) {
+        var idx = DB.categorias.findIndex(function(c){ return c[c.length-1] === nc.id; });
+        if(idx >= 0) {
+          DB.categorias[idx][2] = nc.nuevoDesde.toString();
+          DB.categorias[idx][3] = nc.nuevoHasta.toString();
+        }
+      });
+      _recatPreview.cambios.forEach(function(cambio) {
+        var idx = DB.jugadores.findIndex(function(f){ return f && (f[COL.DNI]||f[COL.TARJETA]||'').toString() === cambio.dni; });
+        if(idx >= 0) DB.jugadores[idx][COL.CATEGORIA_APP] = cambio.catNueva;
+      });
+
+      renderListCat();
+      poblarSelects();
+      renderPlayers();
+      ocultarLoader();
+      cerrarRecat();
+      toast('✓ ' + _recatPreview.cambios.length + ' alumnos reasignados · ' + _recatPreview.nuevasCats.length + ' categorías actualizadas' + (errores ? ' · ' + errores + ' errores' : ''), 'ok');
+      _recatPreview = null;
+    }
+  }
+
+  // 1. Actualizar rangos de categorías en Firestore
+  _recatPreview.nuevasCats.forEach(function(nc) {
+    db.collection('config_categorias').doc(nc.id.toString()).update({
+      edadDesde: nc.nuevoDesde.toString(),
+      edadHasta:  nc.nuevoHasta.toString()
+    }).then(checkDone).catch(function(e){ errores++; checkDone(); });
+  });
+
+  // 2. Actualizar categoría de cada alumno en Firestore
+  _recatPreview.cambios.forEach(function(cambio) {
+    db.collection('socios').doc(cambio.dni).update({
+      categoriaApp: cambio.catNueva
+    }).then(checkDone).catch(function(e){ errores++; checkDone(); });
+  });
+
+  // Si no hay cambios de alumnos ni de cats (caso raro)
+  if(total === 0) { ocultarLoader(); cerrarRecat(); toast('No hay cambios que aplicar', 'ok'); }
+}
+
 </script>
 
 <!-- PANTALLA IMPRESION CITACION -->
