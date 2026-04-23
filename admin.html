@@ -2779,11 +2779,19 @@ function renderPlayers() {
     var fotoHtml = fotoUrl ? '<img src="' + fotoUrl + '" loading="lazy" style="width:80px;height:90px;border-radius:8px;object-fit:cover;border:2px solid ' + bc + ';position:absolute;top:34px;right:8px;" onerror="this.parentNode.removeChild(this)">' : '';
     var prStyle = fotoUrl ? 'padding-right:96px;' : '';
     html += '<div class="cat-badge" style="background:' + bc + '">' + cat + rango + '</div>';
-    html += fotoHtml;
-    html += '<div style="' + prStyle + '">';
     var catSecCard = (f[COL.CAT_SECUNDARIA]||'').toString().trim();
-    var catSecBadge = catSecCard ? '<span style="background:rgba(201,162,39,.2);color:var(--secondary);font-size:10px;font-weight:800;padding:1px 7px;border-radius:8px;margin-left:6px;font-family:\'Barlow Condensed\',sans-serif;">+' + catSecCard + '</span>' : '';
-    html += '<h4 class="card-nombre" style="margin:0 0 2px 0;">' + esc(apellido) + catSecBadge + '<br><span style="font-size:12px;color:var(--muted);">' + esc(nombre) + '</span></h4>';
+    var fotoTop = 34;
+    if(catSecCard){
+      var catSecObj = DB.categorias.find(function(c){ return c[0] === catSecCard; });
+      var catSecColor = catSecObj ? catSecObj[1] : 'var(--secondary)';
+      var catSecRango = catSecObj ? ' (' + catSecObj[2] + '-' + catSecObj[3] + ')' : '';
+      html += '<div class="cat-badge" style="background:' + catSecColor + ';top:24px;">' + catSecCard + catSecRango + '</div>';
+      fotoTop = 56;
+    }
+    var fotoHtmlAdj = fotoUrl ? fotoHtml.replace('top:34px', 'top:' + fotoTop + 'px') : '';
+    html += fotoHtmlAdj;
+    html += '<div style="' + prStyle + '">';
+    html += '<h4 class="card-nombre" style="margin:0 0 2px 0;">' + esc(apellido) + '<br><span style="font-size:12px;color:var(--muted);">' + esc(nombre) + '</span></h4>';
     html += '<p class="card-info" style="margin:0 0 6px 0;">Doc: ' + dni + (anioNac ? ' | Nac. ' + anioNac : '') + '</p>';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
     html += '<div><span class="status-dot ' + (act ? 'active-dot' : 'inactive-dot') + '"></span>';
