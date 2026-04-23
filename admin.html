@@ -2570,7 +2570,7 @@ function renderInscripcionesModal(dni) {
       + '<div class="insc-fechas">Desde ' + i.desde + ' &middot; ' + hastaStr + (i.obs ? ' &middot; ' + i.obs : '') + '</div>'
       + '</div>'
       + '<div style="text-align:right;"><div class="insc-monto">$' + montoEfectivo.toLocaleString('es-AR') + '</div>' + badgeDesc + '</div>'
-      + (!baja ? '<button class="insc-btn" onclick="darDeBajaInscripcion(' + i._row + ',\'' + dniStr + '\')">BAJA</button>' : '')
+      + (!baja ? '<button class="insc-btn" onclick="darDeBajaInscripcion(\'' + i._row + '\',\'' + dniStr + '\')">BAJA</button>' : '')
       + '</div>';
   }).join('');
 }
