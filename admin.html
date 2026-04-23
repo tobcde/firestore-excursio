@@ -2136,6 +2136,14 @@ function _fsDispatch(action, p, ok, err) {
       break;
     }
 
+    case 'deleteInscripcion': {
+      var docIdDel = p.rowIndex;
+      db.collection('inscripciones').doc(docIdDel.toString()).delete()
+        .then(function(){ cb({ok:true}); })
+        .catch(function(e){ cbErr(e.message); });
+      break;
+    }
+
     case 'inscripcionMasiva': {
       // Crear inscripciones para todos los socios de una categoría
       var sociosMasiva = DB.jugadores.slice(1).filter(function(f){
@@ -2570,7 +2578,8 @@ function renderInscripcionesModal(dni) {
       + '<div class="insc-fechas">Desde ' + i.desde + ' &middot; ' + hastaStr + (i.obs ? ' &middot; ' + i.obs : '') + '</div>'
       + '</div>'
       + '<div style="text-align:right;"><div class="insc-monto">$' + montoEfectivo.toLocaleString('es-AR') + '</div>' + badgeDesc + '</div>'
-      + (!baja ? '<button class="insc-btn" onclick="darDeBajaInscripcion(\'' + i._row + '\',\'' + dniStr + '\')">BAJA</button>' : '')
+      + (!baja ? '<button class="insc-btn" onclick="darDeBajaInscripcion(\'' + i._row + '\',\'' + dniStr + '\')">BAJA</button>' : '<button class="insc-btn" style="background:rgba(109,224,151,.15);color:#6de097;border-color:#6de097;" onclick="reactivarInscripcion(\'' + i._row + '\',\'' + dniStr + '\')">REACTIVAR</button>')
+      + '<button class="insc-btn" style="background:rgba(228,67,71,.15);color:var(--red);border-color:var(--red);margin-left:4px;" onclick="eliminarInscripcion(\'' + i._row + '\',\'' + dniStr + '\')" title="Eliminar inscripcion (creada por error)">&#x2715;</button>'
       + '</div>';
   }).join('');
 }
@@ -2651,6 +2660,34 @@ function darDeBajaInscripcion(rowIndex, dni) {
     toast('Inscripcion dada de baja', 'ok');
   }, function(e){ ocultarLoader(); alert('Error: '+e); });
   }); // sgdConfirm
+}
+
+function reactivarInscripcion(rowIndex, dni) {
+  sgdConfirm('Reactivar esta inscripcion?<br><br>Se quita la fecha de baja y vuelve a considerarse vigente.', function() {
+    mostrarLoader('Reactivando...');
+    callScript({action:'updateInscripcion', rowIndex:rowIndex, hasta:'', pass:TOKEN, _noRetry:true}, function(){
+      var insc = DB.inscripciones.find(function(i){ return i._row === rowIndex; });
+      if(insc) insc.hasta = '';
+      renderInscripcionesModal(dni);
+      ocultarLoader();
+      renderPlayers();
+      toast('Inscripcion reactivada', 'ok');
+    }, function(e){ ocultarLoader(); alert('Error: '+e); });
+  }, 'REACTIVAR');
+}
+
+function eliminarInscripcion(rowIndex, dni) {
+  sgdConfirm('<b>Eliminar</b> esta inscripcion?<br><br>Se borra permanentemente del sistema. Usalo solo si fue creada por error — los calculos de deuda historica de esta inscripcion desapareceran.', function() {
+    mostrarLoader('Eliminando inscripcion...');
+    callScript({action:'deleteInscripcion', rowIndex:rowIndex, pass:TOKEN, _noRetry:true}, function(){
+      var idx = DB.inscripciones.findIndex(function(i){ return i._row === rowIndex; });
+      if(idx >= 0) DB.inscripciones.splice(idx, 1);
+      renderInscripcionesModal(dni);
+      ocultarLoader();
+      renderPlayers();
+      toast('Inscripcion eliminada', 'ok');
+    }, function(e){ ocultarLoader(); alert('Error: '+e); });
+  }, 'ELIMINAR');
 }
 
 // ================================================================
