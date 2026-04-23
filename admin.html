@@ -350,7 +350,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <input type="text" id="busq" class="filter-select" placeholder="Nombre o documento..." oninput="renderPlayers()"></div>
     <div class="filter-group"><label class="filter-label">Estado</label>
       <select id="fEstado" class="filter-select" onchange="renderPlayers()">
-        <option value="">Todos</option><option value="Activos" selected>Solo Activos</option><option value="Inactivos">Solo Inactivos</option></select></div>
+        <option value="">Todos</option><option value="Activos" selected>Solo Activos</option><option value="Inactivos">Solo Inactivos</option><option value="SinCat">Sin categoria</option></select></div>
     <div class="filter-group"><label class="filter-label">Genero</label>
       <select id="fGen" class="filter-select" onchange="renderPlayers()">
         <option value="">Todos</option><option>Masculino</option><option>Femenino</option></select></div>
@@ -365,6 +365,15 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
     <div><span class="stat-n" id="statM">0</span><span class="stat-l">Masculino</span></div>
     <div><span class="stat-n" id="statD" style="color:var(--red);">0</span><span class="stat-l">Deben</span></div>
     <div><span class="stat-n" id="statV" style="color:var(--orange);">0</span><span class="stat-l">Por vencer</span></div>
+  </div>
+  <div id="banner-pendientes-cat" style="display:none;background:linear-gradient(135deg,rgba(255,152,0,0.15),rgba(255,152,0,0.05));border:1px solid var(--orange);border-radius:10px;padding:12px 14px;margin:10px 0;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <span style="font-size:20px;">&#x26A0;&#xFE0F;</span>
+    <div style="flex:1;min-width:180px;">
+      <div style="font-weight:700;color:var(--orange);" id="banner-pendientes-cat-txt">0 pendientes de asignar categoría</div>
+      <div style="font-size:12px;color:var(--muted);">Auto-registrados desde datos.html — asignales la categoría correspondiente.</div>
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="verPendientesCategoria()">Ver ahora</button>
+    <button class="btn btn-outline btn-sm" onclick="ocultarBannerPendientes()" title="Descartar" style="padding:4px 10px;">&#x2715;</button>
   </div>
   <div class="grid" id="gridJugadores"></div>
 </div>
@@ -2417,6 +2426,47 @@ function renderAll() {
   });
   renderPeriodosAdmin();
   document.getElementById('asistFecha').value = new Date().toISOString().split('T')[0];
+  revisarPendientesCategoria();
+}
+
+function contarPendientesCategoria(){
+  var n = 0;
+  DB.jugadores.slice(1).forEach(function(f){
+    if(f && f._eliminado) return;
+    var cat = String(f[COL.CATEGORIA_APP]||'').trim();
+    if(!cat) n++;
+  });
+  return n;
+}
+
+function revisarPendientesCategoria(){
+  var n = contarPendientesCategoria();
+  var banner = document.getElementById('banner-pendientes-cat');
+  if(!banner) return;
+  if(n > 0 && sessionStorage.getItem('sgd_banner_cat_cerrado') !== '1'){
+    document.getElementById('banner-pendientes-cat-txt').textContent =
+      n + (n === 1 ? ' socio pendiente' : ' socios pendientes') + ' de asignar categoría';
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function verPendientesCategoria(){
+  var btnJug = document.getElementById('tab-btn-jugadores');
+  if(btnJug) btnJug.click();
+  document.getElementById('fEstado').value = 'SinCat';
+  document.getElementById('fCat').value = '';
+  document.getElementById('fCuota').value = '';
+  document.getElementById('busq').value = '';
+  renderPlayers();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function ocultarBannerPendientes(){
+  sessionStorage.setItem('sgd_banner_cat_cerrado','1');
+  var banner = document.getElementById('banner-pendientes-cat');
+  if(banner) banner.style.display = 'none';
 }
 
 // -- HELPERS FECHA ------------------------------------------------
@@ -2749,6 +2799,7 @@ function renderPlayers() {
     if(catF && cat !== catF) return;
     if(estF==='Activos' && !act) return;
     if(estF==='Inactivos' && act) return;
+    if(estF==='SinCat' && String(f[COL.CATEGORIA_APP]||'').trim() !== '') return;
     if(cuotaF && cuotaF !== est) return;
 
     t++; if(gen==='Masculino') m++; if(gen==='Femenino') fc++;
