@@ -1003,7 +1003,14 @@ function inicializarPaso4() {
   catHtml += '<option value="">— Sin categoría —</option>';
   CATEGORIAS.forEach(function(c) {
     var sel = (c.nombre === catActual) ? ' selected' : '';
-    catHtml += '<option value="' + escHtml(c.nombre) + '"' + sel + '>' + escHtml(c.nombre) + '</option>';
+    var parts = [c.nombre];
+    if(c.genero && c.genero !== 'Mixto') parts.push(c.genero);
+    else if(c.genero === 'Mixto') parts.push('Mixto');
+    if(c.desde && c.hasta){
+      parts.push(c.desde === c.hasta ? String(c.desde) : (c.desde + ' a ' + c.hasta));
+    }
+    var label = parts.join(' - ');
+    catHtml += '<option value="' + escHtml(c.nombre) + '"' + sel + '>' + escHtml(label) + '</option>';
   });
   catHtml += '</select></div>';
   html += catHtml;
