@@ -1566,7 +1566,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.15</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.16</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3244,7 +3244,13 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
   document.getElementById('mp-hasta').value = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().split('T')[0];
   document.getElementById('mp-monto').value = _moSugerido || '';
   document.getElementById('mp-obs').value = '';
-  document.getElementById('mp-cobrador').innerHTML = DB.profesores.map(function(p){ return '<option>' + p[0] + '</option>'; }).join('') || '<option>Sin especificar</option>';
+  // Cobrador: poblar lista y poner Juana Sestua por default si existe
+  var _cobSel = document.getElementById('mp-cobrador');
+  _cobSel.innerHTML = DB.profesores.map(function(p){ return '<option>' + p[0] + '</option>'; }).join('') || '<option>Sin especificar</option>';
+  for (var _ci = 0; _ci < _cobSel.options.length; _ci++) {
+    var _txt = (_cobSel.options[_ci].text || '').trim().toLowerCase();
+    if (_txt.indexOf('juana') >= 0 && _txt.indexOf('sestua') >= 0) { _cobSel.selectedIndex = _ci; break; }
+  }
   // Poblar planes vigentes del socio
   var dniStr = (dni||'').toString().trim();
   var inscVig = getInscripcionesVigentes(dniStr, null);
@@ -3298,10 +3304,10 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
 function cerrarModalPago(){ document.getElementById('modalPago').classList.remove('open'); pagoCtx = null; }
 
 function recalcularTotalPago() {
+  // El usuario cambio un checkbox o toggle de extra: recomputar sugerido y limpiar override manual.
   var checks = document.querySelectorAll('#mp-planes-lista input[name="pp_check"]:checked');
   var total = 0;
   checks.forEach(function(cb){ total += Number(cb.getAttribute('data-monto'))||0; });
-  // Extra
   var extraCheck = document.getElementById('mp-extra-check');
   if(extraCheck && extraCheck.checked) {
     total += Number(document.getElementById('mp-extra-monto').value)||0;
@@ -3309,6 +3315,7 @@ function recalcularTotalPago() {
   var calcEl = document.getElementById('mp-total-calc');
   if(calcEl) calcEl.innerText = '$' + total.toLocaleString('es-AR');
   document.getElementById('mp-monto').value = total || '';
+  if (pagoCtx) pagoCtx._montoOverride = null;
 }
 
 function togglePagoExtra() {
@@ -3319,9 +3326,13 @@ function togglePagoExtra() {
 }
 
 function sincronizarMontoManual() {
-  // cuando el usuario edita monto a mano, actualizar total mostrado
+  // El usuario edito el monto total manualmente. NO tocamos los data-monto
+  // (eso produce feedback loop con keystrokes). Solo actualizamos el label
+  // mostrado y marcamos un flag para que confirmarPago haga el override.
+  var montoTotal = Number(document.getElementById('mp-monto').value) || 0;
   var calcEl = document.getElementById('mp-total-calc');
-  if(calcEl) calcEl.innerText = '$' + (Number(document.getElementById('mp-monto').value)||0).toLocaleString('es-AR');
+  if(calcEl) calcEl.innerText = '$' + montoTotal.toLocaleString('es-AR');
+  if (pagoCtx) pagoCtx._montoOverride = montoTotal;
 }
 
 function toggleUsarFavor() {
@@ -3380,6 +3391,29 @@ function confirmarPago() {
       var extraDesc = document.getElementById('mp-extra-desc').value.trim() || 'Cobro extraordinario';
       var extraMonto = Number(document.getElementById('mp-extra-monto').value)||0;
       if(extraMonto > 0) pagos.push({plan: extraDesc, monto: extraMonto});
+    }
+    // QA-014: si el usuario edito #mp-monto a un total distinto del sugerido
+    // (override manual), respetar ese override y escalar proporcionalmente.
+    var _montoOverride = (pagoCtx && pagoCtx._montoOverride) || 0;
+    if (!_montoOverride) {
+      var _montoMP = Number((document.getElementById('mp-monto')||{}).value) || 0;
+      var _sugTmp  = pagos.reduce(function(s,p){ return s + p.monto; }, 0);
+      if (_montoMP > 0 && Math.abs(_montoMP - _sugTmp) > 0.5) _montoOverride = _montoMP;
+    }
+    var _montoSug = pagos.reduce(function(s,p){ return s + p.monto; }, 0);
+    if (_montoOverride > 0 && pagos.length > 0 && _montoSug > 0 && Math.abs(_montoOverride - _montoSug) > 0.5) {
+      try { console.log('[confirmarPago] override manual: $' + _montoOverride + ' vs sug $' + _montoSug); } catch(_){}
+      if (pagos.length === 1) {
+        pagos[0].monto = _montoOverride;
+      } else {
+        var _factor = _montoOverride / _montoSug;
+        var acumulado = 0;
+        for (var _i = 0; _i < pagos.length - 1; _i++) {
+          pagos[_i].monto = Math.round(pagos[_i].monto * _factor);
+          acumulado += pagos[_i].monto;
+        }
+        pagos[pagos.length - 1].monto = Math.max(0, _montoOverride - acumulado);
+      }
     }
   }
 
@@ -5697,8 +5731,8 @@ function renderReporte() {
   var _re = document.getElementById('r-empty'); if(_re) _re.style.display = 'none';
   var _sd = function(id,v){ var e = document.getElementById(id); if(e) e.style.display = v; };
   _sd('r-filter-mes', tipo === 'tipo_pago' ? '' : 'none');
-  _sd('r-filter-desde', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz','auditoria'].includes(tipo) ? '' : 'none');
-  _sd('r-filter-hasta', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz','auditoria'].includes(tipo) ? '' : 'none');
+  _sd('r-filter-desde', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz'].includes(tipo) ? '' : 'none');
+  _sd('r-filter-hasta', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz'].includes(tipo) ? '' : 'none');
   _sd('r-filter-caja-fecha', tipo === 'caja_dia' ? '' : 'none');
   _sd('r-filter-cat', ['deudores','al_dia','jugadores','asist_matriz','asistencia','asist_por_dia','ranking_asist','pagos_mes','caja_dia','auditoria'].includes(tipo) ? '' : 'none');
   _sd('r-filter-plan', ['pagos_mes','deudores','al_dia','tipo_pago','caja_dia','jugadores'].includes(tipo) ? '' : 'none');
@@ -6231,7 +6265,7 @@ function rptRankingAsist() {
 }
 
 function rptAuditoria() {
-  var rango = getRangoFechas();
+  // No filtramos por rango de fechas — ya limitamos a 500 eventos ordenados desc.
   var cat = document.getElementById('rCat').value;
   var dniByCat = null;
   if(cat){
@@ -6247,13 +6281,12 @@ function rptAuditoria() {
     .then(function(snap) {
       _contarLecturas(snap.size);
       ocultarLoader();
+      try { console.log('[rptAuditoria] docs recibidos:', snap.size); } catch(_){}
       var rows = [];
       var count = 0;
       snap.forEach(function(doc) {
         var d = doc.data();
         var orig = d.pagoOriginal || {};
-        var fechaDia = (d.fecha||'').substring(0,10);
-        if(!enRango(fechaDia, rango.desde, rango.hasta)) return;
         if(dniByCat && !dniByCat[(orig.dni||'').toString().trim()]) return;
         var tipoColor = d.tipo === 'ELIMINAR' ? 'var(--red)' : 'var(--secondary)';
         var detalle = d.tipo === 'EDITAR' && d.pagoNuevo
@@ -6272,8 +6305,24 @@ function rptAuditoria() {
       setCards([{val:count, lbl:'Registros de auditoría', color:'var(--secondary)'}]);
       setTablaHeaders(['Tipo','Fecha','Socio','Plan','Detalle','Motivo']);
       setTablaRows(rows);
-      if(!rows.length) document.getElementById('r-empty').style.display='';
-    }).catch(function(e){ ocultarLoader(); toast('Error: '+e.message,'err'); });
+      if(!rows.length){
+        var empty = document.getElementById('r-empty');
+        if(empty){
+          empty.style.display = '';
+          empty.innerHTML = '<div style="text-align:center;padding:28px;color:var(--muted);">'
+            + '<div style="font-size:30px;margin-bottom:6px;">&#128202;</div>'
+            + '<div style="font-size:14px;font-weight:700;">Sin registros de auditor&iacute;a</div>'
+            + '<div style="font-size:12px;margin-top:4px;">'
+            + 'La colecci&oacute;n <code>auditoria_pagos</code> est&aacute; vac&iacute;a o no hay '
+            + 'eventos para la categor&iacute;a seleccionada. Se registran al editar o eliminar pagos.'
+            + '</div></div>';
+        }
+      }
+    }).catch(function(e){
+      ocultarLoader();
+      try { console.error('[rptAuditoria] error:', e); } catch(_){}
+      toast('Error al cargar auditoría: ' + (e.message || e) + ' (code: ' + (e.code || 'n/a') + ')', 'err');
+    });
 }
 
 function rptEliminados() {
