@@ -1591,7 +1591,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.27</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.28</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -1859,6 +1859,8 @@ function cuotaToRow(d, fsId) {
     d.metodo||'', d.cobrador||'', d.obs||''
   ];
   row._fsId = fsId || d._fsId || '';
+  // Timestamp del cobro para reportes con fecha+hora
+  row._ts = d.ts || null;
   return row;
 }
 
@@ -2626,16 +2628,36 @@ function formatDate(d){ if(!d) return ''; return String(d.getDate()).padStart(2,
 function formatDateTime(d){
   if(!d) return '';
   var dt;
-  if (d.getTime) dt = d;
+  if (d && d.toDate) dt = d.toDate();          // Firestore Timestamp
+  else if (d && d.getTime) dt = d;             // Date object
+  else if (typeof d === 'number') dt = new Date(d);  // epoch ms
   else if (typeof d === 'string') {
     var s = d.trim();
-    // ISO con T (timestamp string firestore): '2026-05-04T19:42:00...'
-    if (/T\d{2}:\d{2}/.test(s)) dt = new Date(s);
-    // legacy o iso con espacio
-    else dt = new Date(s);
-    if (isNaN(dt.getTime())) return s; // fallback: devolver string original
+    // "4/5/2026 19:42" o "04/05/2026 19:42:30" — formato es-AR (dd/MM/yyyy)
+    var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+    if (m) {
+      dt = new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1]),
+                    parseInt(m[4]||'0'), parseInt(m[5]||'0'), parseInt(m[6]||'0'));
+    } else {
+      dt = new Date(s);
+    }
+    if (isNaN(dt.getTime())) return s;
   } else return '';
   return formatDate(dt) + ' ' + String(dt.getHours()).padStart(2,'0') + ':' + String(dt.getMinutes()).padStart(2,'0');
+}
+
+// Helper: extraer dia ISO yyyy-MM-dd para filtros de fecha (acepta varios formatos).
+function _fechaAuditISO(f) {
+  if (!f) return '';
+  if (f.toDate) {
+    var dt = f.toDate();
+    return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+  }
+  var s = String(f).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0,10);
+  var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return m[3] + '-' + m[2].padStart(2,'0') + '-' + m[1].padStart(2,'0');
+  return '';
 }
 function ultimoDiaMes(a,m){ return new Date(a,m,0).getDate(); }
 function nombreMes(n){ return ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][n]; }
@@ -6153,17 +6175,7 @@ function renderReporte() {
   _sd('r-filter-cat', ['deudores','al_dia','jugadores','asist_matriz','asistencia','asist_por_dia','ranking_asist','pagos_mes','caja_dia','auditoria','cit_matriz'].includes(tipo) ? '' : 'none');
   _sd('r-filter-plan', ['pagos_mes','deudores','al_dia','tipo_pago','caja_dia','jugadores','auditoria'].includes(tipo) ? '' : 'none');
   _sd('r-filter-socio', ['auditoria','ajustes_saldo'].includes(tipo) ? '' : 'none');
-  // Para auditoria/ajustes_saldo: si rDesde es del mes actual, ampliarlo 12 meses atras
-  // automaticamente (la mayoria de los audits son viejos y no se quieren filtrar de inicio)
-  if (['auditoria','ajustes_saldo'].includes(tipo)) {
-    var _rDeAud = document.getElementById('rDesde');
-    if (_rDeAud && _rDeAud.value) {
-      var _hoy = new Date();
-      var _ampAud = new Date(_hoy.getFullYear() - 1, _hoy.getMonth(), 1);
-      var _curAud = new Date(_rDeAud.value);
-      if (_curAud > _ampAud) _rDeAud.value = _ampAud.toISOString().split('T')[0];
-    }
-  }
+  // Default rDesde: siempre el 1° del mes actual (no auto-amplificar)
   // Eliminados: mostramos los ultimos 500 eventos sin filtro de fecha — no toca rDesde/rHasta
   if(tipo === 'deudores') rptDeudores();
   else if(tipo === 'al_dia') rptAlDia();
@@ -6451,8 +6463,10 @@ function rptPagosMes() {
     return true;
   });
   var total = pagos.reduce(function(s,c){ return s + Number(c[6]||0); }, 0);
-  var rows = pagos.sort(function(a,b){ return (b[5]||'').localeCompare(a[5]||''); }).map(function(c){
-    return '<tr>' + td(c[5]||'-','muted') + td(c[1]||c[0]||'-') + td(c[2]||'-','muted') + td(c[7]||'-','muted') + td('$'+Number(c[6]).toLocaleString('es-AR'),'ok num') + '</tr>';
+  var rows = pagos.sort(function(a,b){ return (b._ts||0) - (a._ts||0) || (b[5]||'').localeCompare(a[5]||''); }).map(function(c){
+    // Mostrar fecha+hora si hay timestamp; si no, solo fechaPago
+    var fechaShow = c._ts ? formatDateTime(new Date(c._ts)) : (c[5]||'-');
+    return '<tr>' + td(fechaShow,'muted') + td(c[1]||c[0]||'-') + td(c[2]||'-','muted') + td(c[7]||'-','muted') + td('$'+Number(c[6]).toLocaleString('es-AR'),'ok num') + '</tr>';
   });
   setCards([{val:pagos.length, lbl:'Pagos'}, {val:'$'+total.toLocaleString('es-AR'), lbl:'Total recaudado', color:'#6de097'}]);
   setTablaHeaders(['Fecha',T('socio'),'Plan','Metodo','Monto']);
@@ -7015,8 +7029,8 @@ function rptAuditoria() {
         if(dniByCat && !dniByCat[(orig.dni||'').toString().trim()]) return;
         // Filtro plan
         if (plan && String(orig.plan||orig.concepto||'').trim() !== plan) return;
-        // Filtro fecha (d.fecha es string ISO con 'T...' o yyyy-MM-dd)
-        var fechaDia = (d.fecha||'').substring(0,10);
+        // Filtro fecha (d.fecha puede ser "4/5/2026 19:42", ISO o Timestamp)
+        var fechaDia = _fechaAuditISO(d.fecha);
         if (fechaDia) {
           if (rango.desde && fechaDia < rango.desde) return;
           if (rango.hasta && fechaDia > rango.hasta) return;
