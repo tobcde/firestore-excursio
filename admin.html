@@ -1591,7 +1591,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.28</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.29</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3611,7 +3611,8 @@ function confirmarPago() {
       if(extraMonto > 0) pagos.push({plan: extraDesc, monto: extraMonto});
     }
     // QA-014: si el usuario edito #mp-monto a un total distinto del sugerido
-    // (override manual), respetar ese override y escalar proporcionalmente.
+    // (override manual), respetar ese override aplicando la diferencia al pago
+    // mas grande para mantener numeros limpios en los demas.
     var _montoOverride = (pagoCtx && pagoCtx._montoOverride) || 0;
     if (!_montoOverride) {
       var _montoMP = Number((document.getElementById('mp-monto')||{}).value) || 0;
@@ -3624,13 +3625,25 @@ function confirmarPago() {
       if (pagos.length === 1) {
         pagos[0].monto = _montoOverride;
       } else {
-        var _factor = _montoOverride / _montoSug;
-        var acumulado = 0;
-        for (var _i = 0; _i < pagos.length - 1; _i++) {
-          pagos[_i].monto = Math.round(pagos[_i].monto * _factor);
-          acumulado += pagos[_i].monto;
+        // Estrategia "ajuste al mayor": dejar todos los pagos en su sugerido limpio
+        // y aplicar la diff al de mayor monto. Si el mayor no alcanza, cascada al siguiente.
+        var pendiente = _montoSug - _montoOverride; // >0 si pago menos, <0 si pago mas
+        // Indices ordenados desc por monto sugerido
+        var idxsOrden = pagos.map(function(_, i){ return i; }).sort(function(a, b){
+          return pagos[b].monto - pagos[a].monto;
+        });
+        if (pendiente > 0) {
+          // Restar del mayor primero, cascada al siguiente si no alcanza
+          for (var _k = 0; _k < idxsOrden.length && pendiente > 0.5; _k++) {
+            var ix = idxsOrden[_k];
+            var resto = Math.min(pendiente, pagos[ix].monto);
+            pagos[ix].monto -= resto;
+            pendiente -= resto;
+          }
+        } else {
+          // pendiente < 0: pago de mas → sumar al mayor
+          pagos[idxsOrden[0]].monto += (-pendiente);
         }
-        pagos[pagos.length - 1].monto = Math.max(0, _montoOverride - acumulado);
       }
     }
   }
