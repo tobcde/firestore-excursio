@@ -1608,7 +1608,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.34</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.35</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3078,6 +3078,17 @@ function calcularEstadoTiempoReal(f) {
       deudaTotal -= creditoHistorico;
       if (deudaTotal === 0 && estadoPeor !== 'none') estadoPeor = 'ok';
     }
+  }
+
+  // Compensar favor contra deuda: si el socio tiene $9k a favor en una insc Y
+  // $63k de deuda en otra, lo logico es que el favor cancele parte de la deuda
+  // antes de mostrar el saldo. Sin esto, queda "debe $63k Y favor $9k al mismo
+  // tiempo" lo cual confunde al usuario y rompe el "saldo neto al dia".
+  var compensacion = Math.min(deudaTotal, favorTotal);
+  if (compensacion > 0) {
+    deudaTotal -= compensacion;
+    favorTotal -= compensacion;
+    if (deudaTotal === 0 && estadoPeor !== 'none') estadoPeor = 'ok';
   }
 
   // Capturar estado natural (sin ajuste manual) para que el modal Edit Saldo
@@ -4921,23 +4932,28 @@ function abrirModalEditSaldo() {
   document.getElementById('es-nombre').innerText = (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'');
   document.getElementById('es-dni-lbl').innerText = 'DNI ' + itemSel.dni;
 
+  // Helper para formatear con signo correcto: positivo "+$X" / negativo "-$X" / 0 "$0"
+  function _fmtSaldo(val) {
+    var v = Number(val) || 0;
+    var sign = v > 0 ? '+' : (v < 0 ? '-' : '');
+    return sign + '$' + Math.abs(v).toLocaleString('es-AR');
+  }
+  function _colorSaldo(val) {
+    var v = Number(val) || 0;
+    return v > 0 ? '#6de097' : (v < 0 ? 'var(--red)' : 'var(--muted)');
+  }
+
   // Saldo natural (sin ajuste)
   var natural = Number(cv.saldoNetoSinAjuste)||0;
-  var natColor = natural > 0 ? '#6de097' : (natural < 0 ? 'var(--red)' : 'var(--muted)');
-  var natSign = natural > 0 ? '+' : '';
-  document.getElementById('es-saldo-natural').innerHTML = '<span style="color:' + natColor + ';">' + natSign + '$' + Math.abs(natural).toLocaleString('es-AR') + '</span>';
+  document.getElementById('es-saldo-natural').innerHTML = '<span style="color:' + _colorSaldo(natural) + ';">' + _fmtSaldo(natural) + '</span>';
 
   // Ajuste vigente
   var aj = Number(f.ajusteSaldo)||0;
-  var ajColor = aj > 0 ? '#6de097' : (aj < 0 ? 'var(--red)' : 'var(--muted)');
-  var ajSign = aj > 0 ? '+' : '';
-  document.getElementById('es-ajuste-actual').innerHTML = '<span style="color:' + ajColor + ';">' + ajSign + '$' + Math.abs(aj).toLocaleString('es-AR') + '</span>';
+  document.getElementById('es-ajuste-actual').innerHTML = '<span style="color:' + _colorSaldo(aj) + ';">' + _fmtSaldo(aj) + '</span>';
 
   // Saldo efectivo (con ajuste aplicado)
   var neto = Number(cv.saldoNeto)||0;
-  var netoColor = neto > 0 ? '#6de097' : (neto < 0 ? 'var(--red)' : 'var(--muted)');
-  var netoSign = neto > 0 ? '+' : '';
-  document.getElementById('es-saldo-actual').innerHTML = '<span style="color:' + netoColor + ';">' + netoSign + '$' + Math.abs(neto).toLocaleString('es-AR') + '</span>';
+  document.getElementById('es-saldo-actual').innerHTML = '<span style="color:' + _colorSaldo(neto) + ';">' + _fmtSaldo(neto) + '</span>';
 
   // Pre-llenar el input con el saldo efectivo actual (asi al confirmar sin tocar nada, no cambia)
   document.getElementById('es-saldo-final').value = neto || '';
@@ -4961,15 +4977,14 @@ function previsualizarAjusteSaldo() {
   var ajusteNuevo = Math.round((deseado - natural) * 100) / 100;
   var delta = ajusteNuevo - ajusteActual;
 
-  var ajColor = ajusteNuevo > 0 ? '#6de097' : (ajusteNuevo < 0 ? 'var(--red)' : 'var(--muted)');
-  var ajSign = ajusteNuevo > 0 ? '+' : '';
-  var deltaColor = delta > 0 ? '#6de097' : (delta < 0 ? 'var(--red)' : 'var(--muted)');
-  var deltaSign = delta > 0 ? '+' : '';
-  var html = '<div>Nuevo ajuste a guardar: <span style="color:' + ajColor + ';font-weight:700;">' + ajSign + '$' + Math.abs(ajusteNuevo).toLocaleString('es-AR') + '</span></div>';
+  function _fmt(v){ var s = v > 0 ? '+' : (v < 0 ? '-' : ''); return s + '$' + Math.abs(v).toLocaleString('es-AR'); }
+  function _col(v){ return v > 0 ? '#6de097' : (v < 0 ? 'var(--red)' : 'var(--muted)'); }
+
+  var html = '<div>Nuevo ajuste a guardar: <span style="color:' + _col(ajusteNuevo) + ';font-weight:700;">' + _fmt(ajusteNuevo) + '</span></div>';
   if (Math.abs(delta) > 0.5) {
-    html += '<div style="margin-top:2px;">Delta vs anterior: <span style="color:' + deltaColor + ';font-weight:700;">' + deltaSign + '$' + Math.abs(delta).toLocaleString('es-AR') + '</span></div>';
+    html += '<div style="margin-top:2px;">Delta vs anterior: <span style="color:' + _col(delta) + ';font-weight:700;">' + _fmt(delta) + '</span></div>';
   } else {
-    html += '<div style="margin-top:2px;color:var(--muted);">El ajuste no cambia respecto al actual.</div>';
+    html += '<div style="margin-top:2px;color:var(--muted);">&#x2713; El saldo ya est&aacute; como lo quer&eacute;s. No hace falta guardar.</div>';
   }
   prev.innerHTML = html;
 }
@@ -4989,7 +5004,13 @@ function guardarAjusteSaldo() {
   var motivo = (document.getElementById('es-motivo').value||'').trim();
   if (!motivo) return alert('El motivo es obligatorio');
   var anterior = Number(f.ajusteSaldo) || 0;
-  if (Math.abs(nuevo - anterior) < 0.5) return alert('El ajuste no cambio. Cancelá o ingresá un saldo distinto.');
+  if (Math.abs(nuevo - anterior) < 0.5) {
+    // El saldo ya está como lo quiere → no hay cambio. Cerrar el modal silenciosamente.
+    cerrarModalEditSaldo();
+    var saldoEfectivo = (Number(natural)||0) + (Number(anterior)||0);
+    toast('El saldo ya está en $' + Math.abs(Math.round(saldoEfectivo)).toLocaleString('es-AR') + (saldoEfectivo === 0 ? ' (al día)' : (saldoEfectivo > 0 ? ' a favor' : ' debe')) + '. No requirió cambios.', 'ok');
+    return;
+  }
   var delta = nuevo - anterior;
   var usuario = (window.ADMIN_USER || (typeof localStorage!=='undefined' && localStorage.getItem('admin_user')) || 'admin');
   var nombreSocio = (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'');
