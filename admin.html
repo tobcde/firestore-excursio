@@ -1608,7 +1608,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.37</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.38</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -1937,20 +1937,28 @@ function refrescarDatos() {
   var hoy = new Date();
   var yyyy = hoy.getFullYear();
   var mm   = String(hoy.getMonth()+1).padStart(2,'0');
-  // Cuotas: 2 meses atrás para capturar históricos del mes anterior
+  // Cuotas: 2 meses atrás (ISO) + cuotas recientes en formato legacy dd/MM/yyyy
   var corteFecha = new Date(yyyy, hoy.getMonth()-1, 1).toLocaleDateString('sv');
+  // Para legacy, traer todas las cuotas con periodoDesde de los ultimos 2 meses (cualquier formato)
+  var corteLegacy = new Date(yyyy, hoy.getMonth()-2, 1);
+  var legacyDesde = String(corteLegacy.getDate()).padStart(2,'0') + '/' + String(corteLegacy.getMonth()+1).padStart(2,'0') + '/' + corteLegacy.getFullYear();
   Promise.all([
-    db.collection('socios').get(), // todos — incluye auto-registros pendientes (activo:false)
-    db.collection('cuotas').where('fechaPago','>=', corteFecha).get() // ~350-700
+    db.collection('socios').get(),
+    db.collection('cuotas').where('fechaPago','>=', corteFecha).get(),
+    // Cuotas con fechaPago en formato legacy (dd/MM/yyyy) — el filtro "fechaPago >= corteISO"
+    // las excluye lex porque '14/04/2026' < '2026-04-01'. Las traemos con un segundo query
+    // sobre periodoDesde de los meses recientes.
+    db.collection('cuotas').where('periodoDesde','>=', legacyDesde).get()
   ]).then(function(results) {
     // Socios
     DB.jugadores = [[]];
     results[0].forEach(function(doc){ DB.jugadores.push(socioToRow(doc, doc.id)); });
-    // Cuotas
+    // Cuotas (ISO + legacy, dedupeadas por _fsId)
     CUOTAS_DB.cuotas = [];
     results[1].forEach(function(doc){ _pushCuotaUnique(cuotaToRow(doc.data(), doc.id)); });
+    results[2].forEach(function(doc){ _pushCuotaUnique(cuotaToRow(doc.data(), doc.id)); });
     _dedupCuotas();
-    _contarLecturas(results[0].size + results[1].size);
+    _contarLecturas(results[0].size + results[1].size + results[2].size);
     ocultarLoader();
     renderPlayers();
     renderCuotas();
@@ -1984,16 +1992,18 @@ function inicializar(passReal) {
     // Cuotas del mes actual — filtrar por fechaPago (formato yyyy-MM-dd)
     (function(){
       var hoy = new Date();
-      var yyyy = hoy.getFullYear();
-      var mm   = String(hoy.getMonth()+1).padStart(2,'0');
-      var desdeISO = yyyy + '-' + mm + '-01';
-      var hastaISO = yyyy + '-' + mm + '-31';
-      // También traer históricos del mes actual (fechaPago puede ser fin de mes anterior)
-      // Usamos un corte de 2 meses para capturar todos los pagos relevantes
       var corteFecha = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1).toLocaleDateString('sv');
       return db.collection('cuotas')
         .where('fechaPago', '>=', corteFecha)
         .get();
+    })(),
+    // Cuotas con periodoDesde reciente (cubre legacy fechaPago dd/MM/yyyy que el filtro
+    // anterior excluye lexicograficamente)
+    (function(){
+      var hoy = new Date();
+      var corteLegacy = new Date(hoy.getFullYear(), hoy.getMonth()-2, 1);
+      var legacyDesde = String(corteLegacy.getDate()).padStart(2,'0') + '/' + String(corteLegacy.getMonth()+1).padStart(2,'0') + '/' + corteLegacy.getFullYear();
+      return db.collection('cuotas').where('periodoDesde','>=', legacyDesde).get();
     })()
     // asistencias → lazy por tab
   ]).then(function(results) {
@@ -2008,6 +2018,7 @@ function inicializar(passReal) {
     var sociosSnap   = results[8];
     var inscSnapInit  = results[9];
     var cuotasMesSnap = results[10];
+    var cuotasLegacySnap = results[11];
 
     // Institución
     INST = instDoc.exists ? instDoc.data() : {};
@@ -2061,6 +2072,7 @@ function inicializar(passReal) {
     CUOTAS_DB.cuotas = [];
     var mesActual = new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0');
     cuotasMesSnap.forEach(function(doc){ _pushCuotaUnique(cuotaToRow(doc.data(), doc.id)); });
+    if (cuotasLegacySnap) cuotasLegacySnap.forEach(function(doc){ _pushCuotaUnique(cuotaToRow(doc.data(), doc.id)); });
     _dedupCuotas();
     _cargado['cuotas_' + mesActual] = true;
     _cargado.cuotas = true;
@@ -8010,6 +8022,8 @@ function lazyCargarCuotasEInscripciones(cb) {
       _contarLecturas(results[idx].size); idx++;
       _cargado[cacheKey] = true;
       _cargado.cuotas = true;
+      // Refrescar Socios para que el badge "DEBE/AL DIA" use las cuotas recien cargadas
+      try { renderPlayers(); } catch(_){}
     }
     ocultarLoader();
     if(cb) cb();
