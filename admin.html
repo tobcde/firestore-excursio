@@ -1742,7 +1742,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.57</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.58</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -6681,10 +6681,19 @@ function importarPreciosCSV(ev) {
     var errores = [];
     var omitidas = { vacias: 0, desconocidas: [], invalidas: [], duplicadas: [] };
 
+    // Parser inline tolerante (re-declarado en este scope porque el otro está dentro del loop principal)
+    function _parseSmartHere(lineStr) {
+      var c = _parseCSVLine(lineStr, SEP);
+      if (c.length < header.length && c.length === 1) {
+        var inner = _parseCSVLine(c[0], SEP);
+        if (inner.length >= header.length) return inner;
+      }
+      return c;
+    }
     // Dedup en el CSV: si la misma (actividad, categoria) aparece 2+ veces, procesar solo la ÚLTIMA
     var lastIdxByPair = {};
     for (var li2 = 1; li2 < lines.length; li2++) {
-      var cols2 = _parseCSVLine(lines[li2], SEP);
+      var cols2 = _parseSmartHere(lines[li2]);
       var actK = (cols2[iAct]||'').trim().toLowerCase();
       var catK = (cols2[iCat]||'').trim().toLowerCase();
       if (!actK || !catK) continue;
@@ -6696,13 +6705,25 @@ function importarPreciosCSV(ev) {
       lastIdxByPair[key2] = li2;
     }
 
+    // Helper local: parser tolerante a doble-escape (Excel a veces guarda toda la línea
+    // entre comillas con las internas duplicadas). Si quedan menos cols que el header
+    // y solo hay 1, intentar re-parsear el contenido del string.
+    function _parseSmart(lineStr) {
+      var c = _parseCSVLine(lineStr, SEP);
+      if (c.length < header.length && c.length === 1) {
+        var inner = _parseCSVLine(c[0], SEP);
+        if (inner.length >= header.length) return inner;
+      }
+      return c;
+    }
+
     for (var li = 1; li < lines.length; li++) {
       // Si esta línea tiene una "ganadora" más adelante (duplicada), saltarla
-      var cols0 = _parseCSVLine(lines[li], SEP);
+      var cols0 = _parseSmart(lines[li]);
       var actK0 = (cols0[iAct]||'').trim().toLowerCase();
       var catK0 = (cols0[iCat]||'').trim().toLowerCase();
       if (actK0 && catK0 && lastIdxByPair[actK0+'||'+catK0] !== li) continue;
-      var cols = _parseCSVLine(lines[li], SEP);
+      var cols = _parseSmart(lines[li]);
       var actCSV = (cols[iAct] || '').trim();
       var catCSV = (cols[iCat] || '').trim();
       var montoCSV = (cols[iMonto] || '').trim().replace(/\$|\.|\s/g,'').replace(',','.');
