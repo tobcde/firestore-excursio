@@ -1742,7 +1742,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.56</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.57</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -6613,7 +6613,8 @@ function exportarPreciosCSV() {
   toast('CSV de precios descargado (' + (rows.length-1) + ' precios)', 'ok');
 }
 
-function _parseCSVLine(line) {
+function _parseCSVLine(line, sep) {
+  sep = sep || ',';
   var out = [], cur = '', inQ = false;
   for (var i = 0; i < line.length; i++) {
     var ch = line[i];
@@ -6623,7 +6624,7 @@ function _parseCSVLine(line) {
       else cur += ch;
     } else {
       if (ch === '"') inQ = true;
-      else if (ch === ',') { out.push(cur); cur = ''; }
+      else if (ch === sep) { out.push(cur); cur = ''; }
       else cur += ch;
     }
   }
@@ -6631,21 +6632,39 @@ function _parseCSVLine(line) {
   return out;
 }
 
+// Detecta el separador del CSV mirando la primera línea (header).
+// Excel en locale español/argentino guarda con `;`. Otros usan `,` o `\t`.
+function _detectarSeparadorCSV(headerLine) {
+  var candidatos = [';', ',', '\t', '|'];
+  var mejor = ',';
+  var maxCols = 0;
+  candidatos.forEach(function(s){
+    var cols = _parseCSVLine(headerLine, s);
+    if (cols.length > maxCols) { maxCols = cols.length; mejor = s; }
+  });
+  return mejor;
+}
+
 function importarPreciosCSV(ev) {
   var f = ev.target.files && ev.target.files[0];
   if (!f) return;
   var reader = new FileReader();
   reader.onload = function(e) {
-    var txt = String(e.target.result || '').replace(/^﻿/, '');
+    // Quitar BOM (UTF-8 BOM = ﻿, también puede venir ​)
+    var txt = String(e.target.result || '').replace(/^[﻿​]+/, '');
     var lines = txt.split(/\r?\n/).filter(function(l){ return l.trim().length > 0; });
     if (lines.length < 2) { toast('CSV vacío o sin datos', 'err'); return; }
 
-    var header = _parseCSVLine(lines[0]).map(function(h){ return h.trim().toLowerCase(); });
+    // Auto-detectar separador (Excel español usa `;`, otros `,` o tab)
+    var SEP = _detectarSeparadorCSV(lines[0]);
+    try { console.log('[importPrecios] separador detectado:', JSON.stringify(SEP), '| primera línea:', lines[0]); } catch(_){}
+
+    var header = _parseCSVLine(lines[0], SEP).map(function(h){ return h.trim().toLowerCase(); });
     var iAct = header.indexOf('actividad');
     var iCat = header.indexOf('categoria');
     var iMonto = header.indexOf('monto');
     if (iAct < 0 || iCat < 0 || iMonto < 0) {
-      alert('CSV inválido. Header esperado: "actividad,categoria,monto" (en cualquier orden).');
+      alert('CSV inválido. Header esperado: "actividad' + SEP + 'categoria' + SEP + 'monto" (en cualquier orden).\n\nLeído: ' + header.join(' | '));
       return;
     }
 
@@ -6665,7 +6684,7 @@ function importarPreciosCSV(ev) {
     // Dedup en el CSV: si la misma (actividad, categoria) aparece 2+ veces, procesar solo la ÚLTIMA
     var lastIdxByPair = {};
     for (var li2 = 1; li2 < lines.length; li2++) {
-      var cols2 = _parseCSVLine(lines[li2]);
+      var cols2 = _parseCSVLine(lines[li2], SEP);
       var actK = (cols2[iAct]||'').trim().toLowerCase();
       var catK = (cols2[iCat]||'').trim().toLowerCase();
       if (!actK || !catK) continue;
@@ -6676,15 +6695,14 @@ function importarPreciosCSV(ev) {
       }
       lastIdxByPair[key2] = li2;
     }
-    var linesAProcesar = Object.values(lastIdxByPair); // sólo los índices ganadores
 
     for (var li = 1; li < lines.length; li++) {
       // Si esta línea tiene una "ganadora" más adelante (duplicada), saltarla
-      var cols0 = _parseCSVLine(lines[li]);
+      var cols0 = _parseCSVLine(lines[li], SEP);
       var actK0 = (cols0[iAct]||'').trim().toLowerCase();
       var catK0 = (cols0[iCat]||'').trim().toLowerCase();
       if (actK0 && catK0 && lastIdxByPair[actK0+'||'+catK0] !== li) continue;
-      var cols = _parseCSVLine(lines[li]);
+      var cols = _parseCSVLine(lines[li], SEP);
       var actCSV = (cols[iAct] || '').trim();
       var catCSV = (cols[iCat] || '').trim();
       var montoCSV = (cols[iMonto] || '').trim().replace(/\$|\.|\s/g,'').replace(',','.');
