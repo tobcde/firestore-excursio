@@ -1742,7 +1742,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.55</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.56</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -6660,9 +6660,30 @@ function importarPreciosCSV(ev) {
 
     var cambios = [];
     var errores = [];
-    var omitidas = { vacias: 0, desconocidas: [], invalidas: [] };
+    var omitidas = { vacias: 0, desconocidas: [], invalidas: [], duplicadas: [] };
+
+    // Dedup en el CSV: si la misma (actividad, categoria) aparece 2+ veces, procesar solo la ÚLTIMA
+    var lastIdxByPair = {};
+    for (var li2 = 1; li2 < lines.length; li2++) {
+      var cols2 = _parseCSVLine(lines[li2]);
+      var actK = (cols2[iAct]||'').trim().toLowerCase();
+      var catK = (cols2[iCat]||'').trim().toLowerCase();
+      if (!actK || !catK) continue;
+      var key2 = actK+'||'+catK;
+      if (typeof lastIdxByPair[key2] !== 'undefined') {
+        // Hay duplicado: la entrada previa se omite, queda la última
+        omitidas.duplicadas.push((cols2[iAct]||'?')+' × '+(cols2[iCat]||'?'));
+      }
+      lastIdxByPair[key2] = li2;
+    }
+    var linesAProcesar = Object.values(lastIdxByPair); // sólo los índices ganadores
 
     for (var li = 1; li < lines.length; li++) {
+      // Si esta línea tiene una "ganadora" más adelante (duplicada), saltarla
+      var cols0 = _parseCSVLine(lines[li]);
+      var actK0 = (cols0[iAct]||'').trim().toLowerCase();
+      var catK0 = (cols0[iCat]||'').trim().toLowerCase();
+      if (actK0 && catK0 && lastIdxByPair[actK0+'||'+catK0] !== li) continue;
       var cols = _parseCSVLine(lines[li]);
       var actCSV = (cols[iAct] || '').trim();
       var catCSV = (cols[iCat] || '').trim();
@@ -6717,10 +6738,13 @@ function importarPreciosCSV(ev) {
 
     // Construir bloque de omitidas (warnings, no errores) — solo si hubo
     var omitHtml = '';
-    var totalOmit = omitidas.vacias + omitidas.desconocidas.length + omitidas.invalidas.length;
+    var totalOmit = omitidas.vacias + omitidas.desconocidas.length + omitidas.invalidas.length + omitidas.duplicadas.length;
     if (totalOmit > 0) {
       var bits = [];
       if (omitidas.vacias > 0) bits.push('<b>'+omitidas.vacias+'</b> incompleta'+(omitidas.vacias>1?'s':'')+' (sin actividad o categoría)');
+      if (omitidas.duplicadas.length > 0) {
+        bits.push('<b>'+omitidas.duplicadas.length+'</b> duplicada'+(omitidas.duplicadas.length>1?'s':'')+' en el CSV (queda solo la última)<br><span style="font-size:10px;color:var(--muted);padding-left:8px;">'+omitidas.duplicadas.slice(0,5).map(esc).join('<br>')+(omitidas.duplicadas.length>5?'<br>… y '+(omitidas.duplicadas.length-5)+' más':'')+'</span>');
+      }
       if (omitidas.desconocidas.length > 0) {
         bits.push('<b>'+omitidas.desconocidas.length+'</b> con actividad/categoría que no existe<br><span style="font-size:10px;color:var(--muted);padding-left:8px;">'+omitidas.desconocidas.slice(0,5).map(esc).join('<br>')+(omitidas.desconocidas.length>5?'<br>… y '+(omitidas.desconocidas.length-5)+' más':'')+'</span>');
       }
@@ -6817,6 +6841,13 @@ function guardarPrecio() {
   var monto = parseFloat(document.getElementById('precio-monto').value);
   if(!act || !cat) return alert('Selecciona actividad y categoria');
   if(!monto || monto <= 0) return alert('Ingresa un monto valido');
+  // Validar duplicado: si ya existe la combinación (actividad, categoria) y NO estamos editando esa misma fila → bloquear
+  var dupExistente = (DB.precios||[]).find(function(p){
+    return p.actividad === act && p.categoria === cat && p._row !== precioEditIdx;
+  });
+  if (dupExistente) {
+    return alert('Ya existe un precio para "' + act + ' / ' + cat + '" ($' + Number(dupExistente.monto).toLocaleString('es-AR') + ').\n\nEditalo desde la lista (lápiz) en lugar de crear un duplicado.');
+  }
   mostrarLoader('Guardando...');
   callScript({action:'savePrecio', actividad:act, categoria:cat, monto:monto, rowIndex:precioEditIdx||null, pass:TOKEN, _noRetry:true}, function(r){
     ocultarLoader();
