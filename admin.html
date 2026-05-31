@@ -1742,7 +1742,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.54</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.55</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -6588,19 +6588,20 @@ function cancelarEditPrecio() {
 
 // ── CSV de precios ───────────────────────────────────────────────
 function exportarPreciosCSV() {
-  var actividades = (DB.actividades || []).map(function(a){ return a.nombre; });
-  var categorias  = (DB.categorias || []).map(function(c){ return c[0]; });
-  var preciosByKey = {};
-  (DB.precios || []).forEach(function(p){
-    preciosByKey[p.actividad + '||' + p.categoria] = Number(p.monto) || 0;
+  // Solo exporta los precios que YA EXISTEN en DB.precios.
+  // No arma la matriz cruzada actividad×categoría para evitar ruido en el archivo.
+  // Si querés agregar combinaciones nuevas, tipealas manualmente al final del CSV.
+  var precios = (DB.precios || []).slice().sort(function(a,b){
+    var c = (a.actividad||'').localeCompare(b.actividad||'');
+    if (c !== 0) return c;
+    return (a.categoria||'').localeCompare(b.categoria||'');
   });
   var rows = ['actividad,categoria,monto'];
-  actividades.forEach(function(act){
-    categorias.forEach(function(cat){
-      var key = act + '||' + cat;
-      var monto = preciosByKey[key] || '';
-      rows.push('"' + act.replace(/"/g,'""') + '","' + cat.replace(/"/g,'""') + '",' + monto);
-    });
+  precios.forEach(function(p){
+    var act = (p.actividad||'').replace(/"/g,'""');
+    var cat = (p.categoria||'').replace(/"/g,'""');
+    var monto = Number(p.monto) || 0;
+    rows.push('"' + act + '","' + cat + '",' + monto);
   });
   var blob = new Blob(['﻿' + rows.join('\n')], {type:'text/csv;charset=utf-8;'});
   var url = URL.createObjectURL(blob);
@@ -6609,7 +6610,7 @@ function exportarPreciosCSV() {
   a.download = 'precios_' + new Date().toISOString().split('T')[0] + '.csv';
   a.click();
   URL.revokeObjectURL(url);
-  toast('CSV de precios descargado (' + (rows.length-1) + ' filas)', 'ok');
+  toast('CSV de precios descargado (' + (rows.length-1) + ' precios)', 'ok');
 }
 
 function _parseCSVLine(line) {
@@ -6659,27 +6660,45 @@ function importarPreciosCSV(ev) {
 
     var cambios = [];
     var errores = [];
+    var omitidas = { vacias: 0, desconocidas: [], invalidas: [] };
 
     for (var li = 1; li < lines.length; li++) {
       var cols = _parseCSVLine(lines[li]);
       var actCSV = (cols[iAct] || '').trim();
       var catCSV = (cols[iCat] || '').trim();
       var montoCSV = (cols[iMonto] || '').trim().replace(/\$|\.|\s/g,'').replace(',','.');
+      // Fila completamente vacía → ignorar silenciosamente
       if (!actCSV && !catCSV && !montoCSV) continue;
+      // Fila sin actividad o categoría pero con valor → fila incompleta, omitir
+      if (!actCSV || !catCSV) {
+        omitidas.vacias++;
+        try { console.warn('[importPrecios] Línea '+(li+1)+' incompleta (sin actividad o categoría):', cols); } catch(_){}
+        continue;
+      }
 
       var actNom = actSet[actCSV.toLowerCase()];
       var catNom = catSet[catCSV.toLowerCase()];
-      if (!actNom) { errores.push('Línea '+(li+1)+': actividad desconocida "'+actCSV+'"'); continue; }
-      if (!catNom) { errores.push('Línea '+(li+1)+': categoría desconocida "'+catCSV+'"'); continue; }
+      // Actividad o categoría desconocida → warning silencioso, no se procesa pero NO bloquea
+      if (!actNom || !catNom) {
+        omitidas.desconocidas.push((actCSV||'?')+' × '+(catCSV||'?'));
+        try { console.warn('[importPrecios] Línea '+(li+1)+' actividad/categoría desconocida:', actCSV, '×', catCSV); } catch(_){}
+        continue;
+      }
 
       var monto = montoCSV === '' ? null : Number(montoCSV);
       if (monto !== null && (isNaN(monto) || monto < 0)) {
-        errores.push('Línea '+(li+1)+': monto inválido "'+montoCSV+'"');
+        omitidas.invalidas.push(actNom+' × '+catNom+' = "'+montoCSV+'"');
+        try { console.warn('[importPrecios] Línea '+(li+1)+' monto inválido:', montoCSV); } catch(_){}
         continue;
       }
 
       var existing = preciosByKey[(actNom+'||'+catNom).toLowerCase()];
       var montoActual = existing ? Number(existing.monto) || 0 : null;
+
+      // Monto vacío + no existe → ignorar silenciosamente (no había nada, no hay nada que hacer)
+      if (monto === null && !existing) continue;
+      // Monto 0 + no existe → ignorar (típico ruido de la matriz cruzada vieja)
+      if (monto === 0 && !existing) continue;
 
       if (monto === null) {
         if (existing) cambios.push({actividad:actNom, categoria:catNom, montoActual:montoActual, montoNuevo:null, accion:'borrar', row: existing._row});
@@ -6696,16 +6715,24 @@ function importarPreciosCSV(ev) {
     if (!preview) return;
     preview.style.display = 'block';
 
-    if (errores.length) {
-      var errHtml = '<div style="color:var(--red);font-weight:700;margin-bottom:6px;">' + errores.length + ' errores en el CSV — corregilos antes de aplicar:</div>'
-        + '<ul style="color:var(--red);font-size:11px;max-height:120px;overflow:auto;padding-left:18px;">' + errores.map(function(e){ return '<li>' + esc(e) + '</li>'; }).join('') + '</ul>';
-      preview.innerHTML = errHtml;
-      ev.target.value = '';
-      return;
+    // Construir bloque de omitidas (warnings, no errores) — solo si hubo
+    var omitHtml = '';
+    var totalOmit = omitidas.vacias + omitidas.desconocidas.length + omitidas.invalidas.length;
+    if (totalOmit > 0) {
+      var bits = [];
+      if (omitidas.vacias > 0) bits.push('<b>'+omitidas.vacias+'</b> incompleta'+(omitidas.vacias>1?'s':'')+' (sin actividad o categoría)');
+      if (omitidas.desconocidas.length > 0) {
+        bits.push('<b>'+omitidas.desconocidas.length+'</b> con actividad/categoría que no existe<br><span style="font-size:10px;color:var(--muted);padding-left:8px;">'+omitidas.desconocidas.slice(0,5).map(esc).join('<br>')+(omitidas.desconocidas.length>5?'<br>… y '+(omitidas.desconocidas.length-5)+' más':'')+'</span>');
+      }
+      if (omitidas.invalidas.length > 0) bits.push('<b>'+omitidas.invalidas.length+'</b> con monto inválido');
+      omitHtml = '<div style="margin-bottom:8px;padding:8px 10px;background:rgba(255,184,77,.08);border:1px solid rgba(255,184,77,.3);border-radius:6px;color:#ffb84d;font-size:11px;">'
+        + '⚠️ <b>' + totalOmit + ' fila' + (totalOmit>1?'s':'') + ' omitida' + (totalOmit>1?'s':'') + '</b> (no bloquean el resto):<br>'
+        + bits.join('<br>') + '</div>';
     }
 
     if (!cambios.length) {
-      preview.innerHTML = '<div style="color:var(--muted);">El CSV no trae cambios respecto a los precios actuales.</div>';
+      preview.innerHTML = omitHtml
+        + '<div style="color:var(--muted);">El CSV no trae cambios respecto a los precios actuales.</div>';
       ev.target.value = '';
       return;
     }
@@ -6724,7 +6751,8 @@ function importarPreciosCSV(ev) {
     var more = cambios.length > 50 ? '<div style="color:var(--muted);font-size:10px;">… y ' + (cambios.length - 50) + ' cambios más</div>' : '';
 
     preview.innerHTML =
-      '<div style="font-weight:700;color:var(--secondary);margin-bottom:6px;">' + cambios.length + ' cambios detectados '
+      omitHtml
+      + '<div style="font-weight:700;color:var(--secondary);margin-bottom:6px;">' + cambios.length + ' cambios detectados '
       + '(' + (c.crear||0) + ' crear / ' + (c.actualizar||0) + ' actualizar / ' + (c.borrar||0) + ' borrar)</div>'
       + '<div style="max-height:200px;overflow:auto;background:rgba(0,0,0,.2);padding:6px;border-radius:6px;">' + listaHtml + more + '</div>'
       + '<div style="display:flex;gap:6px;margin-top:8px;">'
