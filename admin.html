@@ -37,6 +37,10 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 }
 /* TABS */
 .tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;}
+/* Desktop: tabs sticky justo debajo del header (top ≈ alto del header). */
+@media (min-width: 769px) {
+  .tabs { position: sticky; top: 60px; z-index: 99; }
+}
 .tab{font-family:'Barlow Condensed',sans-serif;padding:15px 22px;cursor:pointer;color:var(--muted);border:none;background:none;text-transform:uppercase;border-bottom:3px solid transparent;font-size:13px;letter-spacing:.05em;white-space:nowrap;}
 .tab:hover{color:var(--text);}
 .tab.active{color:var(--secondary);border-bottom-color:var(--secondary);background:var(--secondary-dim);}
@@ -1738,7 +1742,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.52</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.53</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
