@@ -1742,7 +1742,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.53</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.54</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -2017,6 +2017,12 @@ function cuotaToRow(d, fsId) {
 
 function inscToObj(doc) {
   var d = doc.data ? doc.data() : doc;
+  // historial: array opcional de cambios de precio con vigencia.
+  // Formato: [{desde:'YYYY-MM', monto:Number}, ...] ordenado cronologico.
+  // Si no existe, fallback al campo monto plano (compat con inscripciones viejas).
+  var hist = Array.isArray(d.historial) ? d.historial.slice().filter(function(h){
+    return h && h.desde && typeof h.monto !== 'undefined';
+  }) : [];
   return {
     dni: d.dni||'', nombre: d.nombre||'', plan: d.plan||'',
     monto: Number(d.monto)||0, desde: d.desde||'', hasta: d.hasta||'',
@@ -2024,8 +2030,48 @@ function inscToObj(doc) {
     hnoDe: d.hnoDe||'', _row: doc.id,
     // manual=true: el monto fue seteado a mano (beca/excepcion) y NO se
     // sobreescribe en cascadas masivas de precio.
-    manual: d.manual === true
+    manual: d.manual === true,
+    historial: hist
   };
+}
+
+// ── HELPERS DE PRECIO VIGENTE ─────────────────────────────────────
+// El sistema soporta historial de precios con vigencia. La regla es:
+//   - Cuotas pagadas en su momento → quedan al precio histórico (no se reabren)
+//   - Cuotas impagas/parciales → se reevalúan al precio actual (deuda actualizada)
+// Esto permite cambios de precio sin generar deuda retroactiva indeseada,
+// pero las deudas viejas siguen el valor más reciente.
+
+// Devuelve el monto que estaba vigente para un mes dado (YYYY-MM).
+// Si no hay historial, devuelve el monto plano (compat).
+function getMontoHistorico(insc, mesYYYYMM) {
+  if (!insc || !mesYYYYMM) return Number(insc && insc.monto)||0;
+  var hist = insc.historial;
+  if (!Array.isArray(hist) || !hist.length) return Number(insc.monto)||0;
+  var ord = hist.slice().sort(function(a,b){ return (a.desde||'').localeCompare(b.desde||''); });
+  var vigente = null;
+  for (var i = 0; i < ord.length; i++) {
+    if ((ord[i].desde||'') <= mesYYYYMM) vigente = ord[i];
+    else break;
+  }
+  return vigente ? (Number(vigente.monto)||0) : (Number(insc.monto)||0);
+}
+
+// Devuelve el monto actual (el último/más reciente del historial).
+// Para meses impagos se reevalúa la deuda usando este valor.
+function getMontoActual(insc) {
+  if (!insc) return 0;
+  var hist = insc.historial;
+  if (!Array.isArray(hist) || !hist.length) return Number(insc.monto)||0;
+  var ord = hist.slice().sort(function(a,b){ return (a.desde||'').localeCompare(b.desde||''); });
+  var hoy = new Date(); var mesHoy = hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0');
+  // Buscar el último con desde <= mesHoy
+  var vigente = null;
+  for (var i = 0; i < ord.length; i++) {
+    if ((ord[i].desde||'') <= mesHoy) vigente = ord[i];
+    else break;
+  }
+  return vigente ? (Number(vigente.monto)||0) : (Number(insc.monto)||0);
 }
 
 // ── LOGIN ─────────────────────────────────────────────────────────
@@ -2498,12 +2544,19 @@ function _fsDispatch(action, p, ok, err) {
     // ── INSCRIPCIONES ─────────────────────────────────────────────
     case 'addInscripcion': {
       var row = p.rowArray || [];
+      var _montoIni = Number(row[3])||0;
+      var _desdeIni = row[4]||'';
+      // Inicializar historial con el monto de creación (vigente desde el mes de inicio)
+      var _mesIni = _desdeIni ? normFecha(_desdeIni).substring(0,7) : '';
       var docInsc = {
         dni:normDoc(row[0]||''), nombre:row[1]||'', plan:row[2]||'',
-        monto:Number(row[3])||0, desde:row[4]||'', hasta:row[5]||'',
+        monto: _montoIni, desde: _desdeIni, hasta:row[5]||'',
         obs:row[6]||'', descuentoHno:Number(row[7])||0, hnoDe:row[8]||'',
         // Flag manual: monto distinto al precio configurado para esa categoria
-        manual: row[9] === true
+        manual: row[9] === true,
+        // Historial: arranca con el monto inicial vigente desde el mes de inicio.
+        // Cuando se cambie el precio (cascada o manual), se agregan entradas nuevas.
+        historial: _mesIni ? [{ desde: _mesIni, monto: _montoIni }] : []
       };
       db.collection('inscripciones').add(docInsc)
         .then(function(ref){ cb({ok:true, fila:ref.id}); })
@@ -3017,22 +3070,60 @@ function renderInscripcionesModal(dni) {
     var actObj = (DB.actividades||[]).find(function(a){ return a.nombre === i.plan; });
     var icono  = actObj ? actObj.icono : '';
     var descHno = Number(i.descuentoHno) || 0;
-    var montoBase = Number(i.monto);
+    // El monto vigente ACTUAL del historial (o el monto plano si no hay historial)
+    var montoActual = getMontoActual(i);
+    var montoBase = montoActual;
     var montoEfectivo = descHno > 0 && descHno < montoBase ? montoBase - descHno : montoBase;
     var badgeHno = i.hnoDe ? ' <span style="background:rgba(201,162,39,.2);color:var(--secondary);font-size:10px;padding:1px 6px;border-radius:8px;font-weight:700;">HNO DE ' + i.hnoDe + '</span>' : '';
     var badgeManual = i.manual === true ? ' <span style="background:rgba(255,184,77,.2);color:#ffb84d;font-size:10px;padding:1px 6px;border-radius:8px;font-weight:700;" title="Monto manual / beca: no se sobrescribe en cambios de precio">&#x270B; MANUAL</span>' : '';
     var badgeDesc = descHno > 0 ? '<div style="font-size:10px;color:var(--muted);">Base $' + montoBase.toLocaleString('es-AR') + ' - $' + descHno.toLocaleString('es-AR') + '</div>' : '';
-    return '<div class="insc-row' + (baja ? ' insc-baja' : '') + '">'
+    // Badge histórico: si tiene historial con >1 entradas, mostrar contador
+    var nHist = (Array.isArray(i.historial) ? i.historial.length : 0);
+    var badgeHist = nHist > 1 ? ' <span style="background:rgba(74,140,184,.18);color:#6db4e0;font-size:10px;padding:1px 6px;border-radius:8px;font-weight:700;cursor:pointer;" onclick="event.stopPropagation();toggleHistorialPrecio(\''+i._row+'\')" title="Ver historial de precios">📜 '+nHist+'</span>' : '';
+    return '<div>'
+      + '<div class="insc-row' + (baja ? ' insc-baja' : '') + '">'
       + '<span style="font-size:18px;">' + (icono ? iconoHTML(icono, 22) : (emojiPorNombre(i.plan) || '&#x1F4CB;')) + '</span>'
-      + '<div style="flex:1;">'
-      + '<div class="insc-plan">' + i.plan + (baja ? ' <span style="color:var(--red);font-size:10px;">[BAJA]</span>' : '') + badgeHno + badgeManual + '</div>'
+      + '<div style="flex:1;cursor:'+(nHist>1?'pointer':'default')+';" '+(nHist>1?'onclick="toggleHistorialPrecio(\''+i._row+'\')"':'')+'>'
+      + '<div class="insc-plan">' + i.plan + (baja ? ' <span style="color:var(--red);font-size:10px;">[BAJA]</span>' : '') + badgeHno + badgeManual + badgeHist + '</div>'
       + '<div class="insc-fechas">Desde ' + i.desde + ' &middot; ' + hastaStr + (i.obs ? ' &middot; ' + i.obs : '') + '</div>'
       + '</div>'
       + '<div style="text-align:right;"><div class="insc-monto">$' + montoEfectivo.toLocaleString('es-AR') + '</div>' + badgeDesc + '</div>'
       + (!baja ? '<button class="insc-btn" onclick="darDeBajaInscripcion(\'' + i._row + '\',\'' + dniStr + '\')">BAJA</button>' : '<button class="insc-btn" style="background:rgba(109,224,151,.15);color:#6de097;border-color:#6de097;" onclick="reactivarInscripcion(\'' + i._row + '\',\'' + dniStr + '\')">REACTIVAR</button>')
       + '<button class="insc-btn" style="background:rgba(228,67,71,.15);color:var(--red);border-color:var(--red);margin-left:4px;" onclick="eliminarInscripcion(\'' + i._row + '\',\'' + dniStr + '\')" title="Eliminar inscripcion (creada por error)">&#x2715;</button>'
+      + '</div>'
+      + '<div id="hist-precio-'+i._row+'" style="display:none;margin:0 8px 8px;padding:10px 12px;background:rgba(74,140,184,.06);border:1px solid rgba(74,140,184,.25);border-radius:8px;"></div>'
       + '</div>';
   }).join('');
+}
+
+// Toggle expansible: muestra el historial de precios de una inscripción inline
+function toggleHistorialPrecio(rowId) {
+  var el = document.getElementById('hist-precio-'+rowId);
+  if (!el) return;
+  if (el.style.display !== 'none') { el.style.display = 'none'; return; }
+  var insc = (DB.inscripciones||[]).find(function(i){ return i._row === rowId; });
+  if (!insc) return;
+  var hist = Array.isArray(insc.historial) ? insc.historial.slice() : [];
+  if (!hist.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--muted);">Esta inscripción no tiene historial detallado (precio único: $'+(Number(insc.monto)||0).toLocaleString('es-AR')+').</div>';
+    el.style.display = 'block';
+    return;
+  }
+  hist.sort(function(a,b){ return (a.desde||'').localeCompare(b.desde||''); });
+  var nm = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  function _lblMes(yyyymm){ var p=(yyyymm||'').split('-'); if(p.length!==2) return yyyymm||''; return nm[Number(p[1])-1]+' '+p[0]; }
+  var filas = hist.map(function(h, ix){
+    var hastaMes = (ix < hist.length - 1) ? hist[ix+1].desde : null;
+    var rango = _lblMes(h.desde) + (hastaMes ? ' → mes anterior a ' + _lblMes(hastaMes) : ' → en adelante');
+    return '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;'+(ix>0?'border-top:1px solid rgba(255,255,255,.05);':'')+'">'
+      + '<span style="color:var(--text);">'+rango+'</span>'
+      + '<span style="color:#6db4e0;font-weight:700;">$'+Number(h.monto||0).toLocaleString('es-AR')+'</span>'
+      + '</div>';
+  }).join('');
+  el.innerHTML = '<div style="font-size:11px;color:#6db4e0;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:6px;">📜 Historial de precios</div>'
+    + filas
+    + '<div style="margin-top:8px;font-size:10px;color:var(--muted);">Las cuotas pagadas completas a cada precio quedan saldadas a ese valor. Las deudas viejas se reevalúan al precio más reciente.</div>';
+  el.style.display = 'block';
 }
 
 function abrirModalInscripcion() {
@@ -3176,7 +3267,8 @@ function calcularEstadoTiempoReal(f) {
   });
 
   var planMonto = inscVigentes.reduce(function(s,i){
-    var m = Number(i.monto) || 0;
+    // Usar precio ACTUAL del historial (el que vale hoy) para mostrar el "plan vigente"
+    var m = getMontoActual(i);
     var d = Number(i.descuentoHno) || 0;
     var esCS = /cuota\s*social/i.test(i.plan || '');
     return s + (!esCS && d > 0 && d < m ? m - d : m);
@@ -3189,13 +3281,19 @@ function calcularEstadoTiempoReal(f) {
   var detalle    = [];
 
   inscTodas.forEach(function(insc) {
-    var pm = Number(insc.monto) || 0;
     var descHno = Number(insc.descuentoHno) || 0;
     // Cuota Social NUNCA recibe descuento de hermanos: queda fija en su monto base.
     // Los descuentos solo se aplican a la cuota deportiva (AFA, Mixto, Futsala, etc).
     var esCuotaSocial = /cuota\s*social/i.test(insc.plan || '');
-    if (!esCuotaSocial && descHno > 0 && descHno < pm) pm = pm - descHno;
-    if (!pm) return;
+    // Helper local: aplica descuento de hermano cuando corresponde
+    function _aplicarDescHno(m) {
+      if (!esCuotaSocial && descHno > 0 && descHno < m) return m - descHno;
+      return m;
+    }
+    // pmActual: precio más reciente (último del historial o monto base si no hay historial).
+    // Se usa para REEVALUAR deudas impagas/parciales (regla híbrida del modelo A).
+    var pmActual = _aplicarDescHno(getMontoActual(insc));
+    if (!pmActual) return;
 
     var mD = insc.desde ? normFecha(insc.desde).substring(0,7) : '';
     if (!mD || mD > mesHoy) return;
@@ -3252,33 +3350,42 @@ function calcularEstadoTiempoReal(f) {
       }
     });
 
-    // Recorrer cada mes requerido y comparar con lo pagado
+    // Recorrer cada mes requerido y comparar con lo pagado.
+    // REGLA HÍBRIDA DE PRECIOS (con historial):
+    //   - Si el mes está PAGADO COMPLETO al precio histórico → queda cerrado a ese precio.
+    //   - Si el mes está IMPAGO o PARCIAL → se reevalúa al precio ACTUAL (pmActual).
     var deudaInsc = 0;
-    var favorInsc = pagadoFueraRango; // saldo a favor de meses fuera de rango
+    var favorInsc = pagadoFueraRango;
     var mesesT = 0;
     var totalPagadoEnRango = 0;
-    var mesesAdeudados = []; // [{mes:'2026-04', falta: 45000, parcial: true/false}, ...]
+    var totalRequerido = 0; // suma de precios por mes (ya no es mesesT*pm porque el precio puede variar)
+    var mesesAdeudados = []; // [{mes:'2026-04', falta: 45000, parcial: true/false, precio: 45000}, ...]
     var iterMes = mD;
     while (true) {
       mesesT++;
       var pagadoMes = pagadoPorMes[iterMes] || 0;
       totalPagadoEnRango += pagadoMes;
-      if (pagadoMes >= pm - 0.5) {
-        favorInsc += (pagadoMes - pm);
+      // Precio histórico vigente en este mes específico (lo que correspondía cuando se pagó)
+      var pmHistorico = _aplicarDescHno(getMontoHistorico(insc, iterMes));
+      // Regla híbrida: si lo pagado cubre el precio histórico → mes cerrado a ese precio.
+      // Si no → reevaluar al precio actual.
+      var pmEsteMes = (pagadoMes >= pmHistorico - 0.5) ? pmHistorico : pmActual;
+      totalRequerido += pmEsteMes;
+      if (pagadoMes >= pmEsteMes - 0.5) {
+        favorInsc += (pagadoMes - pmEsteMes);
       } else {
-        var falta = pm - pagadoMes;
+        var falta = pmEsteMes - pagadoMes;
         deudaInsc += falta;
-        mesesAdeudados.push({ mes: iterMes, falta: falta, parcial: pagadoMes > 0 });
+        mesesAdeudados.push({ mes: iterMes, falta: falta, parcial: pagadoMes > 0, precio: pmEsteMes });
       }
       if (iterMes === mH) break;
       iterMes = _mesSiguiente(iterMes);
     }
 
-    var totalRequerido = mesesT * pm;
-    // Estado: si la deuda excede 1 mes completo → 'debe', si es < 1 mes → 'parcial'
+    // Estado: si la deuda excede 1 mes completo (al precio actual) → 'debe', si es < 1 mes → 'parcial'
     var estadoInsc;
     if (deudaInsc <= 0.5) estadoInsc = 'ok';
-    else if (deudaInsc < pm) estadoInsc = 'parcial';
+    else if (deudaInsc < pmActual) estadoInsc = 'parcial';
     else estadoInsc = 'debe';
     if ((prioridad[estadoInsc]||0) > (prioridad[estadoPeor]||0)) estadoPeor = estadoInsc;
 
@@ -3286,7 +3393,7 @@ function calcularEstadoTiempoReal(f) {
     favorTotal += favorInsc;
 
     detalle.push({
-      plan: insc.plan, monto: pm,
+      plan: insc.plan, monto: pmActual,
       mesesT: mesesT,
       totalPagado: totalPagadoEnRango + pagadoFueraRango,
       totalRequerido: totalRequerido,
@@ -6730,39 +6837,101 @@ function ofrecerCascadaPrecio(actividad, categoria, montoNuevo) {
   var ejemplos = afectadas.slice(0, 8).map(function(insc){
     var socio = DB.jugadores.slice(1).find(function(f){ return (f[COL.DNI]||'').toString().trim() === (insc.dni||'').toString().trim(); });
     var nom = socio ? ((socio[COL.APELLIDO]||'')+' '+(socio[COL.NOMBRE]||'')).trim() : (insc.nombre||insc.dni);
+    var montoActual = getMontoActual(insc);
     return '<div style="display:flex;justify-content:space-between;padding:4px 8px;border-bottom:1px solid var(--border);font-size:12px;">'
       + '<span style="color:var(--text);">' + nom + '</span>'
-      + '<span style="color:var(--muted);">$' + Number(insc.monto||0).toLocaleString('es-AR') + ' &rarr; <b style="color:#6de097;">$' + Number(montoNuevo).toLocaleString('es-AR') + '</b></span>'
+      + '<span style="color:var(--muted);">$' + Number(montoActual||0).toLocaleString('es-AR') + ' &rarr; <b style="color:#6de097;">$' + Number(montoNuevo).toLocaleString('es-AR') + '</b></span>'
       + '</div>';
   }).join('');
   var extra = afectadas.length > 8 ? '<div style="text-align:center;color:var(--muted);font-size:11px;padding:6px;">y ' + (afectadas.length - 8) + ' más...</div>' : '';
   var omitInfo = omitidas > 0
     ? '<div style="margin-top:14px;padding:10px 12px;background:rgba(255,184,77,.1);border:1px solid rgba(255,184,77,.3);border-radius:8px;color:#ffb84d;font-size:12px;"><b>&#x270B; ' + omitidas + ' inscripcion' + (omitidas>1?'es':'') + ' marcada' + (omitidas>1?'s':'') + ' como manual/beca</b> — no se toca' + (omitidas>1?'n':'') + '.</div>'
     : '';
+
+  // Selector de "Vigente desde": default mes próximo
+  var hoy = new Date();
+  var mesProxFecha = new Date(hoy.getFullYear(), hoy.getMonth()+1, 1);
+  var defaultMes = mesProxFecha.getFullYear() + '-' + String(mesProxFecha.getMonth()+1).padStart(2,'0');
+  // Generar opciones: 2 meses atrás → 12 meses adelante
+  var opcionesMes = [];
+  for (var off = -2; off <= 12; off++) {
+    var d = new Date(hoy.getFullYear(), hoy.getMonth() + off, 1);
+    var yyyymm = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    var nombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    var lbl = nombres[d.getMonth()] + ' ' + d.getFullYear();
+    if (off === 0) lbl += ' (mes actual)';
+    if (off === 1) lbl += ' (próximo mes — sugerido)';
+    opcionesMes.push('<option value="'+yyyymm+'"'+(yyyymm===defaultMes?' selected':'')+'>'+lbl+'</option>');
+  }
+  var selectorMes = '<div style="margin:12px 0 14px;padding:12px;background:var(--surface);border:1px solid var(--primary-border);border-radius:8px;">'
+    + '<label style="display:block;font-size:11px;color:var(--secondary);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:6px;">📅 Vigente desde</label>'
+    + '<select id="impCascadaDesde" class="edit-input" style="width:100%;">' + opcionesMes.join('') + '</select>'
+    + '<div style="font-size:11px;color:var(--muted);margin-top:6px;">Los pagos completos hechos a precio anterior <b>NO se reabren</b>. Las cuotas impagas se reevalúan al nuevo precio desde el mes elegido en adelante.</div>'
+    + '</div>';
+
   var msg = '<div style="font-size:14px;color:var(--text);margin-bottom:14px;">'
     + 'Hay <b style="color:var(--secondary);">' + afectadas.length + ' inscripcion' + (afectadas.length>1?'es':'') + '</b> activas de <b>"' + actividad + '"</b> (' + categoria + ') con precio distinto a <b style="color:#6de097;">$' + Number(montoNuevo).toLocaleString('es-AR') + '</b>.'
     + '</div>'
-    + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;max-height:280px;overflow-y:auto;">'
+    + selectorMes
+    + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;max-height:240px;overflow-y:auto;">'
     + ejemplos + extra
     + '</div>'
-    + omitInfo
-    + '<div style="margin-top:14px;font-size:12px;color:var(--muted);">¿Actualizar todas al nuevo precio?</div>';
+    + omitInfo;
+
   sgdConfirm(msg, function(){
-    mostrarLoader('Actualizando ' + afectadas.length + ' inscripciones...');
-    var batch = db.batch();
-    afectadas.forEach(function(insc){
-      batch.update(db.collection('inscripciones').doc(insc._row), { monto: Number(montoNuevo) });
-      insc.monto = Number(montoNuevo);
-    });
-    batch.commit().then(function(){
-      ocultarLoader();
-      toast(afectadas.length + ' inscripcion' + (afectadas.length>1?'es':'') + ' actualizada' + (afectadas.length>1?'s':''), 'ok');
-      try { renderPlayers(); } catch(_){}
-    }).catch(function(e){
-      ocultarLoader();
-      alert('Error al actualizar inscripciones: ' + (e && e.message ? e.message : e));
-    });
+    var vigenteDesde = (document.getElementById('impCascadaDesde')||{value:defaultMes}).value || defaultMes;
+    _aplicarCascadaPrecio(afectadas, Number(montoNuevo), vigenteDesde, actividad, categoria);
   }, 'APLICAR A ' + afectadas.length);
+}
+
+// Ejecuta el batch con historial + audit. Se llama desde el confirm del modal.
+function _aplicarCascadaPrecio(afectadas, montoNuevo, vigenteDesde, actividad, categoria) {
+  mostrarLoader('Actualizando ' + afectadas.length + ' inscripciones...');
+  var _user = (window.ADMIN_USER || (typeof localStorage!=='undefined' && localStorage.getItem('admin_user')) || 'admin');
+  var _ts = firebase.firestore.FieldValue.serverTimestamp();
+  var batch = db.batch();
+  afectadas.forEach(function(insc){
+    // Construir el historial nuevo: inicializar con monto viejo si está vacío, luego agregar nueva entrada
+    var hist = Array.isArray(insc.historial) ? insc.historial.slice() : [];
+    if (!hist.length) {
+      var mesIni = insc.desde ? normFecha(insc.desde).substring(0,7) : '';
+      if (mesIni) hist.push({ desde: mesIni, monto: Number(insc.monto)||0 });
+    }
+    // Si ya hay una entrada para ese mes, reemplazarla; si no, agregar
+    var idxMatch = hist.findIndex(function(h){ return h.desde === vigenteDesde; });
+    if (idxMatch >= 0) hist[idxMatch] = { desde: vigenteDesde, monto: montoNuevo };
+    else hist.push({ desde: vigenteDesde, monto: montoNuevo });
+    // Ordenar cronológico
+    hist.sort(function(a,b){ return (a.desde||'').localeCompare(b.desde||''); });
+
+    batch.update(db.collection('inscripciones').doc(insc._row), {
+      historial: hist,
+      monto: Number(montoNuevo) // sigue siendo el "precio actual" para UI legacy
+    });
+    insc.historial = hist;
+    insc.monto = Number(montoNuevo);
+
+    // Audit por inscripción
+    try {
+      var auditRef = db.collection('auditoria_precios').doc();
+      batch.set(auditRef, {
+        inscripcionId: insc._row, dni: insc.dni||'', plan: insc.plan||'',
+        actividad: actividad, categoria: categoria,
+        montoAnterior: Number(insc.monto)||0, montoNuevo: Number(montoNuevo),
+        vigenteDesde: vigenteDesde,
+        origen: 'cascada',
+        modificadoPor: _user, fecha: _ts
+      });
+    } catch(_){}
+  });
+  batch.commit().then(function(){
+    ocultarLoader();
+    toast(afectadas.length + ' inscripcion' + (afectadas.length>1?'es':'') + ' actualizada' + (afectadas.length>1?'s':'') + ' (vigente desde ' + vigenteDesde + ')', 'ok');
+    try { renderPlayers(); } catch(_){}
+  }).catch(function(e){
+    ocultarLoader();
+    alert('Error al actualizar inscripciones: ' + (e && e.message ? e.message : e));
+  });
 }
 
 function getPrecio(actividad, categoria) {
