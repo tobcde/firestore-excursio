@@ -1742,7 +1742,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.61</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.62</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3492,31 +3492,6 @@ function calcularEstadoTiempoReal(f) {
     deudaTotal -= absorb;
     favorTotal += (ajuste - absorb);
     if (deudaTotal === 0 && estadoPeor !== 'none') estadoPeor = 'ok';
-
-    // Distribuir el "absorb" sobre mesesAdeudados (FIFO cronologico) igual que la
-    // compensacion, asi el modal de cobro y la card no muestran deuda fantasma cuando
-    // el ajuste manual ya la cubrio.
-    var _restAdj = absorb;
-    var _flatAdj = [];
-    detalle.forEach(function(_d, _di){
-      (_d.mesesAdeudados || []).forEach(function(_m, _mi){
-        _flatAdj.push({ mes: _m.mes, di: _di, mi: _mi });
-      });
-    });
-    _flatAdj.sort(function(a, b){ return a.mes.localeCompare(b.mes); });
-    for (var _ai = 0; _ai < _flatAdj.length && _restAdj > 0.5; _ai++) {
-      var _refA = _flatAdj[_ai];
-      var _mObjA = detalle[_refA.di].mesesAdeudados[_refA.mi];
-      if (!_mObjA) continue;
-      var _takeA = Math.min(_mObjA.falta, _restAdj);
-      _mObjA.falta -= _takeA;
-      _restAdj -= _takeA;
-      if (_mObjA.falta <= 0.5) _mObjA.falta = 0;
-    }
-    detalle.forEach(function(_d){
-      _d.mesesAdeudados = (_d.mesesAdeudados || []).filter(function(_m){ return _m.falta > 0.5; });
-      _d.deudaPorMes = (_d.mesesAdeudados || []).reduce(function(s, _m){ return s + _m.falta; }, 0);
-    });
   } else if (ajuste < 0) {
     var neg = -ajuste;
     var absorbF = Math.min(neg, favorTotal);
@@ -3524,15 +3499,6 @@ function calcularEstadoTiempoReal(f) {
     deudaTotal += (neg - absorbF);
     if (deudaTotal > 0) {
       estadoPeor = (deudaTotal < (planMonto || 1)) ? 'parcial' : 'debe';
-    }
-    // Consumo del favor en las inscripciones (FIFO)
-    var _restNegF = absorbF;
-    for (var _fi2 = 0; _fi2 < detalle.length && _restNegF > 0.5; _fi2++) {
-      var _df2 = detalle[_fi2];
-      if (!_df2.favorPorMes || _df2.favorPorMes <= 0) continue;
-      var _takeF2 = Math.min(_df2.favorPorMes, _restNegF);
-      _df2.favorPorMes -= _takeF2;
-      _restNegF -= _takeF2;
     }
   }
 
