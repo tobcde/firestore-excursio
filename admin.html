@@ -1742,7 +1742,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.58</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.59</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -4130,7 +4130,7 @@ function renderCuotas() {
     if(fcat && cat !== fcat) return;
     if(busq && !nom.includes(busq) && !dni.includes(busq)) return;
     if(cv.planNom){ tc++; es+=mo; if(est==='ok'){pa++;re+=pagado;} else if(est==='vence'){pv++;re+=pagado;} else de++; deudaAcum+=(cv.deuda||0); saldoFavorAcum+=(cv.saldoAFavor||0); }
-    rows.push({f:f, pl:cv.planNom||'', mo:mo, est:est, hasta:cv.hasta, hastaStr:hastaStr, pagado:pagado, extraConceptos:_extraConceptos});
+    rows.push({f:f, pl:cv.planNom||'', mo:mo, est:est, hasta:cv.hasta, hastaStr:hastaStr, pagado:pagado, extraConceptos:_extraConceptos, deuda: Number(cv.deuda)||0, saldoAFavor: Number(cv.saldoAFavor)||0});
   });
   document.getElementById('rc-total').innerText = tc;
   document.getElementById('rc-pagaron').innerText = pa;
@@ -4155,7 +4155,14 @@ function renderCuotas() {
     var _vigente = it.hastaStr ? formatDate(it.hastaStr) : it.hasta ? formatDate(it.hasta) : '-';
     html += '<div class="ct-row">';
     html += '<div><div class="ct-nombre">' + (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'') + '</div><div class="ct-sub">Doc: ' + (f[COL.DNI]||f[COL.TARJETA]||'') + ' | ' + (f[COL.CATEGORIA_APP]||'Sin ' + T('grupo')) + '</div></div>';
-    html += '<div><span class="cuota-pill ' + cl + '">' + lb + '</span></div>';
+    // Subtítulo del estado: muestra deuda o saldo a favor en pesos
+    var _subEstado = '';
+    if (it.deuda > 0.5) {
+      _subEstado = '<div style="font-size:11px;color:var(--red);font-weight:700;margin-top:3px;">-$' + Number(it.deuda).toLocaleString('es-AR') + '</div>';
+    } else if (it.saldoAFavor > 0.5) {
+      _subEstado = '<div style="font-size:11px;color:#6de097;font-weight:700;margin-top:3px;">+$' + Number(it.saldoAFavor).toLocaleString('es-AR') + ' a favor</div>';
+    }
+    html += '<div><span class="cuota-pill ' + cl + '">' + lb + '</span>' + _subEstado + '</div>';
     var _chipExtras = it.extraConceptos && it.extraConceptos.length ?
       it.extraConceptos.map(function(x){ return '<span style="background:rgba(201,162,39,.2);color:var(--secondary);font-size:10px;padding:1px 6px;border-radius:8px;margin-top:3px;display:inline-block;">+' + x + '</span>'; }).join(' ') : '';
     html += '<div><div style="font-size:12px;font-weight:600;">' + (it.pl||'-') + '</div>' +
