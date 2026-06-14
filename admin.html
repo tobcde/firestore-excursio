@@ -72,6 +72,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 .cuota-pill{font-size:10px;font-weight:800;padding:3px 8px;border-radius:20px;font-family:'Barlow Condensed';text-transform:uppercase;}
 .cuota-ok{background:var(--primary-dim);color:#6de097;border:1px solid var(--primary-border);}
 .cuota-debe{background:var(--red-dim);color:var(--red);border:1px solid var(--red-border);}
+.cuota-pago-anual{background:rgba(26,122,60,.25);color:#6de097;border:1px solid #1a7a3c;font-weight:800;}
 .cuota-parcial{background:rgba(201,162,39,.1);color:var(--secondary);border:1px solid rgba(201,162,39,.35);}
 .cuota-none{background:var(--surface);color:var(--muted);border:1px solid var(--border);}
 .cuota-vence{background:var(--secondary-dim);color:var(--secondary-lite);border:1px solid var(--secondary-border);}
@@ -1226,6 +1227,16 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
           <select id="mp-cobrador" class="edit-input" style="width:100%;"></select></div>
         <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Observaciones</label><input id="mp-obs" class="edit-input" style="width:100%;"></div>
       </div>
+      <!-- Checkbox de cobertura completa: solo visible cuando el periodo es >= 6 meses -->
+      <div id="mp-cobertura-wrap" style="display:none;margin:-4px 0 16px;padding:10px 14px;background:rgba(26,122,60,.12);border:1px solid #1a7a3c;border-radius:8px;">
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+          <input type="checkbox" id="mp-cobertura-check" style="accent-color:#1a7a3c;margin-top:3px;">
+          <div>
+            <div style="font-weight:700;color:#6de097;font-size:13px;">&#x1F4C5; Pago anual con cobertura completa</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Este pago cubre todo el periodo seleccionado, sin importar futuros cambios de precio. El socio quedará "AL DIA · PAGO ANUAL" hasta el mes final.</div>
+          </div>
+        </label>
+      </div>
       <button class="btn btn-save" onclick="confirmarPago()" style="width:100%;padding:14px;font-size:14px;">CONFIRMAR PAGO</button>
     </div>
   </div>
@@ -1482,7 +1493,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;">
   <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--text);text-transform:uppercase;margin-bottom:12px;">Contenido</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px;">
-    <a href="#ayuda-socios" onclick="event.preventDefault();document.getElementById('ayuda-socios').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;" id="ayuda-idx-socios">1. Miembros</a>
+    <a href="#ayuda-socios" onclick="event.preventDefault();document.getElementById('ayuda-socios').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;" id="ayuda-idx-socios">1. Socios</a>
     <a href="#ayuda-inscripciones" onclick="event.preventDefault();document.getElementById('ayuda-inscripciones').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;">2. Inscripciones</a>
     <a href="#ayuda-cobros" onclick="event.preventDefault();document.getElementById('ayuda-cobros').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;">3. Cobros y pagos</a>
     <a href="#ayuda-cuotas" onclick="event.preventDefault();document.getElementById('ayuda-cuotas').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;">4. Cuotas</a>
@@ -1502,7 +1513,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   <div class="ayuda-tabla">
     <div class="ayuda-fila-h"><div>Filtro</div><div>Descripción</div></div>
     <div class="ayuda-fila"><div>Nombre o documento</div><div>Busca por apellido, nombre o DNI</div></div>
-    <div class="ayuda-fila"><div>Categoría</div><div>Filtra por categoría asignada</div></div>
+    <div class="ayuda-fila"><div>Categoría</div><div>Filtra por categoría asignada — incluye tanto la primaria como la secundaria</div></div>
     <div class="ayuda-fila"><div>Género</div><div>Masculino / Femenino / Todos</div></div>
     <div class="ayuda-fila"><div>Estado</div><div>Activos / Inactivos / Todos</div></div>
     <div class="ayuda-fila"><div>Cuota</div><div>Al día / Debe / Parcial / Sin plan</div></div>
@@ -1564,6 +1575,9 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
     <div class="ayuda-fila"><div>Cobrador</div><div>Instructor que recibió el pago</div></div>
   </div>
 
+  <div class="ayuda-subtitulo">Pagar con saldo a favor</div>
+  <p class="ayuda-p">Si el socio tiene <strong>saldo a favor</strong> acumulado (por un pago de más o un ajuste previo), en el modal de pago aparece la opción <strong>"Pagar con saldo a favor"</strong>. Al tildarla, el cobro se descuenta del saldo disponible en vez de registrarse como dinero recibido: el método pasa a "Saldo a favor" y el monto se limita automáticamente al saldo disponible. El movimiento queda registrado en la auditoría del sistema.</p>
+
   <div class="ayuda-subtitulo">Comprobante por email</div>
   <p class="ayuda-p">Después de confirmar el pago, el sistema ofrece enviar un comprobante al email del socio. Requiere que el campo "Email para envío de comprobantes" esté configurado en INSTITUCIÓN.</p>
 
@@ -1600,7 +1614,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
     <li>Marcar los socios <strong>presentes</strong></li>
     <li>Click en <strong>GUARDAR ASISTENCIA</strong></li>
   </ol>
-  <div class="ayuda-nota">El sistema muestra solo los socios de la categoría correspondiente al turno seleccionado.</div>
+  <div class="ayuda-nota">El sistema muestra los socios cuya categoría —primaria o secundaria— corresponde al turno seleccionado.</div>
 
   <div class="ayuda-subtitulo">Porcentaje de asistencia</div>
   <p class="ayuda-p">En la ficha de cada socio se muestra el porcentaje de asistencia del mes actual. También disponible en el reporte de Asistencias del tab REPORTES.</p>
@@ -1645,17 +1659,41 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   <div class="ayuda-titulo">&#x1F4CA; 7. Reportes</div>
   <p class="ayuda-p">Todos los reportes se generan desde datos en memoria — sin costo adicional de lecturas a la base de datos. Todos son exportables a CSV.</p>
 
+  <p class="ayuda-p">Los reportes están agrupados en 4 categorías: <strong>Pagos &amp; cuotas</strong>, <strong>Asistencias</strong>, <strong>Socios</strong> y <strong>Citaciones</strong>.</p>
+
+  <div class="ayuda-subtitulo">Pagos &amp; cuotas</div>
   <div class="ayuda-tabla">
     <div class="ayuda-fila-h"><div>Reporte</div><div>¿Qué muestra?</div></div>
-    <div class="ayuda-fila"><div>Deudores</div><div>Socios con estado DEBE o PARCIAL, con monto adeudado</div></div>
-    <div class="ayuda-fila"><div>Al día</div><div>Socios que tienen el período cubierto</div></div>
-    <div class="ayuda-fila"><div>Socios</div><div>Listado completo con datos de contacto</div></div>
     <div class="ayuda-fila"><div>Pagos del período</div><div>Todos los cobros realizados en el rango de fechas</div></div>
-    <div class="ayuda-fila"><div>Tipo de pago</div><div>Totales por método (efectivo, transferencia, etc.)</div></div>
+    <div class="ayuda-fila"><div>Deben cuota</div><div>Socios con estado DEBE o PARCIAL, con monto adeudado</div></div>
+    <div class="ayuda-fila"><div>Al día</div><div>Socios que tienen el período cubierto</div></div>
+    <div class="ayuda-fila"><div>Por tipo de pago</div><div>Totales por método (efectivo, transferencia, etc.)</div></div>
     <div class="ayuda-fila"><div>Caja del día</div><div>Cobros realizados en una fecha específica</div></div>
+    <div class="ayuda-fila"><div>Auditoría</div><div>Historial de ediciones y eliminaciones de pagos con motivo</div></div>
+    <div class="ayuda-fila"><div>Ajustes de saldo</div><div>Movimientos de saldo a favor / deuda cargados manualmente, con motivo</div></div>
+  </div>
+
+  <div class="ayuda-subtitulo">Asistencias</div>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Reporte</div><div>¿Qué muestra?</div></div>
     <div class="ayuda-fila"><div>Asistencia</div><div>Porcentaje de presencia por socio en un período</div></div>
-    <div class="ayuda-fila"><div>Ranking asistencia</div><div>Socios ordenados por mayor presencia</div></div>
-    <div class="ayuda-fila"><div>Auditoría de pagos</div><div>Historial de ediciones y eliminaciones con motivo</div></div>
+    <div class="ayuda-fila"><div>Matriz</div><div>Grilla de socios × fechas con presentes / ausentes</div></div>
+    <div class="ayuda-fila"><div>Por día</div><div>Total de presentes en cada día del período</div></div>
+    <div class="ayuda-fila"><div>Ranking</div><div>Socios ordenados por mayor presencia</div></div>
+    <div class="ayuda-fila"><div>Semáforo emociones</div><div>Grilla del estado emocional (verde / amarillo / rojo) registrado al tomar asistencia</div></div>
+  </div>
+
+  <div class="ayuda-subtitulo">Socios</div>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Reporte</div><div>¿Qué muestra?</div></div>
+    <div class="ayuda-fila"><div>Listado completo</div><div>Todos los socios con datos de contacto</div></div>
+    <div class="ayuda-fila"><div>Eliminados</div><div>Socios dados de baja / eliminados, con motivo y fecha</div></div>
+  </div>
+
+  <div class="ayuda-subtitulo">Citaciones</div>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Reporte</div><div>¿Qué muestra?</div></div>
+    <div class="ayuda-fila"><div>Matriz de citaciones</div><div>Grilla de jugadores citados por partido / fecha</div></div>
   </div>
 </div>
 
@@ -1742,7 +1780,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.62</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.14</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -2012,6 +2050,12 @@ function cuotaToRow(d, fsId) {
   row._fsId = fsId || d._fsId || '';
   // Timestamp del cobro para reportes con fecha+hora
   row._ts = d.ts || null;
+  // Flag de cobertura completa: si true, el pago salda los meses del rango al
+  // precio del mes (independiente del monto pagado vs precio).
+  // Útil para pagos anuales con descuento donde el monto no coincide exactamente
+  // con la suma de cuotas mensuales.
+  row._coberturaCompleta = d.coberturaCompleta === true;
+  row._tipoCobertura = d.tipoCobertura || '';
   return row;
 }
 
@@ -2535,6 +2579,11 @@ function _fsDispatch(action, p, ok, err) {
         metodo:pg.metodo||'', cobrador:pg.cobrador||'', obs:pg.obs||'',
         periodo:pg.periodo||'', ts:Date.now()
       };
+      // Flag de cobertura completa (pago anual con cobertura sin importar precio)
+      if (pg.coberturaCompleta === true) {
+        docData.coberturaCompleta = true;
+        docData.tipoCobertura = pg.tipoCobertura || 'pago_anual';
+      }
       db.collection('cuotas').add(docData)
         .then(function(ref){ _contarEscrituras(1); cb({ok:true, id:ref.id}); })
         .catch(function(e){ cbErr(e.message); });
@@ -3080,11 +3129,25 @@ function renderInscripcionesModal(dni) {
     // Badge histórico: si tiene historial con >1 entradas, mostrar contador
     var nHist = (Array.isArray(i.historial) ? i.historial.length : 0);
     var badgeHist = nHist > 1 ? ' <span style="background:rgba(74,140,184,.18);color:#6db4e0;font-size:10px;padding:1px 6px;border-radius:8px;font-weight:700;cursor:pointer;" onclick="event.stopPropagation();toggleHistorialPrecio(\''+i._row+'\')" title="Ver historial de precios">📜 '+nHist+'</span>' : '';
+    // Badge PAGO ANUAL si esta inscripción tiene cobertura completa activa
+    var _hayCobertura = (CUOTAS_DB.cuotas||[]).some(function(c){
+      return c[0] === dniStr && c[2] === i.plan && c._coberturaCompleta === true;
+    });
+    var _maxCobertura = '';
+    if (_hayCobertura) {
+      (CUOTAS_DB.cuotas||[]).forEach(function(c){
+        if (c[0] === dniStr && c[2] === i.plan && c._coberturaCompleta === true) {
+          var ph = normFecha((c[4]||'').toString()).substring(0,10);
+          if (ph > _maxCobertura) _maxCobertura = ph;
+        }
+      });
+    }
+    var badgeAnual = _hayCobertura ? ' <span style="background:rgba(26,122,60,.25);color:#6de097;border:1px solid #1a7a3c;font-size:10px;padding:1px 6px;border-radius:8px;font-weight:800;letter-spacing:.04em;" title="Pago anual con cobertura completa hasta '+_maxCobertura+'">&#x1F4C5; PAGO ANUAL'+(_maxCobertura?' &rarr; '+_maxCobertura.substring(0,7):'')+'</span>' : '';
     return '<div>'
       + '<div class="insc-row' + (baja ? ' insc-baja' : '') + '">'
       + '<span style="font-size:18px;">' + (icono ? iconoHTML(icono, 22) : (emojiPorNombre(i.plan) || '&#x1F4CB;')) + '</span>'
       + '<div style="flex:1;cursor:'+(nHist>1?'pointer':'default')+';" '+(nHist>1?'onclick="toggleHistorialPrecio(\''+i._row+'\')"':'')+'>'
-      + '<div class="insc-plan">' + i.plan + (baja ? ' <span style="color:var(--red);font-size:10px;">[BAJA]</span>' : '') + badgeHno + badgeManual + badgeHist + '</div>'
+      + '<div class="insc-plan">' + i.plan + (baja ? ' <span style="color:var(--red);font-size:10px;">[BAJA]</span>' : '') + badgeHno + badgeManual + badgeHist + badgeAnual + '</div>'
       + '<div class="insc-fechas">Desde ' + i.desde + ' &middot; ' + hastaStr + (i.obs ? ' &middot; ' + i.obs : '') + '</div>'
       + '</div>'
       + '<div style="text-align:right;"><div class="insc-monto">$' + montoEfectivo.toLocaleString('es-AR') + '</div>' + badgeDesc + '</div>'
@@ -3277,7 +3340,7 @@ function calcularEstadoTiempoReal(f) {
 
   var deudaTotal = 0, favorTotal = 0;
   var estadoPeor = 'ok';
-  var prioridad  = {ok:0, parcial:1, debe:2};
+  var prioridad  = {pago_anual:0, ok:0, parcial:1, debe:2};
   var detalle    = [];
 
   inscTodas.forEach(function(insc) {
@@ -3308,6 +3371,9 @@ function calcularEstadoTiempoReal(f) {
     // Asi un pago con periodoHasta=Abril marca explicitamente que cubre hasta abril.
     var pagadoPorMes = {};   // {'2026-04': 35000, '2026-05': 0}
     var pagadoFueraRango = 0; // pagos a meses fuera de [mD, mH] (pre/post insc)
+    // Set de meses con COBERTURA COMPLETA (pago anual): se saldan al precio del mes
+    // independientemente del monto pagado. El pago no se distribuye prorata.
+    var mesesCobertosCompleto = {};
     (CUOTAS_DB.cuotas || []).forEach(function(row) {
       var docPago  = (row[0] || '').toString().trim();
       var concepto = (row[2] || '').toString().trim();
@@ -3332,6 +3398,22 @@ function calcularEstadoTiempoReal(f) {
       }
       if (pD > pH) { var tmp = pD; pD = pH; pH = tmp; }
 
+      // ── COBERTURA COMPLETA (pago anual) ──
+      // Si el pago tiene el flag, marca cada mes del rango como "saldado al precio del mes"
+      // sin distribuir prorata. Útil para pagos anuales con descuento donde la suma de
+      // cuotas mensuales no coincide con el monto pagado.
+      if (row._coberturaCompleta === true) {
+        var iterC = pD;
+        while (true) {
+          if (iterC >= mD && iterC <= mH) {
+            mesesCobertosCompleto[iterC] = true;
+          }
+          if (iterC === pH) break;
+          iterC = _mesSiguiente(iterC);
+        }
+        return; // no distribuimos prorata
+      }
+
       // Contar meses cubiertos y distribuir monto
       var nMeses = 1;
       var iter = pD;
@@ -3351,32 +3433,40 @@ function calcularEstadoTiempoReal(f) {
     });
 
     // Recorrer cada mes requerido y comparar con lo pagado.
-    // REGLA HÍBRIDA DE PRECIOS (con historial):
-    //   - Si el mes está PAGADO COMPLETO al precio histórico → queda cerrado a ese precio.
-    //   - Si el mes está IMPAGO o PARCIAL → se reevalúa al precio ACTUAL (pmActual).
+    // REGLAS APLICADAS:
+    //   1) COBERTURA COMPLETA (pago anual): el mes está saldado al precio del mes,
+    //      sin importar el monto pagado vs precio (cuotas anuales con descuento).
+    //   2) PAGADO COMPLETO al precio histórico → queda cerrado a ese precio.
+    //   3) IMPAGO o PARCIAL → se reevalúa al precio ACTUAL (pmActual). Regla híbrida.
     var deudaInsc = 0;
     var favorInsc = pagadoFueraRango;
     var mesesT = 0;
     var totalPagadoEnRango = 0;
-    var totalRequerido = 0; // suma de precios por mes (ya no es mesesT*pm porque el precio puede variar)
-    var mesesAdeudados = []; // [{mes:'2026-04', falta: 45000, parcial: true/false, precio: 45000}, ...]
+    var totalRequerido = 0;
+    var mesesAdeudados = [];
+    var mesesCoberturaCount = 0; // contador de meses cubiertos por pago anual
     var iterMes = mD;
     while (true) {
       mesesT++;
       var pagadoMes = pagadoPorMes[iterMes] || 0;
       totalPagadoEnRango += pagadoMes;
-      // Precio histórico vigente en este mes específico (lo que correspondía cuando se pagó)
       var pmHistorico = _aplicarDescHno(getMontoHistorico(insc, iterMes));
-      // Regla híbrida: si lo pagado cubre el precio histórico → mes cerrado a ese precio.
-      // Si no → reevaluar al precio actual.
-      var pmEsteMes = (pagadoMes >= pmHistorico - 0.5) ? pmHistorico : pmActual;
-      totalRequerido += pmEsteMes;
-      if (pagadoMes >= pmEsteMes - 0.5) {
-        favorInsc += (pagadoMes - pmEsteMes);
+      // Cobertura completa: el mes está saldado al precio del mes, fin.
+      if (mesesCobertosCompleto[iterMes]) {
+        totalRequerido += pmHistorico;
+        mesesCoberturaCount++;
+        // No suma deuda ni favor para este mes
       } else {
-        var falta = pmEsteMes - pagadoMes;
-        deudaInsc += falta;
-        mesesAdeudados.push({ mes: iterMes, falta: falta, parcial: pagadoMes > 0, precio: pmEsteMes });
+        // Regla híbrida normal
+        var pmEsteMes = (pagadoMes >= pmHistorico - 0.5) ? pmHistorico : pmActual;
+        totalRequerido += pmEsteMes;
+        if (pagadoMes >= pmEsteMes - 0.5) {
+          favorInsc += (pagadoMes - pmEsteMes);
+        } else {
+          var falta = pmEsteMes - pagadoMes;
+          deudaInsc += falta;
+          mesesAdeudados.push({ mes: iterMes, falta: falta, parcial: pagadoMes > 0, precio: pmEsteMes });
+        }
       }
       if (iterMes === mH) break;
       iterMes = _mesSiguiente(iterMes);
@@ -3401,7 +3491,15 @@ function calcularEstadoTiempoReal(f) {
       deudaPorMes: deudaInsc, favorPorMes: favorInsc,
       mesesAdeudados: mesesAdeudados,
       estado: estadoInsc,
-      vigente: !insc.hasta || normFecha(insc.hasta).substring(0,7) >= mesHoy
+      vigente: !insc.hasta || normFecha(insc.hasta).substring(0,7) >= mesHoy,
+      // Cuántos meses están cubiertos por pago anual (cobertura completa) en esta insc
+      mesesCoberturaAnual: mesesCoberturaCount,
+      // Hasta qué mes futuro hay cobertura (para mostrar "PAGO ANUAL hasta...")
+      coberturaHasta: (function(){
+        var max = '';
+        Object.keys(mesesCobertosCompleto).forEach(function(m){ if (m > max) max = m; });
+        return max;
+      })()
     });
   });
 
@@ -3502,6 +3600,24 @@ function calcularEstadoTiempoReal(f) {
     }
   }
 
+  // ── Detección de "PAGO ANUAL" ──
+  // Si TODAS las inscripciones vigentes tienen el mes corriente cubierto por pago anual
+  // y NO hay deuda → marcar estado especial 'pago_anual'.
+  // También calcular la fecha máxima de cobertura para mostrar "hasta DD/MM/AAAA".
+  var coberturaHastaGlobal = '';
+  var tienePagoAnual = false;
+  if (estadoPeor === 'ok' && deudaTotal <= 0.5 && inscVigentes.length > 0) {
+    var todasConCobertura = true;
+    inscVigentes.forEach(function(insc){
+      var det = detalle.find(function(d){ return d.plan === insc.plan; });
+      if (!det || !det.mesesCoberturaAnual) { todasConCobertura = false; return; }
+      // Verificar que el mes corriente esté entre los cubiertos
+      if (!det.coberturaHasta || det.coberturaHasta < mesHoy) { todasConCobertura = false; return; }
+      if (det.coberturaHasta > coberturaHastaGlobal) coberturaHastaGlobal = det.coberturaHasta;
+    });
+    if (todasConCobertura) { tienePagoAnual = true; estadoPeor = 'pago_anual'; }
+  }
+
   return {
     estado:         estadoPeor,
     deuda:          deudaTotal,
@@ -3518,6 +3634,9 @@ function calcularEstadoTiempoReal(f) {
     saldoNetoSinAjuste: favorSinAjuste - deudaSinAjuste,
     // Flag util para reportes: ¿tiene al menos una insc vigente HOY?
     tieneVigente:   inscVigentes.length > 0,
+    // Pago anual / cobertura completa
+    pagoAnual:      tienePagoAnual,
+    coberturaHasta: coberturaHastaGlobal,
     detalle:        detalle
   };
 }
@@ -3989,9 +4108,16 @@ function renderPlayers() {
     var st = getStatsJ(dni), pc = st.pct>=75 ? 'var(--primary)' : st.pct>=50 ? 'var(--orange)' : 'var(--red)';
     var moAct = 0;
     var ms = moAct ? '$' + moAct.toLocaleString('es-AR') : '';
-    var cl = est==='ok'?'cuota-ok':est==='debe'?'cuota-debe':est==='vence'?'cuota-vence':est==='parcial'?'cuota-parcial':'cuota-none';
+    var cl = est==='pago_anual'?'cuota-pago-anual':est==='ok'?'cuota-ok':est==='debe'?'cuota-debe':est==='vence'?'cuota-vence':est==='parcial'?'cuota-parcial':'cuota-none';
     var lb;
-    if(est==='ok'||est==='vence'){
+    if (est==='pago_anual') {
+      lb = 'AL DIA · PAGO ANUAL';
+      if (cv.coberturaHasta) {
+        var _nm = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        var _p = (cv.coberturaHasta||'').split('-');
+        if (_p.length === 2) lb += ' (hasta ' + (_nm[Number(_p[1])-1]||'') + ' ' + _p[0] + ')';
+      }
+    } else if(est==='ok'||est==='vence'){
       lb = (est==='vence' ? 'POR VENCER' : 'Al dia');
       if(cv.hasta) lb += ' ' + formatDate(cv.hasta);
       if(cv.saldoAFavor > 0) lb += ' (+$' + Number(cv.saldoAFavor).toLocaleString('es-AR') + ')';
@@ -4150,8 +4276,8 @@ function renderCuotas() {
   var html = '';
   visibles.forEach(function(it, idx){
     var f = it.f;
-    var cl = it.est==='ok'?'cuota-ok':it.est==='debe'?'cuota-debe':it.est==='vence'?'cuota-vence':it.est==='parcial'?'cuota-parcial':'cuota-none';
-    var lb = it.est==='ok'?'Al dia':it.est==='debe'?'DEBE':it.est==='vence'?'POR VENCER':it.est==='parcial'?'PARCIAL':'Sin plan';
+    var cl = it.est==='pago_anual'?'cuota-pago-anual':it.est==='ok'?'cuota-ok':it.est==='debe'?'cuota-debe':it.est==='vence'?'cuota-vence':it.est==='parcial'?'cuota-parcial':'cuota-none';
+    var lb = it.est==='pago_anual'?'AL DIA · PAGO ANUAL':it.est==='ok'?'Al dia':it.est==='debe'?'DEBE':it.est==='vence'?'POR VENCER':it.est==='parcial'?'PARCIAL':'Sin plan';
     var _vigente = it.hastaStr ? formatDate(it.hastaStr) : it.hasta ? formatDate(it.hasta) : '-';
     html += '<div class="ct-row">';
     html += '<div><div class="ct-nombre">' + (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'') + '</div><div class="ct-sub">Doc: ' + (f[COL.DNI]||f[COL.TARJETA]||'') + ' | ' + (f[COL.CATEGORIA_APP]||'Sin ' + T('grupo')) + '</div></div>';
@@ -4250,6 +4376,18 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
   document.getElementById('mp-hasta').value = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().split('T')[0];
   document.getElementById('mp-monto').value = _moSugerido || '';
   document.getElementById('mp-obs').value = '';
+  // Reset checkbox cobertura completa y hookear listener para mostrar/ocultar según rango
+  var _coberCheck = document.getElementById('mp-cobertura-check');
+  if (_coberCheck) _coberCheck.checked = false;
+  // Wire para recalcular visibilidad ante cambio de fechas
+  ['mp-desde','mp-hasta'].forEach(function(_id){
+    var _el = document.getElementById(_id);
+    if (_el && !_el._coberWired) {
+      _el.addEventListener('change', _refrescarCoberturaUI);
+      _el._coberWired = true;
+    }
+  });
+  _refrescarCoberturaUI();
   // Cobrador: poblar lista y poner Juana Sestua por default si existe
   var _cobSel = document.getElementById('mp-cobrador');
   _cobSel.innerHTML = DB.profesores.map(function(p){ return '<option>' + p[0] + '</option>'; }).join('') || '<option>Sin especificar</option>';
@@ -4312,6 +4450,27 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
   document.getElementById('modalPago').classList.add('open');
 }
 function cerrarModalPago(){ document.getElementById('modalPago').classList.remove('open'); pagoCtx = null; }
+
+// Muestra el checkbox de "cobertura completa" solo si el rango del pago es >= 6 meses.
+function _refrescarCoberturaUI() {
+  var d = document.getElementById('mp-desde');
+  var h = document.getElementById('mp-hasta');
+  var wrap = document.getElementById('mp-cobertura-wrap');
+  var chk = document.getElementById('mp-cobertura-check');
+  if (!d || !h || !wrap) return;
+  var dv = d.value || '', hv = h.value || '';
+  if (!dv || !hv) { wrap.style.display = 'none'; if(chk) chk.checked = false; return; }
+  try {
+    var dD = new Date(dv); var hD = new Date(hv);
+    var mesesDiff = (hD.getFullYear() - dD.getFullYear()) * 12 + (hD.getMonth() - dD.getMonth()) + 1;
+    if (mesesDiff >= 6) {
+      wrap.style.display = 'block';
+    } else {
+      wrap.style.display = 'none';
+      if(chk) chk.checked = false;
+    }
+  } catch(_){ wrap.style.display = 'none'; }
+}
 
 function recalcularTotalPago() {
   // El usuario cambio un checkbox o toggle de extra: recomputar sugerido y limpiar override manual.
@@ -4525,6 +4684,8 @@ function confirmarPago() {
   }
 
   mostrarLoader('Registrando pago...');
+  var _coberCheck = document.getElementById('mp-cobertura-check');
+  var _esCoberturaCompleta = !!(_coberCheck && _coberCheck.checked);
   var done = 0;
   pagos.forEach(function(item) {
     var p = {
@@ -4534,10 +4695,27 @@ function confirmarPago() {
       fechaPago: _fecha, monto: item.monto, metodo: _metodo, cobrador: _cobrador, obs: _obs,
       hoja: pagoCtx.hoja
     };
+    if (_esCoberturaCompleta) {
+      p.coberturaCompleta = true;
+      p.tipoCobertura = 'pago_anual';
+    }
     callScript({action:'registrarPago', pago:p, pass:TOKEN, _noRetry:true}, function(res){
       // Agregar a memoria con fsId para poder editar/eliminar después
       var newRow = [p.doc, p.nombre, p.plan, p.periodoDesde, p.periodoHasta, p.fechaPago, p.monto, p.metodo, p.cobrador, p.obs];
       newRow._fsId = (res && res.id) || '';
+      if (_esCoberturaCompleta) {
+        newRow._coberturaCompleta = true; newRow._tipoCobertura = 'pago_anual';
+        // Auditoría: registrar el alta del pago con cobertura completa
+        try {
+          var _userAud = (window.ADMIN_USER || (typeof localStorage!=='undefined' && localStorage.getItem('admin_user')) || 'admin');
+          db.collection('auditoria_pagos').add({
+            tipo: 'pago_anual_creado', dni: p.doc, plan: p.plan,
+            monto: p.monto, periodoDesde: p.periodoDesde, periodoHasta: p.periodoHasta,
+            fsId: (res && res.id) || '',
+            usuario: _userAud, fecha: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } catch(e) { console.warn('auditoria_pagos:', e); }
+      }
       _pushCuotaUnique(newRow);
       if(++done === pagos.length) {
         var _finalizarPago = function(){
@@ -4984,14 +5162,20 @@ function abrirM(ai) {
   document.getElementById('m-hist-cuotas').innerHTML = !hc.length ? '<p style="color:var(--muted);font-size:12px;">Sin pagos registrados</p>' :
     hc.map(function(c){
       var fsId = c._fsId || '';
+      var concepto = (c[2]||'').toString();
+      var esHistorico = concepto.indexOf('Historico') === 0;
       var btnEdit = fsId ? '<button onclick="abrirEditarPago(\'' + fsId + '\')" title="Editar pago" style="background:none;border:none;cursor:pointer;color:var(--secondary);font-size:14px;padding:2px 4px;">&#x270F;</button>' : '';
       var btnDel  = fsId ? '<button onclick="abrirEliminarPago(\'' + fsId + '\')" title="Eliminar pago" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px;padding:2px 4px;">&#x2715;</button>' : '';
-      return '<div class="hist-cuota-row"><div style="flex:1;"><div class="hist-periodo">' + (c[2]||'Sin plan') + '</div>'
+      // Botón para convertir pago histórico en pago anual con cobertura completa
+      var btnConv = (esHistorico && fsId) ? '<button onclick="abrirConvertirHistorico(\'' + fsId + '\')" title="Convertir a pago anual con cobertura" style="background:rgba(26,122,60,.18);border:1px solid #1a7a3c;cursor:pointer;color:#6de097;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;margin-right:4px;">&#x1F500; CONVERTIR</button>' : '';
+      // Pill si el pago es de cobertura completa
+      var pillCob = c._coberturaCompleta ? '<span style="background:rgba(26,122,60,.25);color:#6de097;border:1px solid #1a7a3c;font-size:9px;padding:1px 6px;border-radius:8px;font-weight:800;margin-left:6px;letter-spacing:.05em;">PAGO ANUAL</span>' : '';
+      return '<div class="hist-cuota-row"><div style="flex:1;"><div class="hist-periodo">' + concepto + pillCob + '</div>'
         + '<div class="hist-meta">Fecha: ' + (c[5]||'-') + '</div>'
         + '<div class="hist-meta">' + (c[7]||'-') + (c[9] ? ' · ' + c[9] : '') + '</div></div>'
         + '<div style="display:flex;align-items:center;gap:4px;">'
         + '<div class="hist-monto">$' + Number(c[6]).toLocaleString('es-AR') + '</div>'
-        + btnEdit + btnDel
+        + btnConv + btnEdit + btnDel
         + '</div></div>';
     }).join('');
   var _totPag=hc.reduce(function(s,p){return s+(Number(p[6])||0);},0);
@@ -10455,6 +10639,158 @@ function emailTemplateRecordatorio(it) {
     +'</td></tr>'
     +'<tr><td style="padding:16px;background:#050805;text-align:center;color:#5a6a5a;font-size:11px;">'+_nombre+' &middot; Mensaje automático</td></tr>'
     +'</table></td></tr></table></body></html>';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// CONVERTIR PAGO HISTORICO en pagos con COBERTURA COMPLETA (pago anual)
+// ══════════════════════════════════════════════════════════════════
+window._convCtx = null;
+
+function abrirConvertirHistorico(fsId) {
+  var cuota = (CUOTAS_DB.cuotas||[]).find(function(c){ return c._fsId === fsId; });
+  if (!cuota) return alert('No se encontró el pago.');
+  var dni = (cuota[0]||'').toString().trim();
+  // Inscripciones activas del socio: para sugerir como destinos de conversión
+  var inscs = (DB.inscripciones||[]).filter(function(i){
+    if ((i.dni||'').toString().trim() !== dni) return false;
+    var hMes = i.hasta ? normFecha(i.hasta).substring(0,7) : '';
+    var hoy = new Date(); var mesHoy = hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0');
+    return !hMes || hMes >= mesHoy;
+  });
+  if (!inscs.length) return alert('El socio no tiene inscripciones activas. Cargá la inscripción primero.');
+  // Default: cobertura de enero a diciembre del año actual
+  var hoy = new Date();
+  var defaultDesde = hoy.getFullYear()+'-01-01';
+  var defaultHasta = hoy.getFullYear()+'-12-31';
+  // Monto total del pago histórico
+  var montoTotal = Number(cuota[6])||0;
+  window._convCtx = { cuota: cuota, dni: dni, inscs: inscs, fsId: fsId, montoTotal: montoTotal };
+
+  // Construir filas de asignación: 1 por cada inscripción activa, con monto anual sugerido
+  var filasHtml = inscs.map(function(insc, idx){
+    var montoSugerido = Number(insc.monto)||0;
+    var montoAnualSug = montoSugerido * 12;
+    return '<div style="display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">'
+      + '<input type="checkbox" id="conv-chk-'+idx+'" checked style="accent-color:#1a7a3c;">'
+      + '<div><div style="font-weight:600;color:var(--text);font-size:13px;">'+insc.plan+'</div>'
+      + '<div style="font-size:10px;color:var(--muted);">$'+montoSugerido.toLocaleString('es-AR')+'/mes &middot; sugerido $'+montoAnualSug.toLocaleString('es-AR')+' anual</div></div>'
+      + '<input type="number" id="conv-monto-'+idx+'" value="'+montoAnualSug+'" style="width:110px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:12px;text-align:right;">'
+      + '</div>';
+  }).join('');
+
+  var msg = '<div style="font-size:13px;color:var(--text);margin-bottom:10px;">'
+    + 'Convertir pago histórico de <b style="color:#6de097;">$'+montoTotal.toLocaleString('es-AR')+'</b> en pagos anuales con cobertura completa.'
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Cada inscripción seleccionada va a tener un pago nuevo cubriendo todo el rango sin importar cambios de precio.</div>'
+    + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0 12px;margin-bottom:10px;">'
+    + filasHtml
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'
+    + '<div><label class="filter-label">Período DESDE</label><input id="conv-desde" type="date" class="edit-input" style="width:100%;" value="'+defaultDesde+'"></div>'
+    + '<div><label class="filter-label">Período HASTA</label><input id="conv-hasta" type="date" class="edit-input" style="width:100%;" value="'+defaultHasta+'"></div>'
+    + '</div>'
+    + '<div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;">'
+    + '<label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;"><input type="checkbox" id="conv-borrar-orig" checked style="accent-color:var(--red);"> Eliminar el pago histórico original al convertir</label>'
+    + '<label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;"><input type="checkbox" id="conv-borrar-ajuste" style="accent-color:#ffb84d;"> Borrar el ajuste manual de saldo del socio (si existe)</label>'
+    + '</div>';
+
+  sgdConfirm(msg, function(){ _ejecutarConversionHistorico(); }, 'CONVERTIR');
+}
+
+function _ejecutarConversionHistorico() {
+  var ctx = window._convCtx; if (!ctx) return;
+  var desde = (document.getElementById('conv-desde')||{value:''}).value;
+  var hasta = (document.getElementById('conv-hasta')||{value:''}).value;
+  if (!desde || !hasta) return alert('Completá las fechas del período.');
+  var borrarOrig   = (document.getElementById('conv-borrar-orig')||{checked:false}).checked;
+  var borrarAjuste = (document.getElementById('conv-borrar-ajuste')||{checked:false}).checked;
+  var asignaciones = [];
+  ctx.inscs.forEach(function(insc, idx){
+    var chk = document.getElementById('conv-chk-'+idx);
+    var mon = document.getElementById('conv-monto-'+idx);
+    if (!chk || !chk.checked) return;
+    var m = Number((mon||{}).value)||0;
+    if (m <= 0) return;
+    asignaciones.push({ plan: insc.plan, monto: m });
+  });
+  if (!asignaciones.length) return alert('Marcá al menos una inscripción y poné monto > 0.');
+
+  var _user = (window.ADMIN_USER || (typeof localStorage!=='undefined' && localStorage.getItem('admin_user')) || 'admin');
+  mostrarLoader('Convirtiendo... 0/'+asignaciones.length);
+  var ix = 0, hechos = 0, errores = 0;
+  function siguiente() {
+    if (ix >= asignaciones.length) return finalizar();
+    var a = asignaciones[ix];
+    mostrarLoader('Creando pago '+(ix+1)+'/'+asignaciones.length+'...');
+    var p = {
+      doc: ctx.dni, nombre: ctx.cuota[1]||'',
+      plan: a.plan, concepto: a.plan,
+      periodoDesde: desde, periodoHasta: hasta,
+      fechaPago: ctx.cuota[5] || new Date().toISOString().split('T')[0],
+      monto: a.monto, metodo: ctx.cuota[7] || 'Transferencia',
+      cobrador: ctx.cuota[8] || '', obs: 'Conversión de pago anual con cobertura completa',
+      coberturaCompleta: true, tipoCobertura: 'pago_anual'
+    };
+    callScript({action:'registrarPago', pago:p, pass:TOKEN, _noRetry:true}, function(res){
+      hechos++;
+      var newRow = [p.doc, p.nombre, p.plan, p.periodoDesde, p.periodoHasta, p.fechaPago, p.monto, p.metodo, p.cobrador, p.obs];
+      newRow._fsId = (res && res.id) || '';
+      newRow._coberturaCompleta = true;
+      newRow._tipoCobertura = 'pago_anual';
+      _pushCuotaUnique(newRow);
+      // Auditoría
+      try {
+        db.collection('auditoria_pagos').add({
+          tipo: 'conversion_anual', dni: ctx.dni, plan: a.plan,
+          montoAsignado: a.monto, fsIdOrigen: ctx.fsId,
+          periodoDesde: desde, periodoHasta: hasta,
+          usuario: _user, fecha: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch(e) { console.warn('auditoria_pagos:', e); }
+      ix++; siguiente();
+    }, function(e){ errores++; console.error('[convertir]', e); ix++; siguiente(); });
+  }
+  function finalizar() {
+    var pasos = [];
+    if (borrarOrig && ctx.fsId) {
+      pasos.push(db.collection('cuotas').doc(ctx.fsId).delete().then(function(){
+        CUOTAS_DB.cuotas = (CUOTAS_DB.cuotas||[]).filter(function(c){ return c._fsId !== ctx.fsId; });
+      }));
+    }
+    if (borrarAjuste) {
+      var _socioDni = ctx.dni;
+      pasos.push(db.collection('socios').doc(_socioDni).get().then(function(doc){
+        if (!doc.exists) return;
+        var d = doc.data();
+        var ajusteAnterior = Number(d.ajusteSaldo)||0;
+        if (ajusteAnterior === 0) return;
+        var batch = db.batch();
+        batch.update(db.collection('socios').doc(_socioDni), { ajusteSaldo: 0 });
+        batch.set(db.collection('auditoria_saldos').doc(), {
+          dni: _socioDni, nombreSocio: ctx.cuota[1]||'',
+          montoAnterior: ajusteAnterior, montoNuevo: 0, delta: -ajusteAnterior,
+          motivo: 'Borrado por conversión de pago histórico a pago anual', modificadoPor: _user,
+          fecha: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        return batch.commit().then(function(){
+          // Actualizar memoria local
+          var _row = (DB.jugadores||[]).find(function(r){ return (r[COL.DNI]||'').toString().trim() === _socioDni; });
+          if (_row) _row.ajusteSaldo = 0;
+        });
+      }));
+    }
+    Promise.all(pasos).then(function(){
+      ocultarLoader();
+      try { renderPlayers(); } catch(_){}
+      try { abrirM((DB.jugadores||[]).findIndex(function(r){ return (r[COL.DNI]||'').toString().trim() === ctx.dni; })); } catch(_){}
+      toast(hechos+' pagos creados'+(errores?' ('+errores+' fallaron)':''), errores?'warn':'ok');
+      window._convCtx = null;
+    }).catch(function(e){
+      ocultarLoader();
+      alert('Error: '+(e&&e.message?e.message:e));
+    });
+  }
+  siguiente();
 }
 
 </script>
