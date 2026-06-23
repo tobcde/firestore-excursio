@@ -8154,7 +8154,7 @@ function rptAsistenciaMatriz() {
 
   if(!fechas.length){
     setCards([{val:0, lbl:'Sin registros en el rango'}]);
-    document.getElementById('rTabla').innerHTML = '<p style="color:var(--muted);padding:20px;">Sin datos en el rango seleccionado.</p>';
+    (document.getElementById('r-tabla') || document.getElementById('rTabla')).innerHTML = '<p style="color:var(--muted);padding:20px;">Sin datos en el rango seleccionado.</p>';
     return;
   }
 
@@ -8186,7 +8186,7 @@ function rptAsistenciaMatriz() {
 
   if(!socios.length){
     setCards([{val:0, lbl:'Sin socios con registros'}]);
-    document.getElementById('rTabla').innerHTML = '<p style="color:var(--muted);padding:20px;">Sin socios con registros en el rango.</p>';
+    (document.getElementById('r-tabla') || document.getElementById('rTabla')).innerHTML = '<p style="color:var(--muted);padding:20px;">Sin socios con registros en el rango.</p>';
     return;
   }
 
