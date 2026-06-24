@@ -587,6 +587,13 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 <div id="tab-admin" class="tab-content" style="display:none;">
   <div class="admin-container">
 
+    <!-- Comparativa de apps (conciliador SGD vs otra app) -->
+    <div class="admin-card" id="cardConciliador">
+      <div class="admin-title">&#x1F501; Comparativa Apps</div>
+      <p style="font-size:12px;color:var(--muted);">Conciliá los cobros entre sistemas: subí el <b>CSV de cobros del SGD</b> y el <b>Excel de la otra app</b>, y la herramienta los compara.</p>
+      <button class="btn btn-save" onclick="window.open('conciliador_excursionistas.html','_blank')" style="width:100%;">&#x1F4CA; ABRIR COMPARATIVA APPS</button>
+    </div>
+
     <!-- Categorias -->
     <div class="admin-card" id="cardCat">
       <div class="admin-title" id="lbl-admin-categorias">Categorias</div>
@@ -1780,7 +1787,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.15</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.16</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
