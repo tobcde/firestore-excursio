@@ -1787,7 +1787,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.16</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.17</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -4074,7 +4074,8 @@ function renderPlayers() {
     lazyCargarInactivos(function(){ renderPlayers(); });
     return;
   }
-  var busq = document.getElementById('busq').value.toLowerCase();
+  // Busqueda generosa: sin tildes ni mayusculas (JOAQUIN == JOAQUíN)
+  var busq = document.getElementById('busq').value.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
   var genF = document.getElementById('fGen').value, catF = document.getElementById('fCat').value;
   var estF = document.getElementById('fEstado').value, cuotaF = document.getElementById('fCuota').value;
   var grid = document.getElementById('gridJugadores');
@@ -4093,7 +4094,7 @@ function renderPlayers() {
     var cc = catObj ? catObj[1] : 'transparent';
     var cv = estadoCuotaV2(f), est = cv.estado;
 
-    if(!(nom.toLowerCase().includes(busq) || dni.includes(busq))) return;
+    if(!(nom.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').includes(busq) || dni.includes(busq))) return;
     if(genF && gen !== genF) return;
     if(catF) {
       // Normalizamos a lowercase + trim para evitar mismatches por mayusculas/espacios.
