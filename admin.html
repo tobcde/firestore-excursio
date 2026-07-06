@@ -1787,7 +1787,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.19</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.20</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -9333,6 +9333,10 @@ function abrirEditarPago(fsId) {
   }
   document.getElementById('audit-fecha').value = fechaRaw;
   document.getElementById('audit-obs').value = c[9]||'';
+  // Periodo desde/hasta — normalizar dd/MM/yyyy -> yyyy-MM-dd para el input date
+  var _toISO = function(s){ s=(s||'').toString(); var m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/); return m ? (m[3]+'-'+m[2]+'-'+m[1]) : s; };
+  document.getElementById('audit-desde').value = _toISO(c[3]);
+  document.getElementById('audit-hasta').value = _toISO(c[4]);
   document.getElementById('audit-motivo').value = '';
   document.getElementById('audit-motivo-error').style.display = 'none';
   document.getElementById('audit-btn-confirmar').style.background = 'var(--secondary)';
@@ -9399,16 +9403,25 @@ function confirmarAuditoriaPago() {
     var nuevoMetodo = document.getElementById('audit-metodo').value;
     var nuevaFecha  = document.getElementById('audit-fecha').value;
     var nuevaObs    = document.getElementById('audit-obs').value.trim();
+    var nuevoDesde  = document.getElementById('audit-desde').value; // yyyy-MM-dd
+    var nuevoHasta  = document.getElementById('audit-hasta').value; // yyyy-MM-dd
     // Convertir fecha a dd/MM/yyyy
     if(nuevaFecha.match(/^\d{4}-\d{2}-\d{2}$/)) {
       var fp = nuevaFecha.split('-');
       nuevaFecha = fp[2]+'/'+fp[1]+'/'+fp[0];
     }
-    audDoc.pagoNuevo = {monto:nuevoMonto, metodo:nuevoMetodo, fechaPago:nuevaFecha, obs:nuevaObs};
+    // Validacion basica del periodo
+    if(nuevoDesde && nuevoHasta && nuevoHasta < nuevoDesde){
+      ocultarLoader();
+      toast('El período "hasta" no puede ser anterior al "desde".', 'err');
+      return;
+    }
+    audDoc.pagoNuevo = {monto:nuevoMonto, metodo:nuevoMetodo, fechaPago:nuevaFecha, obs:nuevaObs, periodoDesde:nuevoDesde, periodoHasta:nuevoHasta};
 
     // 1. Actualizar en Firestore
     db.collection('cuotas').doc(_auditCtx.fsId).update({
-      monto: nuevoMonto, metodo: nuevoMetodo, fechaPago: nuevaFecha, obs: nuevaObs
+      monto: nuevoMonto, metodo: nuevoMetodo, fechaPago: nuevaFecha, obs: nuevaObs,
+      periodoDesde: nuevoDesde, periodoHasta: nuevoHasta
     }).then(function() {
       _contarEscrituras(1);
       // 2. Guardar auditoría
@@ -9422,6 +9435,8 @@ function confirmarAuditoriaPago() {
         CUOTAS_DB.cuotas[idx][7] = nuevoMetodo;
         CUOTAS_DB.cuotas[idx][5] = nuevaFecha;
         CUOTAS_DB.cuotas[idx][9] = nuevaObs;
+        CUOTAS_DB.cuotas[idx][3] = nuevoDesde;
+        CUOTAS_DB.cuotas[idx][4] = nuevoHasta;
       }
       cerrarModalAuditoria();
       ocultarLoader();
@@ -10890,7 +10905,16 @@ function _ejecutarConversionHistorico() {
             <label class="filter-label">Observaciones</label>
             <input id="audit-obs" type="text" class="edit-input" style="width:100%;margin-top:4px;" placeholder="Opcional">
           </div>
+          <div>
+            <label class="filter-label">Período desde</label>
+            <input id="audit-desde" type="date" class="edit-input" style="width:100%;margin-top:4px;">
+          </div>
+          <div>
+            <label class="filter-label">Período hasta</label>
+            <input id="audit-hasta" type="date" class="edit-input" style="width:100%;margin-top:4px;">
+          </div>
         </div>
+        <p style="font-size:10px;color:var(--muted);margin:-2px 0 10px;">El período (desde/hasta) define qué meses cubre este pago en el cálculo de deuda.</p>
       </div>
       <div style="margin-bottom:16px;">
         <label class="filter-label">Motivo <span style="color:var(--red);">*</span></label>
