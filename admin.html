@@ -1787,7 +1787,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.18</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.19</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3596,6 +3596,27 @@ function calcularEstadoTiempoReal(f) {
     var absorb = Math.min(ajuste, deudaTotal);
     deudaTotal -= absorb;
     favorTotal += (ajuste - absorb);
+    // Distribuir el credito absorbido sobre las inscripciones (FIFO por mes) para que
+    // el detalle por-plan — y por ende el modal de cobro — refleje la deuda NETA y no
+    // la bruta. Sin esto la card mostraba $X neto pero el modal sugeria el bruto.
+    var _restAj = absorb;
+    var _flatAj = [];
+    detalle.forEach(function(_d, _di){
+      (_d.mesesAdeudados || []).forEach(function(_m, _mi){ _flatAj.push({ mes:_m.mes, di:_di, mi:_mi }); });
+    });
+    _flatAj.sort(function(a, b){ return a.mes.localeCompare(b.mes); });
+    for (var _ai = 0; _ai < _flatAj.length && _restAj > 0.5; _ai++) {
+      var _rf = _flatAj[_ai];
+      var _mo = detalle[_rf.di].mesesAdeudados[_rf.mi];
+      if (!_mo) continue;
+      var _tk = Math.min(_mo.falta, _restAj);
+      _mo.falta -= _tk; _restAj -= _tk;
+      if (_mo.falta <= 0.5) _mo.falta = 0;
+    }
+    detalle.forEach(function(_d){
+      _d.mesesAdeudados = (_d.mesesAdeudados || []).filter(function(_m){ return _m.falta > 0.5; });
+      _d.deudaPorMes = (_d.mesesAdeudados || []).reduce(function(s, _m){ return s + _m.falta; }, 0);
+    });
     if (deudaTotal === 0 && estadoPeor !== 'none') estadoPeor = 'ok';
   } else if (ajuste < 0) {
     var neg = -ajuste;
