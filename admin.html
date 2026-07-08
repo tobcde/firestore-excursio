@@ -1802,7 +1802,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.26</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.27</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -4550,6 +4550,11 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
         _badge = '<span style="background:rgba(220,53,69,.15);color:var(--red);font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px;">'
           + 'debe $' + Number(_sc.faltaPesos).toLocaleString('es-AR') + '</span>';
         _montoSugerido = _sc.faltaPesos;
+      }
+      // Arancel único ya saldado: no sugerir cobrarlo de nuevo (sino sugeriría el total otra vez).
+      if(i.unico && _sc.estado === 'exacto') {
+        _montoSugerido = 0;
+        _badge = '<span style="background:rgba(26,122,60,.25);color:#6de097;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px;">arancel pagado</span>';
       }
       // Cuota Social: se sugiere la deuda completa (en Excursio se cobran varios meses junto).
       // La protección contra override desbalanceado vive en confirmarPago (que ajusta solo la
