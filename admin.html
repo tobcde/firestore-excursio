@@ -1787,7 +1787,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.23</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.24</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -4322,11 +4322,10 @@ function renderCuotas() {
       _subEstado = '<div style="font-size:11px;color:#6de097;font-weight:700;margin-top:3px;">+$' + Number(it.saldoAFavor).toLocaleString('es-AR') + ' a favor</div>';
     }
     html += '<div><span class="cuota-pill ' + cl + '">' + lb + '</span>' + _subEstado + '</div>';
-    var _chipExtras = it.extraConceptos && it.extraConceptos.length ?
-      it.extraConceptos.map(function(x){ return '<span style="background:rgba(201,162,39,.2);color:var(--secondary);font-size:10px;padding:1px 6px;border-radius:8px;margin-top:3px;display:inline-block;">+' + x + '</span>'; }).join(' ') : '';
+    // Los cobros extraordinarios (ej. "Inscripcion") NO se muestran en la vista mensual
+    // de cuotas — son pagos únicos, no cuota. Quedan en el Historial de pagos del socio.
     html += '<div><div style="font-size:12px;font-weight:600;">' + (it.pl||'-') + '</div>' +
             '<div style="font-size:12px;font-weight:700;color:var(--secondary);">' + (it.mo ? '$' + it.mo.toLocaleString('es-AR') : '') + '</div>' +
-            (_chipExtras ? '<div>' + _chipExtras + '</div>' : '') +
             '</div>';
     html += '<div style="font-size:13px;font-weight:700;">' + (it.pagado ? '$' + it.pagado.toLocaleString('es-AR') : '-') + '</div>';
     html += '<div style="font-size:12px;color:var(--muted);">' + _vigente + '</div>';
