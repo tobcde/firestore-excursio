@@ -330,6 +330,9 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
     </div>
     <p style="color:var(--muted);font-size:11px;margin-bottom:20px;text-transform:uppercase;letter-spacing:.1em;">Panel de Administracion</p>
     <input type="password" id="passInput" placeholder="CONTRASENA" onkeyup="if(event.key==='Enter')intentarLogin()" autocomplete="new-password">
+    <label style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:var(--muted);margin:-6px 0 10px;cursor:pointer;user-select:none;">
+      <input type="checkbox" onclick="var p=document.getElementById('passInput');p.type=this.checked?'text':'password';"> &#x1F441; Ver contrase&ntilde;a
+    </label>
     <div id="login-error" style="display:none;color:var(--red);font-size:12px;margin:-8px 0 10px;text-align:center;font-family:'Barlow Condensed',sans-serif;letter-spacing:.05em;"></div>
     <button class="btn btn-save" style="width:100%;margin-bottom:10px;" onclick="intentarLogin()">INGRESAR</button>
     <button class="btn" id="btnHuella" style="width:100%;background:var(--surface2);border:1px solid var(--primary);color:var(--muted);font-size:13px;display:none;" onclick="loginConHuella()">
@@ -1802,7 +1805,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.27</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.28</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -2160,17 +2163,45 @@ function intentarLogin() {
   mostrarLoader('Verificando...');
   auth.signInWithEmailAndPassword(ADMIN_EMAIL, pass)
     .then(function(cred) {
+      _registrarLogin('ok', '');
       TOKEN = pass;
       sessionStorage.setItem('sgd_sess', '1');
       inicializar(pass); // pasar pass para ofrecer huella post-login
     })
     .catch(function(e) {
+      _registrarLogin('fail', e.code || '');
       ocultarLoader();
       TOKEN = '';
       var msg = 'Contraseña incorrecta';
       if (e.code === 'auth/too-many-requests') msg = 'Demasiados intentos. Esperá unos minutos.';
       loginError(msg);
     });
+}
+
+// Registrador de intentos de login (exitosos y fallidos) -> Firestore /_logins.
+// NUNCA guarda la contraseña. Sirve para diagnosticar rebotes: quien, cuando,
+// desde que dispositivo/IP y por que codigo de error (wrong-password, too-many-requests, etc).
+function _registrarLogin(resultado, errorCode) {
+  try {
+    var doc = {
+      ts: firebase.firestore.FieldValue.serverTimestamp(),
+      resultado: resultado,                              // 'ok' | 'fail'
+      errorCode: (errorCode || '').toString().substring(0, 60),
+      ua: (navigator.userAgent || '').substring(0, 300),
+      app: 'admin',
+      ip: '', ciudad: '', region: '', pais: '', isp: ''
+    };
+    var enviado = false;
+    var _grabar = function(){ if (enviado) return; enviado = true; try { db.collection('_logins').add(doc); } catch(_){} };
+    var _to = setTimeout(_grabar, 1800); // si el geo-IP tarda, grabamos igual
+    fetch('https://ipapi.co/json/').then(function(r){ return r.json(); }).then(function(g){
+      clearTimeout(_to);
+      doc.ip = (g.ip || '').toString();      doc.ciudad = (g.city || '').toString();
+      doc.region = (g.region || '').toString(); doc.pais = (g.country_name || '').toString();
+      doc.isp = (g.org || '').toString();
+      _grabar();
+    }).catch(function(){ clearTimeout(_to); _grabar(); });
+  } catch(_){}
 }
 
 function mostrarLoader(m){ document.getElementById('loader').style.display='flex'; document.getElementById('loader-msg').innerText = m || 'Cargando...'; }
