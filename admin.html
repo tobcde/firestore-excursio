@@ -1805,7 +1805,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.29</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.30</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3174,6 +3174,7 @@ function renderInscripcionesModal(dni) {
     var actObj = (DB.actividades||[]).find(function(a){ return a.nombre === i.plan; });
     var icono  = actObj ? actObj.icono : '';
     var descHno = Number(i.descuentoHno) || 0;
+    if (descHno > 0 && DESCUENTO_HNO_SUGERIDO > 0) descHno = DESCUENTO_HNO_SUGERIDO; // descuento hnos = valor actual del admin (no el viejo pegado)
     // El monto vigente ACTUAL del historial (o el monto plano si no hay historial)
     var montoActual = getMontoActual(i);
     var montoBase = montoActual;
@@ -3389,6 +3390,7 @@ function calcularEstadoTiempoReal(f) {
     // Usar precio ACTUAL del historial (el que vale hoy) para mostrar el "plan vigente"
     var m = getMontoActual(i);
     var d = Number(i.descuentoHno) || 0;
+    if (d > 0 && DESCUENTO_HNO_SUGERIDO > 0) d = DESCUENTO_HNO_SUGERIDO; // descuento hnos = valor actual del admin
     var esCS = /cuota\s*social/i.test(i.plan || '');
     return s + (!esCS && d > 0 && d < m ? m - d : m);
   }, 0);
@@ -3402,6 +3404,7 @@ function calcularEstadoTiempoReal(f) {
 
   inscTodas.forEach(function(insc) {
     var descHno = Number(insc.descuentoHno) || 0;
+    if (descHno > 0 && DESCUENTO_HNO_SUGERIDO > 0) descHno = DESCUENTO_HNO_SUGERIDO; // descuento hnos = valor actual del admin (no el viejo pegado)
     // Cuota Social NUNCA recibe descuento de hermanos: queda fija en su monto base.
     // Los descuentos solo se aplican a la cuota deportiva (AFA, Mixto, Futsala, etc).
     var esCuotaSocial = /cuota\s*social/i.test(insc.plan || '');
@@ -3802,6 +3805,7 @@ window.diagnosticoSocio = function(query) {
     inscs.forEach(function(insc){
       var pm = Number(insc.monto)||0;
       var dh = Number(insc.descuentoHno)||0;
+      if (dh > 0 && DESCUENTO_HNO_SUGERIDO > 0) dh = DESCUENTO_HNO_SUGERIDO; // descuento hnos = valor actual del admin
       if (dh > 0 && dh < pm) pm = pm - dh;
       if (!pm) return;
       var mD = insc.desde ? normFecha(insc.desde).substring(0,7) : '';
