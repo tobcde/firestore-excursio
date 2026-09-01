@@ -1805,7 +1805,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.32</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.33</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -5937,7 +5937,30 @@ function reenviarComprobante(docId) {
   sgdConfirm('Reenviar comprobante a <b>'+email+'</b>'+(datos.nombre?' ('+datos.nombre+')':'')+'?', function(){
     mostrarLoader('Reenviando comprobante...');
     _enviarComprobante(datos, email,
-      function(){ toast('Comprobante reenviado a '+email, 'ok'); emailRefrescarHistorial(); },
+      function(){
+        toast('Comprobante reenviado a '+email, 'ok');
+        // Marcar como "reenviado" el registro clickeado y TODOS los otros intentos
+        // fallidos de comprobante del MISMO socio (mismo socioDni) → así no vuelven
+        // a ofrecer reenviar y no se manda dos veces. Si el registro no tiene
+        // socioDni (legacy), se agrupa por email destinatario.
+        try {
+          var _map = window._emailHistMap || {};
+          var _sd = String(x.socioDni || '');
+          var _ts = firebase.firestore.FieldValue.serverTimestamp();
+          var _batch = db.batch(), _n = 0;
+          Object.keys(_map).forEach(function(id){
+            var r = _map[id];
+            if (!r || r.tipo !== 'comprobante' || r.estado === 'ok' || r.reenviado) return;
+            var _match = _sd ? (String(r.socioDni||'') === _sd) : (r.destinatario === email);
+            if (id === docId || _match) {
+              _batch.update(db.collection('auditoria_emails').doc(id), { reenviado: true, reenviadoFecha: _ts });
+              _n++;
+            }
+          });
+          if (_n) { _batch.commit().then(emailRefrescarHistorial, emailRefrescarHistorial); }
+          else { emailRefrescarHistorial(); }
+        } catch(_){ emailRefrescarHistorial(); }
+      },
       function(err){ alert('Error al reenviar: '+err); emailRefrescarHistorial(); }
     );
   }, 'REENVIAR');
@@ -10777,19 +10800,46 @@ function emailRenderHistorial() {
   db.collection('auditoria_emails').orderBy('fecha','desc').limit(40).get()
     .then(function(snap){
       if (snap.empty) { el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px;">Sin envíos registrados</div>'; return; }
-      var rows = [];
+      // Pasada 1: juntar docs e indexar el comprobante OK más reciente por socio,
+      // para detectar fallidos que ya quedaron resueltos por un reenvío exitoso
+      // (incluso los reenviados antes de que existiera el flag "reenviado").
+      var docs = [];
+      var okMsBySocio = {};    // socioDni -> millis del comprobante OK más reciente
+      var okMsByEmail = {};    // fallback por email (registros sin socioDni)
       snap.forEach(function(d){
-        var x = d.data();
+        var x = d.data(); x._id = d.id;
         window._emailHistMap[d.id] = x;
+        docs.push(x);
+        if (x.tipo === 'comprobante' && x.estado === 'ok') {
+          var ms = (x.fecha && x.fecha.toMillis) ? x.fecha.toMillis() : 0;
+          var sd = String(x.socioDni || '');
+          if (sd && ms > (okMsBySocio[sd]||0)) okMsBySocio[sd] = ms;
+          var em = (x.destinatario || '');
+          if (em && ms > (okMsByEmail[em]||0)) okMsByEmail[em] = ms;
+        }
+      });
+      // Pasada 2: render.
+      var rows = [];
+      docs.forEach(function(x){
         var f = x.fecha && x.fecha.toDate ? x.fecha.toDate() : null;
         var fstr = f ? f.toLocaleString('es-AR') : '—';
         var icon = x.estado === 'ok' ? '&#x2705;' : '&#x274C;';
         var col = x.estado === 'ok' ? '#6de097' : '#f85149';
         var tipoLabel = {comprobante:'Comprobante', recordatorio:'Recordatorio', pass:'Pass temp'}[x.tipo] || x.tipo;
-        // Botón de reenvío sólo en comprobantes fallidos con email válido.
+        // Botón de reenvío sólo en comprobantes fallidos con email válido que aún
+        // no fueron resueltos. Se considera resuelto si tiene el flag "reenviado"
+        // o si existe un comprobante OK igual o posterior para el mismo socio
+        // (o el mismo email si el registro no tiene socioDni).
         var _btn = '';
-        if (x.estado !== 'ok' && x.tipo === 'comprobante' && x.destinatario && x.destinatario.indexOf('@') > 0) {
-          _btn = '<div style="margin-top:4px;"><button onclick="reenviarComprobante(\''+d.id+'\')" style="background:var(--secondary);color:#000;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">&#x1F504; Reenviar</button></div>';
+        if (x.tipo === 'comprobante' && x.estado !== 'ok' && x.destinatario && x.destinatario.indexOf('@') > 0) {
+          var _fms = (x.fecha && x.fecha.toMillis) ? x.fecha.toMillis() : 0;
+          var _sd = String(x.socioDni || '');
+          var _okPosterior = _sd ? ((okMsBySocio[_sd]||0) >= _fms) : ((okMsByEmail[x.destinatario]||0) >= _fms);
+          if (x.reenviado || _okPosterior) {
+            _btn = '<div style="margin-top:4px;color:#6de097;font-size:10px;font-weight:700;">&#x2714; Reenviado</div>';
+          } else {
+            _btn = '<div style="margin-top:4px;"><button onclick="reenviarComprobante(\''+x._id+'\')" style="background:var(--secondary);color:#000;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">&#x1F504; Reenviar</button></div>';
+          }
         }
         rows.push('<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;gap:10px;">'
           + '<div style="flex:1;min-width:0;"><span style="color:'+col+';">'+icon+'</span> <b>'+tipoLabel+'</b> &rarr; '+(x.destinatario||'—')+(x.socioNombre?' <span style="color:var(--muted);">('+x.socioNombre+')</span>':'')+(x.error?'<div style="color:#f85149;font-size:10px;margin-left:18px;">'+x.error+'</div>':'')+'</div>'
