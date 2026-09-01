@@ -1805,7 +1805,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.31</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.32</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -5829,74 +5829,143 @@ function enviarComprobanteEmail() {
   var datos = window._ultimoPago; if(!datos) return;
   datos.email = email;
   mostrarLoader('Enviando comprobante...');
-  callScript({action:'sendEmail', emailDest:email, logoUrl:(INST.logoUrl||''), asunto:'Comprobante de pago - ' + (INST.nombre||''), htmlBody:
-    (function(){
-      var _logoUrl = INST.logoUrl ? getDriveDisplay(INST.logoUrl) : '';
-      var _logo = _logoUrl ? '<img src="' + _logoUrl + '" style="width:80px;height:80px;object-fit:contain;background:white;border-radius:10px;padding:6px;" alt="">' : '';
-      var _nombre = INST.nombre || INST.nombreCorto || 'SGD';
-      var _plan = (datos.planAct||'') + (datos.plSoc ? ' + ' + datos.plSoc : '');
-      var _monto = '$' + Number(datos.moTotal||0).toLocaleString('es-AR');
-      var _row = function(lbl, val) {
-        return '<tr><td style="padding:10px 16px;color:#888;font-size:13px;border-bottom:1px solid #2a2a2a;white-space:nowrap;">'+lbl+'</td>'
-          +'<td style="padding:10px 16px;font-size:13px;font-weight:600;border-bottom:1px solid #2a2a2a;text-align:right;">'+val+'</td></tr>';
-      };
-      return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,sans-serif;">'
-        +'<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f0f0;padding:30px 0;">'
-        +'<tr><td align="center">'
-        +'<table width="520" cellpadding="0" cellspacing="0" style="background:#0a0d0a;border-radius:14px;overflow:hidden;border:2px solid #1a7a3c;">'
-        // Header verde con escudo
-        +'<tr><td style="background:linear-gradient(135deg,#0f5228,#1a7a3c);padding:28px 32px;text-align:center;">'
-        +(_logo ? '<div style="margin-bottom:12px;">'+_logo+'</div>' : '')
-        +'<div style="font-family:Arial Black,sans-serif;font-size:20px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:2px;">'+_nombre+'</div>'
-        +'<div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:4px;text-transform:uppercase;letter-spacing:1px;">Comprobante de Pago</div>'
-        +'</td></tr>'
-        // Saludo
-        +'<tr><td style="padding:24px 32px 8px;">'
-        +'<p style="color:#e8f0e8;font-size:15px;margin:0;">Hola <b style="color:#c9a227;">'+datos.nombre+'</b>,</p>'
-        +'<p style="color:#7a927a;font-size:13px;margin:8px 0 0;">Registramos tu pago correctamente. Aca tenes el detalle:</p>'
-        +'</td></tr>'
-        // Tabla de detalle
-        +'<tr><td style="padding:8px 32px 24px;">'
-        +'<table width="100%" cellpadding="0" cellspacing="0" style="background:#121812;border-radius:10px;border:1px solid #253025;overflow:hidden;color:#e8f0e8;">'
-        +_row('Plan', _plan)
-        +'<tr><td style="padding:10px 16px;color:#888;font-size:13px;border-bottom:1px solid #2a2a2a;">Monto</td>'
-        +'<td style="padding:10px 16px;font-size:20px;font-weight:800;color:#c9a227;border-bottom:1px solid #2a2a2a;text-align:right;">'+_monto+'</td></tr>'
-        +_row('Periodo', datos.periodo||'-')
-        +_row('Vigente hasta', (function(v){ if(!v||v==='-')return '-'; var p=v.split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:v; })(datos.vigente))
-        +_row('Metodo', datos.metodo||'Efectivo')
-        +_row('Cobrado por', datos.cobrador||'-')
-        +'</table>'
-        +'</td></tr>'
-        // Badge verde AL DIA
-        +'<tr><td style="padding:0 32px 28px;text-align:center;">'
-        +'<div style="display:inline-block;background:rgba(26,122,60,.2);border:1px solid #1a7a3c;border-radius:20px;padding:8px 24px;color:#6de097;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">&#10003; Pago registrado</div>'
-        +'</td></tr>'
-        // Footer
-        +'<tr><td style="background:#121812;padding:16px 32px;text-align:center;border-top:1px solid #253025;">'
-        +'<p style="color:#4a6a4a;font-size:11px;margin:0;">'+_nombre+' &bull; Sistema de Gestion Digital</p>'
-        +'</td></tr>'
-        +'</table>'
-        +'</td></tr></table>'
-        +'</body></html>';
-    })(),
-    pass:TOKEN, _noRetry:true},
+  _enviarComprobante(datos, email,
+    function(){ cerrarModalComprobante(); toast('Comprobante enviado a '+email, 'ok'); },
+    function(err){ alert('Error al enviar: ' + err); }
+  );
+}
+
+// Construye el HTML del comprobante a partir de los datos del pago.
+// Extraído para reutilizarlo en el envío normal y en el reenvío desde el historial.
+function _buildComprobanteHtml(datos) {
+  var _logoUrl = INST.logoUrl ? getDriveDisplay(INST.logoUrl) : '';
+  var _logo = _logoUrl ? '<img src="' + _logoUrl + '" style="width:80px;height:80px;object-fit:contain;background:white;border-radius:10px;padding:6px;" alt="">' : '';
+  var _nombre = INST.nombre || INST.nombreCorto || 'SGD';
+  var _plan = (datos.planAct||'') + (datos.plSoc ? ' + ' + datos.plSoc : '');
+  var _monto = '$' + Number(datos.moTotal||0).toLocaleString('es-AR');
+  var _row = function(lbl, val) {
+    return '<tr><td style="padding:10px 16px;color:#888;font-size:13px;border-bottom:1px solid #2a2a2a;white-space:nowrap;">'+lbl+'</td>'
+      +'<td style="padding:10px 16px;font-size:13px;font-weight:600;border-bottom:1px solid #2a2a2a;text-align:right;">'+val+'</td></tr>';
+  };
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,sans-serif;">'
+    +'<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f0f0;padding:30px 0;">'
+    +'<tr><td align="center">'
+    +'<table width="520" cellpadding="0" cellspacing="0" style="background:#0a0d0a;border-radius:14px;overflow:hidden;border:2px solid #1a7a3c;">'
+    // Header verde con escudo
+    +'<tr><td style="background:linear-gradient(135deg,#0f5228,#1a7a3c);padding:28px 32px;text-align:center;">'
+    +(_logo ? '<div style="margin-bottom:12px;">'+_logo+'</div>' : '')
+    +'<div style="font-family:Arial Black,sans-serif;font-size:20px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:2px;">'+_nombre+'</div>'
+    +'<div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:4px;text-transform:uppercase;letter-spacing:1px;">Comprobante de Pago</div>'
+    +'</td></tr>'
+    // Saludo
+    +'<tr><td style="padding:24px 32px 8px;">'
+    +'<p style="color:#e8f0e8;font-size:15px;margin:0;">Hola <b style="color:#c9a227;">'+datos.nombre+'</b>,</p>'
+    +'<p style="color:#7a927a;font-size:13px;margin:8px 0 0;">Registramos tu pago correctamente. Aca tenes el detalle:</p>'
+    +'</td></tr>'
+    // Tabla de detalle
+    +'<tr><td style="padding:8px 32px 24px;">'
+    +'<table width="100%" cellpadding="0" cellspacing="0" style="background:#121812;border-radius:10px;border:1px solid #253025;overflow:hidden;color:#e8f0e8;">'
+    +_row('Plan', _plan)
+    +'<tr><td style="padding:10px 16px;color:#888;font-size:13px;border-bottom:1px solid #2a2a2a;">Monto</td>'
+    +'<td style="padding:10px 16px;font-size:20px;font-weight:800;color:#c9a227;border-bottom:1px solid #2a2a2a;text-align:right;">'+_monto+'</td></tr>'
+    +_row('Periodo', datos.periodo||'-')
+    +_row('Vigente hasta', (function(v){ if(!v||v==='-')return '-'; var p=String(v).split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:v; })(datos.vigente))
+    +_row('Metodo', datos.metodo||'Efectivo')
+    +_row('Cobrado por', datos.cobrador||'-')
+    +'</table>'
+    +'</td></tr>'
+    // Badge verde AL DIA
+    +'<tr><td style="padding:0 32px 28px;text-align:center;">'
+    +'<div style="display:inline-block;background:rgba(26,122,60,.2);border:1px solid #1a7a3c;border-radius:20px;padding:8px 24px;color:#6de097;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">&#10003; Pago registrado</div>'
+    +'</td></tr>'
+    // Footer
+    +'<tr><td style="background:#121812;padding:16px 32px;text-align:center;border-top:1px solid #253025;">'
+    +'<p style="color:#4a6a4a;font-size:11px;margin:0;">'+_nombre+' &bull; Sistema de Gestion Digital</p>'
+    +'</td></tr>'
+    +'</table>'
+    +'</td></tr></table>'
+    +'</body></html>';
+}
+
+// Snapshot mínimo del pago que se guarda en la auditoría para poder reenviar.
+function _compPayload(datos) {
+  return { nombre: datos.nombre||'', dni: datos.dni||'', planAct: datos.planAct||'',
+           plSoc: datos.plSoc||'', moTotal: Number(datos.moTotal||0),
+           periodo: datos.periodo||'', vigente: datos.vigente||'',
+           metodo: datos.metodo||'', cobrador: datos.cobrador||'' };
+}
+
+// Envío + auditoría reutilizable. onOk() / onErr(err). Cierra el loader.
+function _enviarComprobante(datos, email, onOk, onErr) {
+  callScript({action:'sendEmail', emailDest:email, logoUrl:(INST.logoUrl||''),
+    asunto:'Comprobante de pago - ' + (INST.nombre||''),
+    htmlBody:_buildComprobanteHtml(datos), pass:TOKEN, _noRetry:true},
     function(r){
       ocultarLoader();
       if(r&&r.ok===false){
-        try { emailAuditar('comprobante', email, 'Comprobante de pago', 'error', String(r.error||''), { dni: datos.dni, nombre: datos.nombre }); } catch(_){}
-        alert('Error: '+(r.error||''));
+        try { emailAuditar('comprobante', email, 'Comprobante de pago', 'error', String(r.error||''), { dni: datos.dni, nombre: datos.nombre }, _compPayload(datos)); } catch(_){}
+        if(onErr) onErr(r.error||'');
         return;
       }
-      try { emailAuditar('comprobante', email, 'Comprobante de pago', 'ok', '', { dni: datos.dni, nombre: datos.nombre }); } catch(_){}
-      cerrarModalComprobante();
-      toast('Comprobante enviado a '+email, 'ok');
+      try { emailAuditar('comprobante', email, 'Comprobante de pago', 'ok', '', { dni: datos.dni, nombre: datos.nombre }, _compPayload(datos)); } catch(_){}
+      if(onOk) onOk();
     },
     function(e){
       ocultarLoader();
-      try { emailAuditar('comprobante', email, 'Comprobante de pago', 'error', String(e||''), { dni: datos.dni, nombre: datos.nombre }); } catch(_){}
-      alert('Error al enviar: ' + e);
+      try { emailAuditar('comprobante', email, 'Comprobante de pago', 'error', String(e||''), { dni: datos.dni, nombre: datos.nombre }, _compPayload(datos)); } catch(_){}
+      if(onErr) onErr(e);
     }
   );
+}
+
+// Reenvía un comprobante fallido desde el historial de emails (botón "Reenviar").
+function reenviarComprobante(docId) {
+  var x = (window._emailHistMap||{})[docId];
+  if (!x) return alert('No se encontró el registro. Refrescá el historial e intentá de nuevo.');
+  var email = (x.destinatario||'').trim();
+  if (!email || email.indexOf('@') < 0) return alert('El registro no tiene un email válido.');
+  var datos;
+  if (x.payload) {
+    // Reenvío exacto: usamos el snapshot del pago guardado al enviar.
+    datos = x.payload; datos.email = email;
+  } else {
+    // Registro viejo sin payload (ej: fallas previas a esta versión):
+    // reconstruimos desde el último pago del socio cargado en CUOTAS_DB.
+    datos = _reconstruirComprobante(x.socioDni, x.socioNombre, email);
+    if (!datos) return alert('No pude reconstruir el comprobante: no encontré pagos de este socio cargados.\n\nAbrí la pestaña CUOTAS para que se carguen los pagos y reintentá, o reenvialo registrando/consultando el pago desde la ficha del socio.');
+  }
+  sgdConfirm('Reenviar comprobante a <b>'+email+'</b>'+(datos.nombre?' ('+datos.nombre+')':'')+'?', function(){
+    mostrarLoader('Reenviando comprobante...');
+    _enviarComprobante(datos, email,
+      function(){ toast('Comprobante reenviado a '+email, 'ok'); emailRefrescarHistorial(); },
+      function(err){ alert('Error al reenviar: '+err); emailRefrescarHistorial(); }
+    );
+  }, 'REENVIAR');
+}
+
+// Reconstruye los datos del comprobante desde el último pago del socio, para
+// registros del historial que no guardaron el payload. Agrupa los pagos del
+// mismo lote (misma fechaPago) sumando montos y uniendo planes, como el original.
+function _reconstruirComprobante(dni, nombre, email) {
+  if (!dni || typeof CUOTAS_DB === 'undefined' || !CUOTAS_DB.cuotas) return null;
+  var pagos = CUOTAS_DB.cuotas.filter(function(c){ return c && String(c[0]) === String(dni); });
+  if (!pagos.length) return null;
+  pagos.sort(function(a,b){
+    var ta = (a._ts && a._ts.toMillis) ? a._ts.toMillis() : (a[5] ? (Date.parse(a[5])||0) : 0);
+    var tb = (b._ts && b._ts.toMillis) ? b._ts.toMillis() : (b[5] ? (Date.parse(b[5])||0) : 0);
+    return tb - ta;
+  });
+  var ult = pagos[0];
+  var fechaUlt = ult[5];
+  var lote = pagos.filter(function(c){ return c[5] === fechaUlt; });
+  var planes = lote.map(function(c){ return c[2]; }).filter(Boolean).join(' + ');
+  var monto = lote.reduce(function(s,c){ return s + (Number(c[6])||0); }, 0);
+  return {
+    nombre: nombre || ult[1] || '', dni: String(dni), email: email,
+    planAct: planes, plSoc: '', moTotal: monto,
+    periodo: ult[3] || '', vigente: ult[4] || '',
+    metodo: ult[7] || 'Efectivo', cobrador: ult[8] || ''
+  };
 }
 
 // -- EDITAR SALDO (ajuste manual con auditoria) -------------------
@@ -10652,16 +10721,20 @@ function emailContarHoy(cb) {
     });
 }
 
-function emailAuditar(tipo, destinatario, asunto, estado, error, socio) {
+function emailAuditar(tipo, destinatario, asunto, estado, error, socio, payload) {
   var _user = (window.ADMIN_USER || (typeof localStorage!=='undefined' && localStorage.getItem('admin_user')) || 'admin');
-  return db.collection('auditoria_emails').add({
+  var _doc = {
     tipo: tipo, destinatario: destinatario || '', asunto: asunto || '',
     estado: estado, error: error || '',
     socioDni: socio ? (socio.dni || '') : '',
     socioNombre: socio ? (socio.nombre || '') : '',
     enviadoPor: _user,
     fecha: firebase.firestore.FieldValue.serverTimestamp()
-  }).catch(function(e){ console.error('[emails] auditar:', e); });
+  };
+  // Guardar el snapshot del pago (payload) permite reenviar el comprobante
+  // exacto desde el historial sin tener que reconstruirlo.
+  if (payload) { try { _doc.payload = payload; } catch(_){} }
+  return db.collection('auditoria_emails').add(_doc).catch(function(e){ console.error('[emails] auditar:', e); });
 }
 
 function emailPintarPanel() {
@@ -10700,20 +10773,27 @@ function emailIniciar() {
 
 function emailRenderHistorial() {
   var el = document.getElementById('em-historial'); if (!el) return;
+  window._emailHistMap = {};
   db.collection('auditoria_emails').orderBy('fecha','desc').limit(40).get()
     .then(function(snap){
       if (snap.empty) { el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px;">Sin envíos registrados</div>'; return; }
       var rows = [];
       snap.forEach(function(d){
         var x = d.data();
+        window._emailHistMap[d.id] = x;
         var f = x.fecha && x.fecha.toDate ? x.fecha.toDate() : null;
         var fstr = f ? f.toLocaleString('es-AR') : '—';
         var icon = x.estado === 'ok' ? '&#x2705;' : '&#x274C;';
         var col = x.estado === 'ok' ? '#6de097' : '#f85149';
         var tipoLabel = {comprobante:'Comprobante', recordatorio:'Recordatorio', pass:'Pass temp'}[x.tipo] || x.tipo;
+        // Botón de reenvío sólo en comprobantes fallidos con email válido.
+        var _btn = '';
+        if (x.estado !== 'ok' && x.tipo === 'comprobante' && x.destinatario && x.destinatario.indexOf('@') > 0) {
+          _btn = '<div style="margin-top:4px;"><button onclick="reenviarComprobante(\''+d.id+'\')" style="background:var(--secondary);color:#000;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">&#x1F504; Reenviar</button></div>';
+        }
         rows.push('<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;gap:10px;">'
           + '<div style="flex:1;min-width:0;"><span style="color:'+col+';">'+icon+'</span> <b>'+tipoLabel+'</b> &rarr; '+(x.destinatario||'—')+(x.socioNombre?' <span style="color:var(--muted);">('+x.socioNombre+')</span>':'')+(x.error?'<div style="color:#f85149;font-size:10px;margin-left:18px;">'+x.error+'</div>':'')+'</div>'
-          + '<div style="color:var(--muted);font-size:11px;white-space:nowrap;">'+fstr+'</div></div>');
+          + '<div style="color:var(--muted);font-size:11px;white-space:nowrap;text-align:right;">'+fstr+_btn+'</div></div>');
       });
       el.innerHTML = rows.join('');
     }).catch(function(e){ el.innerHTML = '<div style="color:#f85149;font-size:12px;padding:20px;">Error: '+e.message+'</div>'; });
