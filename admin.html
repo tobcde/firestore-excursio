@@ -358,11 +358,100 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   </div>
 </header>
 
+<style id="cv2-css">
+/* ── CUOTAS V2: cobro por renglón (mes × plan). Convive con la pestaña Cuotas original. ── */
+#tab-cuotasv2,#modalCobroV2{--cv2-ok:#6de097;--cv2-ok-dim:rgba(109,224,151,.14);--cv2-ok-border:rgba(109,224,151,.35);--cv2-warn:#ffc107;--cv2-warn-dim:rgba(255,193,7,.14);--cv2-warn-border:rgba(255,193,7,.35);--cv2-blue:#6db4e0;--cv2-blue-dim:rgba(109,180,224,.14);--cv2-blue-border:rgba(109,180,224,.35);--cv2-surface3:#1f281f;}
+.cv2-wrap{padding:18px 20px;display:flex;flex-direction:column;gap:14px;}
+.cv2-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;}
+.cv2-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--secondary);text-transform:uppercase;letter-spacing:.02em;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.cv2-beta{font-size:11px;font-weight:700;letter-spacing:.1em;background:var(--secondary-dim);border:1px solid var(--secondary-border);color:var(--secondary);border-radius:999px;padding:2px 9px;}
+.cv2-sub{font-size:12px;color:var(--muted);margin-top:4px;}
+.cv2-stats{display:flex;gap:18px;flex-wrap:wrap;}
+.cv2-stat{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+.cv2-stat b{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--secondary);margin-right:6px;font-variant-numeric:tabular-nums;}
+.cv2-filters{display:grid;grid-template-columns:1fr 200px 200px;gap:10px;}
+.cv2-lista{display:flex;flex-direction:column;gap:6px;}
+.cv2-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:14px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;}
+.cv2-nom{font-weight:700;font-size:14px;}
+.cv2-meta{font-size:11px;color:var(--muted);margin-top:2px;}
+.cv2-est{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
+.cv2-cobrar{padding:8px 14px;font-size:12px;}
+.cv2-pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:1px solid transparent;white-space:nowrap;line-height:1.5;}
+.cv2-pill.debe{background:var(--red-dim);color:var(--red);border-color:var(--red-border);}
+.cv2-pill.ok,.cv2-pill.okd{background:var(--cv2-ok-dim);color:var(--cv2-ok);border-color:var(--cv2-ok-border);}
+.cv2-pill.warn{background:var(--cv2-warn-dim);color:var(--cv2-warn);border-color:var(--cv2-warn-border);}
+.cv2-pill.mut{background:var(--cv2-surface3);color:var(--muted);border-color:var(--border);}
+.cv2-pill.gold{background:var(--secondary-dim);color:var(--secondary);border-color:var(--secondary-border);}
+.cv2-pill.hno{background:var(--cv2-blue-dim);color:var(--cv2-blue);border-color:var(--cv2-blue-border);text-transform:none;letter-spacing:0;font-family:'Barlow',sans-serif;font-weight:600;}
+.cv2-modal{max-width:640px;}
+.cv2-body{display:flex;flex-direction:column;gap:18px;}
+.cv2-lbl{font-family:'Barlow Condensed',sans-serif;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;}
+.cv2-hint{font-family:'Barlow',sans-serif;font-weight:400;letter-spacing:0;text-transform:none;font-size:11px;}
+.cv2-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.cv2-chip{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 9px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;}
+.cv2-chip:hover{border-color:var(--primary);}
+.cv2-ledger{display:flex;flex-direction:column;gap:10px;margin-top:8px;}
+.cv2-grp{border:1px solid var(--border);border-radius:10px;background:var(--surface2);overflow:hidden;}
+.cv2-grp-h{display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--border);background:var(--cv2-surface3);}
+.cv2-grp-h .cv2-rail{width:4px;height:18px;border-radius:2px;background:var(--red);flex:none;}
+.cv2-grp.adel .cv2-rail{background:var(--muted);} .cv2-grp.aran .cv2-rail{background:var(--secondary);}
+.cv2-grp-h .cv2-gnom{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;flex:1;}
+.cv2-grp-h .cv2-gmini{font-size:11px;color:var(--muted);}
+.cv2-r{display:grid;grid-template-columns:22px 26px 1fr auto 118px;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;}
+.cv2-r:last-child{border-bottom:none;} .cv2-r:hover{background:rgba(255,255,255,.02);}
+.cv2-r input[type=checkbox]{width:16px;height:16px;accent-color:var(--primary);margin:0;cursor:pointer;}
+.cv2-r .cv2-ico{font-size:16px;text-align:center;}
+.cv2-r .cv2-pl{font-size:13px;font-weight:600;display:flex;flex-direction:column;gap:3px;min-width:0;}
+.cv2-r .cv2-pl small{font-size:11px;color:var(--muted);font-weight:400;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.cv2-r .cv2-pr{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--secondary);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.cv2-r .cv2-pr s,.cv2-r .cv2-pl s{color:var(--muted);font-weight:400;}
+.cv2-amt{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 8px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums;outline:none;}
+.cv2-amt:focus{border-color:var(--primary);} .cv2-amt:disabled{opacity:.35;}
+.cv2-r.off .cv2-pl,.cv2-r.off .cv2-pr,.cv2-r.off .cv2-ico{opacity:.45;}
+.cv2-badge{grid-column:3 / -1;margin-top:-4px;font-size:11px;}
+.cv2-extra{border:1px dashed var(--border);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;}
+.cv2-extra-top{display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;flex-wrap:wrap;}
+.cv2-extra-top input{accent-color:var(--primary);width:16px;height:16px;margin:0;} .cv2-extra-top small{color:var(--muted);font-weight:400;}
+.cv2-extra-fields{display:none;grid-template-columns:1fr 130px;gap:8px;}
+.cv2-money{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;text-align:right;font-variant-numeric:tabular-nums;}
+.cv2-tot{border:1px solid var(--secondary-border);background:linear-gradient(180deg,var(--secondary-dim),transparent 60%);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;}
+.cv2-tl{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;}
+.cv2-k{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+.cv2-k small{display:block;font-family:'Barlow',sans-serif;font-weight:400;letter-spacing:0;text-transform:none;font-size:11px;margin-top:2px;}
+.cv2-v{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;color:var(--secondary);font-variant-numeric:tabular-nums;line-height:1;}
+.cv2-v-sm{font-size:18px;color:var(--text);}
+.cv2-rec{width:170px;font-size:22px;padding:6px 10px;}
+.cv2-favrow{display:none;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:8px;background:var(--cv2-ok-dim);border:1px solid var(--cv2-ok-border);}
+.cv2-favrow label{display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;color:var(--cv2-ok);}
+.cv2-favrow input{accent-color:var(--primary);width:16px;height:16px;margin:0;}
+.cv2-favn{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;color:var(--cv2-ok);font-variant-numeric:tabular-nums;}
+.cv2-res{border-top:1px dashed var(--secondary-border);padding-top:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:34px;}
+.cv2-res .cv2-big{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;white-space:nowrap;}
+.cv2-res .cv2-msg{font-size:12px;color:var(--muted);flex:1;}
+.cv2-res.ok .cv2-big{color:var(--cv2-ok);} .cv2-res.bad .cv2-big{color:var(--red);} .cv2-res.bad .cv2-msg{color:var(--red);}
+.cv2-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.cv2-sum{border:1px solid var(--border);border-radius:10px;background:var(--bg);padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
+.cv2-sum ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;}
+.cv2-sum li{display:grid;grid-template-columns:1fr auto;gap:10px;font-size:12.5px;padding:3px 0;border-bottom:1px dotted var(--border);}
+.cv2-sum li:last-child{border-bottom:none;}
+.cv2-sum li .cv2-n{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-variant-numeric:tabular-nums;color:var(--secondary);}
+.cv2-sum li.fav,.cv2-sum li.fav .cv2-n{color:var(--cv2-ok);} .cv2-sum li.usa,.cv2-sum li.usa .cv2-n{color:var(--cv2-blue);}
+.cv2-sum li small{color:var(--muted);}
+.cv2-after{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted);padding-top:6px;border-top:1px solid var(--border);}
+.cv2-after b{color:var(--text);}
+.cv2-btn{width:100%;padding:14px;font-size:14px;}
+.cv2-btn:disabled{opacity:.4;cursor:not-allowed;}
+.cv2-btn.cv2-done{background:var(--cv2-ok);color:#0a0d0a;}
+.cv2-why{font-size:11.5px;color:var(--red);text-align:center;min-height:14px;}
+@media (max-width:640px){.cv2-filters{grid-template-columns:1fr;}.cv2-row{grid-template-columns:1fr;}.cv2-est{align-items:flex-start;}.cv2-r{grid-template-columns:22px 1fr auto 100px;}.cv2-r .cv2-ico{display:none;}.cv2-grid2{grid-template-columns:1fr;}.cv2-rec{width:140px;}}
+</style>
+
 <!-- TABS -->
 <div class="tabs">
   <div class="tab active" onclick="cambiarTab(event,'jugadores')" id="tab-btn-jugadores">&#x1F465; SOCIOS</div>
   <div class="tab" onclick="cambiarTab(event,'asistencias')">&#x1F4CB; ASISTENCIAS</div>
   <div class="tab" onclick="cambiarTab(event,'cuotas')">&#x1F4B0; CUOTAS</div>
+  <div class="tab" onclick="cambiarTab(event,'cuotasv2')" style="color:var(--secondary);">&#x1F4B3; CUOTAS V2</div>
   <div class="tab" onclick="cambiarTab(event,'citaciones')">&#x1F4E3; CITACIONES</div>
   <div class="tab" onclick="cambiarTab(event,'admin')">&#x1F6E0;&#xFE0F; ADMINISTRACION</div>
   <div class="tab" onclick="cambiarTab(event,'reportes')">&#x1F4CA; REPORTES</div>
@@ -484,6 +573,27 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 </div>
 
 <!-- TAB CITACIONES -->
+<!-- TAB CUOTAS V2 (cobro por renglón; convive con la pestaña Cuotas original) -->
+<div id="tab-cuotasv2" class="tab-content" style="display:none;">
+  <div class="cv2-wrap">
+    <div class="cv2-head">
+      <div>
+        <div class="cv2-title">&#x1F4B3; Cuotas V2 <span class="cv2-beta">cobro por rengl&oacute;n</span></div>
+        <div class="cv2-sub">Cada mes &times; plan es una transacci&oacute;n propia. Sin reparto de montos: lo que tild&aacute;s es exactamente lo que se graba.</div>
+      </div>
+      <div class="cv2-stats" id="cv2-stats"></div>
+    </div>
+    <div class="cv2-filters">
+      <input id="cv2-busq" class="edit-input" placeholder="Buscar por apellido, nombre o DNI" oninput="cv2Render()">
+      <select id="cv2-filtro" class="edit-input" onchange="cv2Render()">
+        <option value="deben">Deben</option><option value="todos">Todos los activos</option><option value="favor">Con saldo a favor</option><option value="ok">Al d&iacute;a</option>
+      </select>
+      <select id="cv2-cat" class="edit-input" onchange="cv2Render()"><option value="">Todas las categor&iacute;as</option></select>
+    </div>
+    <div id="cv2-lista" class="cv2-lista"></div>
+  </div>
+</div>
+
 <div id="tab-citaciones" class="tab-content" style="display:none;">
   <div class="asist-container">
 
@@ -1267,6 +1377,51 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   </div>
 </div>
 
+<!-- MODAL COBRO V2 (cobro por renglón) -->
+<div class="modal-overlay" id="modalCobroV2">
+  <div class="modal cv2-modal">
+    <div class="modal-header">
+      <div><div class="modal-title">Registrar pago</div><div class="modal-subtitle" id="cv2m-sub"></div></div>
+      <button class="modal-close" onclick="cv2Cerrar()">&#x2715;</button>
+    </div>
+    <div class="modal-body cv2-body">
+      <section>
+        <div class="cv2-lbl"><span>Qu&eacute; se cobra <span class="cv2-hint">&middot; cada rengl&oacute;n es una transacci&oacute;n propia</span></span>
+          <span class="cv2-actions"><button class="cv2-chip" type="button" onclick="cv2Marcar('debe')">Tildar toda la deuda</button><button class="cv2-chip" type="button" onclick="cv2Marcar('none')">Destildar todo</button></span></div>
+        <div class="cv2-ledger" id="cv2-ledger"></div>
+      </section>
+      <section class="cv2-extra">
+        <label class="cv2-extra-top"><input type="checkbox" id="cv2-ex-on" onchange="cv2Recalc()"> Agregar cobro extraordinario <small>(equipamiento, viaje, multa&hellip;)</small></label>
+        <div class="cv2-extra-fields" id="cv2-ex-fields">
+          <input class="edit-input" id="cv2-ex-desc" list="cv2-ex-sug" placeholder="Concepto" oninput="cv2Recalc()">
+          <datalist id="cv2-ex-sug"></datalist>
+          <input class="edit-input cv2-money" id="cv2-ex-monto" type="number" min="0" step="500" placeholder="$ 0" oninput="cv2Recalc()">
+        </div>
+      </section>
+      <section class="cv2-tot">
+        <div class="cv2-tl"><div class="cv2-k">Total a cobrar <small id="cv2-tot-desc"></small></div><div class="cv2-v" id="cv2-tot-val"></div></div>
+        <div class="cv2-favrow" id="cv2-favrow"><label><input type="checkbox" id="cv2-usar-favor" onchange="cv2Recalc()"> Usar saldo a favor que ya tiene</label><span class="cv2-favn" id="cv2-fav-disp"></span></div>
+        <div class="cv2-tl" id="cv2-acubrir-row" style="display:none;"><div class="cv2-k">A cubrir ahora <small>Total menos el saldo a favor usado</small></div><div class="cv2-v cv2-v-sm" id="cv2-acubrir"></div></div>
+        <div class="cv2-tl"><div class="cv2-k">Monto recibido <small>Lo que entreg&oacute; el socio (en efectivo suele venir redondeado)</small></div><input class="edit-input cv2-money cv2-rec" id="cv2-recibido" type="number" min="0" step="500" oninput="if(cv2Ctx){cv2Ctx.recTocado=true;}cv2Recalc()"></div>
+        <div class="cv2-res" id="cv2-res"></div>
+      </section>
+      <section class="cv2-grid2">
+        <div class="filter-group"><label class="filter-label">M&eacute;todo de pago</label><select id="cv2-metodo" class="edit-input" style="width:100%;"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta debito</option><option>Tarjeta credito</option><option>Mercado Pago</option></select></div>
+        <div class="filter-group"><label class="filter-label">Fecha de pago</label><input id="cv2-fecha" type="date" class="edit-input" style="width:100%;" onchange="cv2Recalc()"></div>
+        <div class="filter-group"><label class="filter-label">Cobrador</label><select id="cv2-cobrador" class="edit-input" style="width:100%;"></select></div>
+        <div class="filter-group"><label class="filter-label">Observaciones</label><input id="cv2-obs" class="edit-input" style="width:100%;" placeholder="Opcional"></div>
+      </section>
+      <section class="cv2-sum">
+        <div class="cv2-lbl"><span>Resumen &middot; esto es exactamente lo que se graba</span><span class="cv2-pill gold" id="cv2-ntx"></span></div>
+        <ul id="cv2-sum-list"></ul>
+        <div class="cv2-after" id="cv2-after"></div>
+      </section>
+      <button class="btn btn-save cv2-btn" id="cv2-btn" onclick="cv2Confirmar()">CONFIRMAR PAGO</button>
+      <div class="cv2-why" id="cv2-why"></div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL NUEVO SOCIO -->
 <div class="modal-overlay" id="modalNuevoSocio">
   <div class="modal modal-sm">
@@ -1805,7 +1960,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.34</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.35</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -9418,6 +9573,9 @@ function cambiarTab(ev, id) {
     poblarPeriodos();
     lazyCargarCuotasEInscripciones(function(){ renderCuotas(); });
   }
+  if(id === 'cuotasv2'){
+    lazyCargarCuotasEInscripciones(function(){ cv2Init(); });
+  }
   if(id === 'asistencias'){
     lazyCargarAsistencias(function(){ poblarTurnosAsist(); });
   }
@@ -11198,6 +11356,394 @@ function _ejecutarConversionHistorico() {
     });
   }
   siguiente();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// CUOTAS V2 — cobro por renglón (mes × plan). Convive con la pestaña Cuotas
+// original: NO la reemplaza. Cada renglón tildado se graba como su propia
+// cuota (mes, plan, importe exacto). No hay "monto total a repartir", por lo
+// que no puede cruzarse plata entre planes (el bug del override viejo).
+// Reglas que respeta: desc. hermano solo al deportivo (nunca Cuota Social),
+// precio por mes del motor (historial), saldo a favor previo, aranceles únicos.
+// ═══════════════════════════════════════════════════════════════════════
+var cv2Ctx = null;
+function cv2Money(n){ return '$' + Math.round(Number(n)||0).toLocaleString('es-AR'); }
+function cv2EsCS(p){ return /cuota\s*social/i.test(p||''); }
+function cv2DescHno(insc){
+  if(!insc) return 0;
+  var d = Number(insc.descuentoHno)||0;
+  if (d>0 && DESCUENTO_HNO_SUGERIDO>0) d = DESCUENTO_HNO_SUGERIDO; // valor vigente de Administración
+  return cv2EsCS(insc.plan) ? 0 : d;                               // CS nunca se descuenta
+}
+function cv2PrecioActual(insc){ var m = getMontoActual(insc); var d = cv2DescHno(insc); return (d>0 && d<m) ? m-d : m; }
+function cv2UltimoDia(yyyymm){ var y=parseInt(yyyymm.substring(0,4),10), m=parseInt(yyyymm.substring(5,7),10); return yyyymm+'-'+String(new Date(y,m,0).getDate()).padStart(2,'0'); }
+function cv2MesHoy(){ var h=new Date(); return h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0'); }
+function cv2Icono(plan){
+  var a = (DB.actividades||[]).find(function(x){ return x && x.nombre===plan; });
+  var raw = a ? a.icono : '';
+  return raw ? iconoHTML(raw, 18) : (emojiPorNombre(plan) || '&#x1F4CB;');
+}
+
+// ── Lista de socios de la pestaña ──
+function cv2Init(){
+  var sel = document.getElementById('cv2-cat');
+  if (sel && sel.options.length <= 1) {
+    var cats = {};
+    DB.jugadores.slice(1).forEach(function(f){ var c = f[COL.CATEGORIA_APP]; if(c) cats[c]=1; });
+    Object.keys(cats).sort().forEach(function(c){ var o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+  }
+  cv2Render();
+}
+function cv2Render(){
+  var lista = document.getElementById('cv2-lista'); if(!lista) return;
+  var busq = (document.getElementById('cv2-busq').value||'').toLowerCase().trim();
+  var filtro = document.getElementById('cv2-filtro').value;
+  var fcat = document.getElementById('cv2-cat').value;
+  var rows = [], tDeben=0, tFavor=0, sumDeuda=0;
+  DB.jugadores.slice(1).forEach(function(f){
+    var a = f[COL.ACTIVO]; if(!(a===true||String(a).toLowerCase()==='si')) return;
+    var dni = (f[COL.DNI]||f[COL.TARJETA]||'').toString().trim(); if(!dni) return;
+    var cv = calcularEstadoTiempoReal(f);
+    if(!cv.planNom && !(cv.detalle && cv.detalle.length)) return;
+    var nom = (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'');
+    var cat = f[COL.CATEGORIA_APP]||'';
+    var deuda = Number(cv.deuda)||0, favor = Number(cv.saldoAFavor)||0;
+    if(deuda>0.5){ tDeben++; sumDeuda+=deuda; } if(favor>0.5) tFavor++;
+    if(filtro==='deben' && deuda<=0.5) return;
+    if(filtro==='favor' && favor<=0.5) return;
+    if(filtro==='ok' && deuda>0.5) return;
+    if(fcat && cat!==fcat) return;
+    if(busq && nom.toLowerCase().indexOf(busq)<0 && dni.indexOf(busq)<0) return;
+    rows.push({f:f, dni:dni, nom:nom, cat:cat, cv:cv, deuda:deuda, favor:favor});
+  });
+  rows.sort(function(a,b){ return (b.deuda-a.deuda) || a.nom.localeCompare(b.nom); });
+  document.getElementById('cv2-stats').innerHTML =
+    '<span class="cv2-stat"><b>'+tDeben+'</b>deben</span><span class="cv2-stat"><b>'+cv2Money(sumDeuda)+'</b>deuda total</span><span class="cv2-stat"><b>'+tFavor+'</b>con saldo a favor</span>';
+  if(!rows.length){ lista.innerHTML='<div class="empty-state"><p>Sin resultados</p></div>'; return; }
+  window._cv2Rows = rows;
+  lista.innerHTML = rows.map(function(r,i){
+    var est = r.deuda>0.5 ? '<span class="cv2-pill debe">Debe '+cv2Money(r.deuda)+'</span>' : '<span class="cv2-pill ok">Al d&iacute;a</span>';
+    var fav = r.favor>0.5 ? '<span class="cv2-pill okd">+'+cv2Money(r.favor)+' a favor</span>' : '';
+    var nMes = 0; (r.cv.detalle||[]).forEach(function(d){ if(!d.unico) nMes = Math.max(nMes,(d.mesesAdeudados||[]).length); });
+    return '<div class="cv2-row"><div><div class="cv2-nom">'+esc(r.nom)+'</div><div class="cv2-meta">DNI '+esc(r.dni)+' &middot; '+esc(r.cat||'Sin categoría')+' &middot; '+esc(r.cv.planNom||'—')+'</div></div>'
+      +'<div class="cv2-est">'+est+fav+(nMes?'<div class="cv2-meta">'+nMes+' mes'+(nMes===1?'':'es')+' vencido'+(nMes===1?'':'s')+'</div>':'')+'</div>'
+      +'<div><button class="btn btn-save cv2-cobrar" data-i="'+i+'">COBRAR</button></div></div>';
+  }).join('');
+  lista.onclick = function(e){ var b = e.target.closest('.cv2-cobrar'); if(!b) return; var r = window._cv2Rows[parseInt(b.getAttribute('data-i'),10)]; if(r) cv2Abrir(r.f); };
+}
+
+// ¿Ese mes de ese plan ya está cubierto por alguna cuota grabada? (para no ofrecer adelantar un mes pago)
+function cv2MesCubierto(dni, plan, mes){
+  return (CUOTAS_DB.cuotas||[]).some(function(row){
+    if ((row[0]||'').toString().trim()!==dni) return false;
+    if ((row[2]||'').toString().trim()!==plan) return false;
+    if ((Number(row[6])||0)<=0) return false;
+    var pD = normFecha((row[3]||'').toString().trim()).substring(0,7), pH = normFecha((row[4]||'').toString().trim()).substring(0,7);
+    if(!pD||!pH){ var fp = normFecha((row[5]||'').toString().trim()).substring(0,7); pD=pD||fp; pH=pH||fp; }
+    if(!pD||!pH) return false; if(pD>pH){ var t=pD; pD=pH; pH=t; }
+    return mes>=pD && mes<=pH;
+  });
+}
+function cv2PoblarSugerencias(dni){
+  var dl = document.getElementById('cv2-ex-sug'); if(!dl) return;
+  var esPlan = {};
+  (DB.actividades||[]).forEach(function(a){ if(a&&a.nombre) esPlan[a.nombre.toLowerCase().trim()]=1; });
+  (DB.inscripciones||[]).forEach(function(i){ if(i&&i.plan) esPlan[i.plan.toLowerCase().trim()]=1; });
+  var vistos={}, propios=[], otros=[];
+  (CUOTAS_DB.cuotas||[]).forEach(function(c){
+    var con=(c[2]||'').toString().trim(); if(!con) return; var low=con.toLowerCase();
+    if(low.indexOf('historico')===0 || con.indexOf('+')>=0 || esPlan[low] || vistos[low]) return; vistos[low]=1;
+    (((c[0]||'').toString().trim()===dni) ? propios : otros).push(con);
+  });
+  dl.innerHTML = propios.concat(otros).map(function(v){ return '<option value="'+v.replace(/"/g,'&quot;')+'">'; }).join('');
+}
+
+// ── Abrir el modal: armar los renglones desde el motor de deuda ──
+function cv2Abrir(f){
+  var dni = (f[COL.DNI]||f[COL.TARJETA]||'').toString().trim();
+  var nombre = ((f[COL.APELLIDO]||'') + ' ' + (f[COL.NOMBRE]||'')).trim();
+  var cv = calcularEstadoTiempoReal(f);
+  var mesHoy = cv2MesHoy();
+  var inscVig = getInscripcionesVigentes(dni, null);
+  var todasInsc = (DB.inscripciones||[]).filter(function(i){ return (i.dni||'').toString().trim()===dni; });
+  var items = [];
+  // 1) Deuda: meses adeudados por plan. El precio viene del motor (historial + desc. hno ya aplicados).
+  (cv.detalle||[]).forEach(function(d){
+    var insc = inscVig.find(function(i){ return i.plan===d.plan; }) || todasInsc.find(function(i){ return i.plan===d.plan; }) || null;
+    if (d.unico){
+      var fu = Number(d.deudaPorMes)||0;
+      if (fu>0.5) items.push({ id:'aran|'+d.plan, tipo:'arancel', plan:d.plan, precio:fu, falta:fu, on:false, monto:fu, insc:insc, descHno:0, base:fu });
+      return;
+    }
+    (d.mesesAdeudados||[]).forEach(function(m){
+      var pr = Number(m.precio)||0, fa = Number(m.falta)||0;
+      items.push({ id:m.mes+'|'+d.plan, tipo:'mes', mes:m.mes, plan:d.plan, precio:pr, falta:fa, parcialPrevio:!!m.parcial, on:true, monto:fa, estado:'debe', insc:insc, descHno:cv2DescHno(insc), base:insc?getMontoHistorico(insc,m.mes):pr });
+    });
+  });
+  // 2) Adelantar: próximos 3 meses no cubiertos, por plan mensual vigente.
+  inscVig.forEach(function(insc){
+    if (insc.unico===true||insc.unico==='true') return;
+    var mH = insc.hasta ? normFecha(insc.hasta).substring(0,7) : '';
+    var mes = _mesSiguiente(mesHoy);
+    for (var n=0; n<3; n++){
+      if (mH && mes > mH) break;
+      var ya = items.some(function(i){ return i.tipo==='mes' && i.mes===mes && i.plan===insc.plan; });
+      if (!ya && !cv2MesCubierto(dni, insc.plan, mes)){
+        var pr2 = cv2PrecioActual(insc);
+        items.push({ id:mes+'|'+insc.plan, tipo:'mes', mes:mes, plan:insc.plan, precio:pr2, falta:pr2, on:false, monto:pr2, estado:'adelantar', insc:insc, descHno:cv2DescHno(insc), base:getMontoActual(insc) });
+      }
+      mes = _mesSiguiente(mes);
+    }
+  });
+  items.sort(function(a,b){
+    if(a.tipo!==b.tipo) return a.tipo==='mes'?-1:1;
+    if(a.tipo==='mes'){ var c=a.mes.localeCompare(b.mes); if(c) return c; var ac=cv2EsCS(a.plan), bc=cv2EsCS(b.plan); if(ac!==bc) return ac?1:-1; }
+    return a.plan.localeCompare(b.plan);
+  });
+  cv2Ctx = { f:f, dni:dni, nombre:nombre, cv:cv, items:items, favorPrevio:Number(cv.saldoAFavor)||0, recTocado:false, enviando:false, hecho:false, mesHoy:mesHoy };
+
+  var hnoInsc = null; inscVig.forEach(function(i){ if(!hnoInsc && cv2DescHno(i)>0) hnoInsc=i; });
+  var hnoTxt = hnoInsc ? ' <span class="cv2-pill hno" title="El descuento hermano solo aplica al plan deportivo, nunca a Cuota Social">&#x1F465; Hermano'+(hnoInsc.hnoDe?' de '+esc(hnoInsc.hnoDe):'')+' &middot; −'+cv2Money(cv2DescHno(hnoInsc))+'</span>' : '';
+  var deudaTxt = (Number(cv.deuda)||0)>0.5 ? '<span class="cv2-pill debe">Debe '+cv2Money(cv.deuda)+'</span>' : '<span class="cv2-pill ok">Al d&iacute;a</span>';
+  document.getElementById('cv2m-sub').innerHTML = '<strong style="color:var(--text)">'+esc(nombre)+'</strong> &middot; '+esc(cv.planNom||'')+' '+deudaTxt+hnoTxt;
+
+  document.getElementById('cv2-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('cv2-obs').value='';
+  document.getElementById('cv2-ex-on').checked=false; document.getElementById('cv2-ex-fields').style.display='none';
+  document.getElementById('cv2-ex-desc').value=''; document.getElementById('cv2-ex-monto').value='';
+  document.getElementById('cv2-usar-favor').checked=false; document.getElementById('cv2-metodo').selectedIndex=0;
+  var cob = document.getElementById('cv2-cobrador');
+  cob.innerHTML = (DB.profesores||[]).map(function(p){ return '<option>'+esc(p[0])+'</option>'; }).join('') || '<option>Sin especificar</option>';
+  for (var ci=0; ci<cob.options.length; ci++){ var t=(cob.options[ci].text||'').toLowerCase(); if(t.indexOf('juana')>=0 && t.indexOf('sestua')>=0){ cob.selectedIndex=ci; break; } }
+  cv2PoblarSugerencias(dni);
+  var btn=document.getElementById('cv2-btn'); btn.classList.remove('cv2-done'); btn.textContent='CONFIRMAR PAGO'; btn.disabled=false;
+  cv2BuildLedger(); cv2Recalc();
+  document.getElementById('modalCobroV2').classList.add('open');
+}
+function cv2Cerrar(){ document.getElementById('modalCobroV2').classList.remove('open'); cv2Ctx=null; }
+
+// ── Renglones ──
+function cv2RowHTML(it){
+  var parcial = it.on && it.monto < it.falta - 0.5;
+  var sub;
+  if (it.tipo==='mes'){
+    var pre = it.estado==='debe' ? 'vencido &middot; ' : 'adelantar &middot; ';
+    if (it.descHno>0 && it.base>it.precio) sub = pre + '<s>'+cv2Money(it.base)+'</s> '+cv2Money(it.precio)+'/mes <span class="cv2-pill hno">hno −'+cv2Money(it.descHno)+'</span>';
+    else {
+      var hayHno = cv2Ctx && cv2Ctx.items.some(function(x){ return x.descHno>0; });
+      sub = pre + cv2Money(it.precio)+'/mes' + ((cv2EsCS(it.plan) && hayHno) ? ' &middot; sin desc. hno' : '');
+    }
+    if (it.parcialPrevio && it.falta < it.precio - 0.5) sub += ' &middot; ya pagó '+cv2Money(it.precio-it.falta)+', falta '+cv2Money(it.falta);
+  } else sub = 'arancel único &middot; se cobra una sola vez';
+  return '<input type="checkbox" '+(it.on?'checked':'')+' data-cb="'+it.id+'">'
+    +'<span class="cv2-ico">'+(it.tipo==='mes'?cv2Icono(it.plan):'&#x1F3AB;')+'</span>'
+    +'<span class="cv2-pl">'+esc(it.plan)+'<small>'+sub+'</small></span>'
+    +'<span class="cv2-pr">'+(parcial?'<s>'+cv2Money(it.falta)+'</s> ':'')+(it.on?cv2Money(it.monto):'—')+'</span>'
+    +'<input class="cv2-amt" type="number" min="0" max="'+it.falta+'" step="500" value="'+it.monto+'" data-amt="'+it.id+'" '+(it.on?'':'disabled')+' aria-label="Importe '+esc(it.plan)+'">'
+    +(parcial?'<div class="cv2-badge"><span class="cv2-pill warn">Parcial &middot; queda '+cv2Money(it.falta-it.monto)+'</span></div>':'');
+}
+function cv2BuildLedger(){
+  var L = document.getElementById('cv2-ledger'); L.innerHTML='';
+  var items = cv2Ctx.items;
+  if(!items.length){ L.innerHTML='<div class="empty-state" style="padding:14px;"><p>Este socio está al día y no tiene meses para adelantar ni aranceles pendientes.</p></div>'; return; }
+  var meses = []; items.forEach(function(i){ if(i.tipo==='mes' && meses.indexOf(i.mes)<0) meses.push(i.mes); }); meses.sort();
+  var grupos = meses.map(function(m){
+    var debe = items.some(function(i){ return i.tipo==='mes'&&i.mes===m&&i.estado==='debe'; });
+    return { key:m, label:periodoLabel(m), cls:debe?'':'adel', pill:debe?'<span class="cv2-pill debe">Debe</span>':'<span class="cv2-pill mut">Adelantar</span>' };
+  });
+  if (items.some(function(i){ return i.tipo==='arancel'; })) grupos.push({ key:'aran', label:'Aranceles pendientes', cls:'aran', pill:'<span class="cv2-pill gold">Único</span>' });
+  grupos.forEach(function(g){
+    var box=document.createElement('div'); box.className='cv2-grp '+g.cls;
+    box.innerHTML='<div class="cv2-grp-h"><span class="cv2-rail"></span><span class="cv2-gnom">'+esc(g.label)+'</span><span class="cv2-gmini" data-gmini="'+g.key+'"></span>'+g.pill+'</div>';
+    items.filter(function(i){ return (i.tipo==='mes'?i.mes:'aran')===g.key; }).forEach(function(it){
+      var row=document.createElement('label'); row.className='cv2-r'+(it.on?'':' off'); row.setAttribute('data-row',it.id); row.innerHTML=cv2RowHTML(it); box.appendChild(row);
+    });
+    L.appendChild(box);
+  });
+  if(!L._cv2Wired){
+    L._cv2Wired=true;
+    L.addEventListener('change', function(e){
+      var id = e.target.getAttribute('data-cb'); if(!id || !cv2Ctx) return;
+      var it = cv2Ctx.items.find(function(i){ return i.id===id; }); if(!it) return;
+      it.on = e.target.checked; if(it.on && it.monto<=0) it.monto=it.falta;
+      cv2PatchRow(it); cv2Recalc();
+    });
+    L.addEventListener('click', function(e){ if(e.target.classList.contains('cv2-amt')) e.stopPropagation(); });
+    L.addEventListener('input', function(e){
+      var id = e.target.getAttribute('data-amt'); if(!id || !cv2Ctx) return;
+      var it = cv2Ctx.items.find(function(i){ return i.id===id; }); if(!it) return;
+      var v = Number(e.target.value)||0;
+      if (v > it.falta){ v = it.falta; e.target.value = v; toast('No se puede cobrar más que lo adeudado en ese renglón. El excedente va en "Monto recibido" y queda a favor.', 'err'); }
+      it.monto = v; cv2PatchRow(it, true); cv2Recalc();
+    });
+  }
+}
+// Actualiza un renglón en su lugar (sin reconstruir, así el input no pierde el foco al tipear).
+function cv2PatchRow(it, keepInput){
+  var row = document.querySelector('#cv2-ledger [data-row="'+it.id+'"]'); if(!row) return;
+  var parcial = it.on && it.monto < it.falta - 0.5;
+  row.classList.toggle('off', !it.on);
+  row.querySelector('.cv2-pr').innerHTML = (parcial?'<s>'+cv2Money(it.falta)+'</s> ':'') + (it.on?cv2Money(it.monto):'—');
+  var amt = row.querySelector('input.cv2-amt'); amt.disabled = !it.on; if(!keepInput && String(amt.value)!==String(it.monto)) amt.value = it.monto;
+  var cb = row.querySelector('input[type=checkbox]'); if(cb.checked!==it.on) cb.checked=it.on;
+  var bl = row.querySelector('.cv2-badge');
+  if(parcial){ if(!bl){ bl=document.createElement('div'); bl.className='cv2-badge'; row.appendChild(bl); } bl.innerHTML='<span class="cv2-pill warn">Parcial &middot; queda '+cv2Money(it.falta-it.monto)+'</span>'; }
+  else if(bl) bl.remove();
+}
+function cv2Marcar(modo){
+  if(!cv2Ctx) return;
+  cv2Ctx.items.forEach(function(i){ i.on = modo==='debe' ? (i.tipo==='mes' && i.estado==='debe') : false; if(i.on && i.monto<=0) i.monto=i.falta; cv2PatchRow(i); });
+  cv2Recalc();
+}
+
+// ── Cálculo de totales / estado del formulario ──
+function cv2Extra(){
+  var on = document.getElementById('cv2-ex-on').checked;
+  document.getElementById('cv2-ex-fields').style.display = on ? 'grid' : 'none';
+  if(!on) return null;
+  var m = Number(document.getElementById('cv2-ex-monto').value)||0;
+  var d = (document.getElementById('cv2-ex-desc').value||'').trim() || 'Cobro extraordinario';
+  return m>0 ? {desc:d, monto:m} : null;
+}
+function cv2Estado(){
+  var sel = cv2Ctx.items.filter(function(i){ return i.on && i.monto>0; });
+  var ex = cv2Extra();
+  var total = sel.reduce(function(s,i){ return s+i.monto; },0) + (ex?ex.monto:0);
+  var favDisp = cv2Ctx.favorPrevio||0;
+  var usaFavor = (favDisp>0 && document.getElementById('cv2-usar-favor').checked) ? Math.min(favDisp,total) : 0;
+  var aCubrir = total - usaFavor;
+  if(!cv2Ctx.recTocado) document.getElementById('cv2-recibido').value = aCubrir;
+  var rec = Number(document.getElementById('cv2-recibido').value)||0;
+  var diff = rec - aCubrir;
+  var ok=true, why='';
+  if(total<=0){ ok=false; why='No hay nada tildado.'; }
+  else if(diff < -0.5){ ok=false; why='Faltan '+cv2Money(-diff)+' para cubrir lo tildado.'; }
+  return { sel:sel, ex:ex, total:total, favDisp:favDisp, usaFavor:usaFavor, aCubrir:aCubrir, rec:rec, diff:diff, ok:ok, why:why };
+}
+function cv2Recalc(){
+  if(!cv2Ctx) return;
+  var st = cv2Estado();
+  var items = cv2Ctx.items;
+  document.querySelectorAll('#cv2-ledger [data-gmini]').forEach(function(el){
+    var k=el.getAttribute('data-gmini'); var its=items.filter(function(i){ return (i.tipo==='mes'?i.mes:'aran')===k; }); var on=its.filter(function(i){ return i.on; });
+    el.textContent = on.length+'/'+its.length+' tildados · '+cv2Money(on.reduce(function(s,i){ return s+i.monto; },0));
+  });
+  document.getElementById('cv2-favrow').style.display = st.favDisp>0.5 ? 'flex' : 'none';
+  document.getElementById('cv2-fav-disp').textContent = cv2Money(st.favDisp)+' disponible';
+  document.getElementById('cv2-acubrir-row').style.display = st.usaFavor>0 ? 'grid' : 'none';
+  document.getElementById('cv2-acubrir').textContent = cv2Money(st.aCubrir);
+  document.getElementById('cv2-tot-val').textContent = cv2Money(st.total);
+  document.getElementById('cv2-tot-desc').textContent = st.sel.length+' ítem'+(st.sel.length===1?'':'s')+' tildado'+(st.sel.length===1?'':'s')+(st.ex?' + extraordinario':'');
+  var R = document.getElementById('cv2-res'); R.className='cv2-res';
+  if(st.total<=0) R.innerHTML='<span class="cv2-msg">Tildá al menos un renglón para cobrar.</span>';
+  else if(st.diff>0.5){ R.classList.add('ok'); R.innerHTML='<span class="cv2-msg">El socio entregó de más. Queda como <b style="color:var(--cv2-ok)">saldo a favor</b> para la próxima.</span><span class="cv2-big">A FAVOR '+cv2Money(st.diff)+'</span>'; }
+  else if(st.diff<-0.5){ R.classList.add('bad'); R.innerHTML='<span class="cv2-msg">Recibiste <b>'+cv2Money(-st.diff)+' menos</b> que lo tildado. Bajá el importe de un renglón (pago parcial) o destildalo.</span><span class="cv2-big">FALTAN '+cv2Money(-st.diff)+'</span>'; }
+  else R.innerHTML='<span class="cv2-msg">Recibido justo. Sin saldo a favor.</span>';
+  // Resumen: exactamente lo que se va a grabar
+  var ul=document.getElementById('cv2-sum-list'); ul.innerHTML='';
+  st.sel.forEach(function(i){
+    var parcial = i.monto < i.falta - 0.5;
+    var lbl = i.tipo==='mes' ? periodoLabel(i.mes)+' · '+esc(i.plan)+(i.descHno>0?' <small>(c/desc. hno)</small>':'') : esc(i.plan)+' <small>(arancel único)</small>';
+    ul.insertAdjacentHTML('beforeend','<li><span>'+lbl+(parcial?' <small>· parcial, queda debiendo '+cv2Money(i.falta-i.monto)+'</small>':'')+'</span><span class="cv2-n">'+cv2Money(i.monto)+'</span></li>');
+  });
+  if(st.ex) ul.insertAdjacentHTML('beforeend','<li><span>'+esc(st.ex.desc)+' <small>(extraordinario)</small></span><span class="cv2-n">'+cv2Money(st.ex.monto)+'</span></li>');
+  if(st.usaFavor>0) ul.insertAdjacentHTML('beforeend','<li class="usa"><span>Se usa saldo a favor que ya tenía</span><span class="cv2-n">−'+cv2Money(st.usaFavor)+'</span></li>');
+  if(st.diff>0.5) ul.insertAdjacentHTML('beforeend','<li class="fav"><span>Nuevo saldo a favor (vuelto no entregado)</span><span class="cv2-n">+'+cv2Money(st.diff)+'</span></li>');
+  var nTx = st.sel.length+(st.ex?1:0);
+  document.getElementById('cv2-ntx').textContent = nTx+' transacci'+(nTx===1?'ón':'ones')+(st.diff>0.5?' + favor':'');
+  // Estado después del pago
+  var pend = items.filter(function(i){ return (i.tipo==='mes'&&i.estado==='debe')||i.tipo==='arancel'; });
+  var restaMes = pend.filter(function(i){ return i.tipo==='mes'; }).reduce(function(s,i){ return s + (i.on ? Math.max(0,i.falta-i.monto) : i.falta); },0);
+  var cub = items.filter(function(i){ return i.tipo==='mes' && i.on && i.monto>=i.falta-0.5; }).map(function(i){ return i.mes; }).sort();
+  var ult = cub.length ? cub[cub.length-1] : null;
+  var favFinal = (st.favDisp - st.usaFavor) + Math.max(0,st.diff);
+  var after;
+  if(restaMes<=0.5){
+    after = '<span class="cv2-pill ok">Al día</span> después de este pago'+(ult?' · cubierto hasta <b>'+periodoLabel(ult)+'</b>':'');
+    var aranPend = pend.filter(function(i){ return i.tipo==='arancel' && (!i.on || i.monto<i.falta-0.5); });
+    if(aranPend.length) after += ' · <span style="color:var(--cv2-warn)">arancel pendiente '+cv2Money(aranPend.reduce(function(s,i){ return s+(i.on?i.falta-i.monto:i.falta); },0))+'</span>';
+  } else {
+    var det = pend.filter(function(i){ return i.tipo==='mes' && (!i.on || i.monto<i.falta-0.5); }).map(function(i){ return esc(i.plan)+' '+_mesNombreCorto(i.mes)+' '+cv2Money(i.on?i.falta-i.monto:i.falta); }).join(' · ');
+    after = '<span class="cv2-pill debe">Sigue debiendo '+cv2Money(restaMes)+'</span> <span>'+det+'</span>';
+  }
+  if(favFinal>0.5) after += ' · <b style="color:var(--cv2-ok)">'+cv2Money(favFinal)+' a favor</b>';
+  document.getElementById('cv2-after').innerHTML = after;
+  var b=document.getElementById('cv2-btn'); b.disabled = !st.ok || cv2Ctx.hecho || cv2Ctx.enviando;
+  document.getElementById('cv2-why').textContent = (cv2Ctx.hecho||st.ok) ? '' : st.why;
+}
+
+// ── Confirmar y grabar: UNA cuota por renglón, sin reparto ──
+function cv2Confirmar(){
+  if(!cv2Ctx || cv2Ctx.enviando || cv2Ctx.hecho) return;
+  var st = cv2Estado(); if(!st.ok){ cv2Recalc(); return; }
+  var fecha = document.getElementById('cv2-fecha').value;
+  if(!fecha) return alert('Completá la fecha de pago');
+  var lim = new Date(new Date().setDate(new Date().getDate()+7)).toISOString().split('T')[0];
+  if(fecha>lim) return alert('La fecha de pago no puede ser más de 7 días en el futuro');
+  var metodoSel = document.getElementById('cv2-metodo').value;
+  var metodo = (st.usaFavor>0 && st.aCubrir<=0.5) ? 'Saldo a favor' : metodoSel;
+  var cobrador = document.getElementById('cv2-cobrador').value, obs = (document.getElementById('cv2-obs').value||'').trim();
+  var mesHoy = cv2Ctx.mesHoy;
+  var txs = st.sel.map(function(i){
+    if(i.tipo==='mes') return { plan:i.plan, monto:i.monto, periodo:periodoLabel(i.mes), periodoDesde:i.mes+'-01', periodoHasta:cv2UltimoDia(i.mes), label:periodoLabel(i.mes)+' · '+i.plan, mes:i.mes };
+    return { plan:i.plan, monto:i.monto, periodo:periodoLabel(mesHoy), periodoDesde:mesHoy+'-01', periodoHasta:cv2UltimoDia(mesHoy), label:i.plan+' (arancel)', mes:null };
+  });
+  if(st.ex) txs.push({ plan:st.ex.desc, monto:st.ex.monto, periodo:periodoLabel(mesHoy), periodoDesde:mesHoy+'-01', periodoHasta:cv2UltimoDia(mesHoy), label:st.ex.desc+' (extraordinario)', mes:null });
+  var resumen = txs.map(function(t){ return '&bull; '+esc(t.label)+': <b>'+cv2Money(t.monto)+'</b>'; }).join('<br>')
+    + (st.usaFavor>0 ? '<br>&bull; Usa saldo a favor: <b>−'+cv2Money(st.usaFavor)+'</b>' : '')
+    + (st.diff>0.5 ? '<br>&bull; Nuevo saldo a favor: <b>+'+cv2Money(st.diff)+'</b>' : '');
+  sgdConfirm('Se van a grabar <b>'+txs.length+'</b> transacci'+(txs.length===1?'ón':'ones')+' para <b>'+esc(cv2Ctx.nombre)+'</b>:<br><br>'+resumen+'<br><br>Método: <b>'+esc(metodo)+'</b> · Fecha: <b>'+esc(fecha)+'</b>',
+    function(){ cv2Grabar(txs, { fecha:fecha, metodo:metodo, cobrador:cobrador, obs:obs, usaFavor:st.usaFavor, diff:st.diff }); }, 'GRABAR');
+}
+function cv2Grabar(txs, o){
+  cv2Ctx.enviando = true; document.getElementById('cv2-btn').disabled = true;
+  mostrarLoader('Grabando '+txs.length+' transacci'+(txs.length===1?'ón':'ones')+'...');
+  var dni=cv2Ctx.dni, nombre=cv2Ctx.nombre, f=cv2Ctx.f, hoja=f[f.length-2];
+  var k=0, errs=[];
+  var obsBase = o.obs + (o.usaFavor>0 ? (o.obs?' · ':'')+'usa '+cv2Money(o.usaFavor)+' a favor' : '');
+  function next(){
+    if(k>=txs.length) return cv2PostGrabar(txs, o, errs);
+    var t = txs[k++];
+    var p = { doc:dni, nombre:nombre, plan:t.plan, concepto:t.plan, periodo:t.periodo, periodoDesde:t.periodoDesde, periodoHasta:t.periodoHasta, fechaPago:o.fecha, monto:t.monto, metodo:o.metodo, cobrador:o.cobrador, obs:obsBase, hoja:hoja };
+    callScript({action:'registrarPago', pago:p, pass:TOKEN, _noRetry:true}, function(res){
+      var row=[p.doc,p.nombre,p.plan,p.periodoDesde,p.periodoHasta,p.fechaPago,p.monto,p.metodo,p.cobrador,p.obs]; row._fsId=(res&&res.id)||''; row._ts=Date.now();
+      _pushCuotaUnique(row); next();
+    }, function(e){ errs.push(t.label+': '+e); next(); });
+  }
+  next();
+}
+function cv2PostGrabar(txs, o, errs){
+  var ctx=cv2Ctx, f=ctx.f, dni=ctx.dni;
+  // Saldo a favor: +vuelto no entregado, −favor usado. Misma mecánica que el modal viejo (ajusteSaldo + auditoria_saldos).
+  var delta = (o.diff>0.5?o.diff:0) - (o.usaFavor>0?o.usaFavor:0);
+  function fin(){
+    ocultarLoader(); ctx.enviando=false; ctx.hecho=true;
+    var total = txs.reduce(function(s,t){ return s+t.monto; },0);
+    var meses = txs.filter(function(t){ return t.mes; }).map(function(t){ return t.mes; }).sort();
+    var ult = meses.length ? meses[meses.length-1] : ctx.mesHoy;
+    var periodoTxt = meses.length ? (meses[0]===ult ? periodoLabel(ult) : periodoLabel(meses[0])+' a '+periodoLabel(ult)) : periodoLabel(ctx.mesHoy);
+    var planes = []; txs.forEach(function(t){ if(planes.indexOf(t.plan)<0) planes.push(t.plan); });
+    window._ultimoPago = { nombre:ctx.nombre, dni:dni, email:f?(f[COL.EMAIL]||''):'', categoria:f?(f[COL.CATEGORIA_APP]||''):'', planAct:planes.join(' + '), moTotal:total, periodo:periodoTxt, vigente:cv2UltimoDia(ult), fechaPago:o.fecha, cobrador:o.cobrador, metodo:o.metodo };
+    cv2Cerrar();
+    try{ renderCuotas(); }catch(_){ }
+    try{ renderPlayers(); }catch(_){ }
+    try{ cv2Render(); }catch(_){ }
+    if(errs.length) alert('Se grabaron '+(txs.length-errs.length)+' de '+txs.length+' transacciones. Fallaron:\n'+errs.join('\n'));
+    else toast('Pago grabado: '+txs.length+' transacci'+(txs.length===1?'ón':'ones')+(o.diff>0.5?' · +'+cv2Money(o.diff)+' a favor':''), 'ok');
+    try{ ofrecerEnvioComprobante(window._ultimoPago); }catch(_){ }
+  }
+  if(Math.abs(delta)<0.5 || !f) return fin();
+  try{
+    var anterior = (typeof f.ajusteSaldo==='number') ? f.ajusteSaldo : 0;
+    var nuevo = Math.round((anterior+delta)*100)/100;
+    var usuario = (window.ADMIN_USER || (typeof localStorage!=='undefined' && localStorage.getItem('admin_user')) || 'admin');
+    var nombreSocio = (f[COL.APELLIDO]||'')+', '+(f[COL.NOMBRE]||'');
+    var partes=[]; if(o.usaFavor>0) partes.push('usó '+cv2Money(o.usaFavor)+' a favor'); if(o.diff>0.5) partes.push('vuelto no entregado +'+cv2Money(o.diff));
+    var batch=db.batch();
+    batch.update(db.collection('socios').doc(String(dni)), { ajusteSaldo:nuevo });
+    batch.set(db.collection('auditoria_saldos').doc(), { dni:String(dni), nombreSocio:nombreSocio, montoAnterior:anterior, montoNuevo:nuevo, delta:delta, motivo:'Cobro V2: '+partes.join(' · '), modificadoPor:usuario, fecha:firebase.firestore.FieldValue.serverTimestamp() });
+    batch.commit().then(function(){ f.ajusteSaldo=nuevo; fin(); }).catch(function(err){ alert('Pago grabado, pero falló el ajuste del saldo a favor: '+(err&&err.message?err.message:err)+'\nAjustalo desde "Editar saldo".'); fin(); });
+  }catch(e){ alert('Pago grabado, pero falló el ajuste del saldo a favor: '+e.message); fin(); }
 }
 
 </script>
