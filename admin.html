@@ -1960,7 +1960,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.35</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.36</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -11511,7 +11511,8 @@ function cv2Abrir(f){
   document.getElementById('cv2-obs').value='';
   document.getElementById('cv2-ex-on').checked=false; document.getElementById('cv2-ex-fields').style.display='none';
   document.getElementById('cv2-ex-desc').value=''; document.getElementById('cv2-ex-monto').value='';
-  document.getElementById('cv2-usar-favor').checked=false; document.getElementById('cv2-metodo').selectedIndex=0;
+  document.getElementById('cv2-usar-favor').checked=false;
+  document.getElementById('cv2-metodo').value='Transferencia'; // default V2: la mayoría de los cobros son transferencia
   var cob = document.getElementById('cv2-cobrador');
   cob.innerHTML = (DB.profesores||[]).map(function(p){ return '<option>'+esc(p[0])+'</option>'; }).join('') || '<option>Sin especificar</option>';
   for (var ci=0; ci<cob.options.length; ci++){ var t=(cob.options[ci].text||'').toLowerCase(); if(t.indexOf('juana')>=0 && t.indexOf('sestua')>=0){ cob.selectedIndex=ci; break; } }
