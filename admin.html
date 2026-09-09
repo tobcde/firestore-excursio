@@ -1960,7 +1960,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.42</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.43</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -6003,7 +6003,7 @@ function enviarComprobanteEmail() {
   datos.email = email;
   mostrarLoader('Enviando comprobante...');
   _enviarComprobante(datos, email,
-    function(){ cerrarModalComprobante(); toast('Comprobante enviado a '+email, 'ok'); },
+    function(){ cerrarModalComprobante(); toast('Comprobante enviado a '+email, 'ok'); try{ cv2MarcarEnviado(datos.dni); }catch(_){ } },
     function(err){ alert('Error al enviar: ' + err); }
   );
 }
@@ -11423,8 +11423,36 @@ function cv2Init(){
     DB.jugadores.slice(1).forEach(function(f){ var c = f[COL.CATEGORIA_APP]; if(c) cats[c]=1; });
     Object.keys(cats).sort().forEach(function(c){ var o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
   }
-  cv2Render();
+  cv2CargarEnviados(function(){ cv2Render(); });
 }
+
+// Comprobantes de HOY ya enviados OK → para tildarlos en la lista y no mandar dos veces.
+function cv2CargarEnviados(cb){
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  db.collection('auditoria_emails').where('fecha','>=',hoy).get()
+    .then(function(snap){
+      var m = {};
+      snap.forEach(function(d){
+        var x = d.data();
+        if (x.tipo !== 'comprobante' || x.estado !== 'ok') return;
+        var dni = String(x.socioDni||''); if(!dni) return;
+        var f = (x.fecha && x.fecha.toDate) ? x.fecha.toDate() : new Date();
+        if (!m[dni] || f > m[dni]) m[dni] = f;
+      });
+      window._cv2Enviados = m;
+      if(cb) cb();
+    })
+    .catch(function(e){ console.warn('[cv2] enviados:', e); window._cv2Enviados = window._cv2Enviados||{}; if(cb) cb(); });
+}
+// Marca en el acto (sin ir a Firestore) cuando se manda un comprobante desde el modal.
+function cv2MarcarEnviado(dni){
+  if(!dni) return;
+  window._cv2Enviados = window._cv2Enviados || {};
+  window._cv2Enviados[String(dni).trim()] = new Date();
+  var tab = document.getElementById('tab-cuotasv2');
+  if (tab && tab.style.display !== 'none') cv2Render();
+}
+
 function cv2Render(){
   var lista = document.getElementById('cv2-lista'); if(!lista) return;
   var busq = (document.getElementById('cv2-busq').value||'').toLowerCase().trim();
@@ -11449,19 +11477,25 @@ function cv2Render(){
     rows.push({f:f, dni:dni, nom:nom, cat:cat, cv:cv, deuda:deuda, favor:favor});
   });
   rows.sort(function(a,b){ return (b.deuda-a.deuda) || a.nom.localeCompare(b.nom); });
+  var _env = window._cv2Enviados || {};
+  var _envN = rows.filter(function(r){ return _env[r.dni]; }).length;
   document.getElementById('cv2-stats').innerHTML =
-    '<span class="cv2-stat"><b>'+tDeben+'</b>deben</span><span class="cv2-stat"><b>'+cv2Money(sumDeuda)+'</b>deuda total</span><span class="cv2-stat"><b>'+tFavor+'</b>con saldo a favor</span>';
+    '<span class="cv2-stat"><b>'+tDeben+'</b>deben</span><span class="cv2-stat"><b>'+cv2Money(sumDeuda)+'</b>deuda total</span><span class="cv2-stat"><b>'+tFavor+'</b>con saldo a favor</span>'
+    + (filtro==='hoy' ? '<span class="cv2-stat" style="color:var(--cv2-ok);"><b style="color:var(--cv2-ok);">'+_envN+' de '+rows.length+'</b>comprobantes enviados</span>' : '');
   if(!rows.length){ lista.innerHTML='<div class="empty-state"><p>Sin resultados</p></div>'; return; }
   window._cv2Rows = rows;
   lista.innerHTML = rows.map(function(r,i){
     var est = r.deuda>0.5 ? '<span class="cv2-pill debe">Debe '+cv2Money(r.deuda)+'</span>' : '<span class="cv2-pill ok">Al d&iacute;a</span>';
     var fav = r.favor>0.5 ? '<span class="cv2-pill okd">+'+cv2Money(r.favor)+' a favor</span>' : '';
     var nMes = 0; (r.cv.detalle||[]).forEach(function(d){ if(!d.unico) nMes = Math.max(nMes,(d.mesesAdeudados||[]).length); });
-    return '<div class="cv2-row"><div><div class="cv2-nom">'+esc(r.nom)+'</div><div class="cv2-meta">DNI '+esc(r.dni)+' &middot; '+esc(r.cat||'Sin categoría')+' &middot; '+esc(r.cv.planNom||'—')+'</div></div>'
-      +'<div class="cv2-est">'+est+fav+(nMes?'<div class="cv2-meta">'+nMes+' mes'+(nMes===1?'':'es')+' vencido'+(nMes===1?'':'s')+'</div>':'')+'</div>'
+    var envF = _env[r.dni];
+    var envHora = envF ? envF.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}) : '';
+    var envPill = envF ? '<span class="cv2-pill okd" title="Ya se envió el comprobante">&#x2705; Comprobante enviado '+envHora+'</span>' : '';
+    return '<div class="cv2-row"'+(envF?' style="opacity:.72;"':'')+'><div><div class="cv2-nom">'+esc(r.nom)+'</div><div class="cv2-meta">DNI '+esc(r.dni)+' &middot; '+esc(r.cat||'Sin categoría')+' &middot; '+esc(r.cv.planNom||'—')+'</div></div>'
+      +'<div class="cv2-est">'+est+fav+envPill+(nMes?'<div class="cv2-meta">'+nMes+' mes'+(nMes===1?'':'es')+' vencido'+(nMes===1?'':'s')+'</div>':'')+'</div>'
       +'<div style="display:flex;gap:6px;align-items:center;justify-content:flex-end;">'
         +'<button class="btn btn-save cv2-cobrar" data-i="'+i+'">COBRAR</button>'
-        +'<button class="btn btn-secondary cv2-comp" data-i="'+i+'" style="padding:8px 12px;font-size:13px;" title="Enviar comprobante del &uacute;ltimo pago">&#x1F4E7;</button>'
+        +'<button class="btn '+(envF?'btn-secondary':'btn-gold')+' cv2-comp" data-i="'+i+'" style="padding:8px 12px;font-size:13px;" title="'+(envF?'Ya enviado — clic para reenviar':'Enviar comprobante del último pago')+'">'+(envF?'&#x2705;':'&#x1F4E7;')+'</button>'
       +'</div></div>';
   }).join('');
   lista.onclick = function(e){
