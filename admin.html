@@ -1960,7 +1960,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.38</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.39</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -11508,7 +11508,14 @@ function cv2Abrir(f){
     if(a.tipo==='mes'){ var c=a.mes.localeCompare(b.mes); if(c) return c; var ac=cv2EsCS(a.plan), bc=cv2EsCS(b.plan); if(ac!==bc) return ac?1:-1; }
     return a.plan.localeCompare(b.plan);
   });
-  cv2Ctx = { f:f, dni:dni, nombre:nombre, cv:cv, items:items, favorPrevio:Number(cv.saldoAFavor)||0, recTocado:false, enviando:false, hecho:false, mesHoy:mesHoy };
+  // Descuadre: la deuda del socio (cv.deuda) puede NO coincidir con la suma de los renglones.
+  // Pasa cuando hay un ajusteSaldo negativo (deuda que no está imputada a ningún mes) o cuando el
+  // motor compensó saldo a favor contra los meses. Si no se avisa, Juana cobra de menos.
+  var sumaRenglones = items.filter(function(i){ return i.estado==='debe' || i.tipo==='arancel'; })
+                           .reduce(function(s,i){ return s + i.falta; }, 0);
+  var descuadre = Math.round(((Number(cv.deuda)||0) - sumaRenglones) * 100) / 100;
+  var ajusteSaldo = (f && typeof f.ajusteSaldo === 'number') ? f.ajusteSaldo : 0;
+  cv2Ctx = { f:f, dni:dni, nombre:nombre, cv:cv, items:items, favorPrevio:Number(cv.saldoAFavor)||0, recTocado:false, enviando:false, hecho:false, mesHoy:mesHoy, descuadre:descuadre, sumaRenglones:sumaRenglones, ajusteSaldo:ajusteSaldo };
 
   var hnoInsc = null; inscVig.forEach(function(i){ if(!hnoInsc && cv2DescHno(i)>0) hnoInsc=i; });
   var hnoTxt = hnoInsc ? ' <span class="cv2-pill hno" title="El descuento hermano solo aplica al plan deportivo, nunca a Cuota Social">&#x1F465; Hermano'+(hnoInsc.hnoDe?' de '+esc(hnoInsc.hnoDe):'')+' &middot; −'+cv2Money(cv2DescHno(hnoInsc))+'</span>' : '';
@@ -11534,7 +11541,6 @@ function cv2Cerrar(){ document.getElementById('modalCobroV2').classList.remove('
 // ── Renglones ──
 function cv2RowHTML(it){
   var parcial = it.on && it.monto < it.falta - 0.5;
-  var exceso  = it.on && it.monto > it.falta + 0.5;   // paga más de lo que figura adeudado → queda a favor
   var sub;
   if (it.tipo==='mes'){
     var pre = it.estado==='debe' ? 'vencido &middot; ' : 'adelantar &middot; ';
@@ -11544,22 +11550,32 @@ function cv2RowHTML(it){
       sub = pre + cv2Money(it.precio)+'/mes' + ((cv2EsCS(it.plan) && hayHno) ? ' &middot; sin desc. hno' : '');
     }
     if (it.parcialPrevio && it.falta < it.precio - 0.5) sub += ' &middot; ya pagó '+cv2Money(it.precio-it.falta)+', falta '+cv2Money(it.falta);
-    // Falta menos que el precio sin que haya pago parcial de ese mes → el motor le aplicó saldo a favor
-    // (ej: sobrepago en otro plan/mes). Decirlo evita que parezca un error de cálculo.
-    else if (!it.parcialPrevio && it.estado==='debe' && it.falta < it.precio - 0.5) sub += ' &middot; <span class="cv2-pill okd">se aplicaron '+cv2Money(it.precio-it.falta)+' de saldo a favor</span>';
   } else sub = 'arancel único &middot; se cobra una sola vez';
   return '<input type="checkbox" '+(it.on?'checked':'')+' data-cb="'+it.id+'">'
     +'<span class="cv2-ico">'+(it.tipo==='mes'?cv2Icono(it.plan):'&#x1F3AB;')+'</span>'
     +'<span class="cv2-pl">'+esc(it.plan)+'<small>'+sub+'</small></span>'
     +'<span class="cv2-pr">'+(parcial?'<s>'+cv2Money(it.falta)+'</s> ':'')+(it.on?cv2Money(it.monto):'—')+'</span>'
     +'<input class="cv2-amt" type="number" min="0" max="'+it.precio+'" step="500" value="'+it.monto+'" data-amt="'+it.id+'" '+(it.on?'':'disabled')+' aria-label="Importe '+esc(it.plan)+'">'
-    +(parcial?'<div class="cv2-badge"><span class="cv2-pill warn">Parcial &middot; queda '+cv2Money(it.falta-it.monto)+'</span></div>'
-      :(exceso?'<div class="cv2-badge"><span class="cv2-pill okd">Paga '+cv2Money(it.monto-it.falta)+' m&aacute;s de lo que figura adeudado &rarr; queda a favor</span></div>':''));
+    +(parcial?'<div class="cv2-badge"><span class="cv2-pill warn">Parcial &middot; queda '+cv2Money(it.falta-it.monto)+'</span></div>':'');
 }
 function cv2BuildLedger(){
   var L = document.getElementById('cv2-ledger'); L.innerHTML='';
   var items = cv2Ctx.items;
-  if(!items.length){ L.innerHTML='<div class="empty-state" style="padding:14px;"><p>Este socio está al día y no tiene meses para adelantar ni aranceles pendientes.</p></div>'; return; }
+  // Aviso de descuadre (ver cv2Abrir): los renglones no cubren toda la deuda del socio.
+  if (Math.abs(cv2Ctx.descuadre) > 0.5) {
+    var falta = cv2Ctx.descuadre > 0;
+    var causa = cv2Ctx.ajusteSaldo < -0.5
+      ? 'Tiene un <b>ajuste de saldo manual de '+cv2Money(cv2Ctx.ajusteSaldo)+'</b>, que suma deuda pero no está imputada a ningún mes.'
+      : 'El sistema aplicó saldo a favor sobre los meses adeudados.';
+    L.insertAdjacentHTML('beforeend',
+      '<div style="border:1px solid var(--red-border);background:var(--red-dim);border-radius:10px;padding:10px 12px;">'
+      +'<div style="color:var(--red);font-weight:700;font-size:13px;">&#9888; Ojo: los renglones no coinciden con la deuda</div>'
+      +'<div style="font-size:12px;color:var(--text);margin-top:5px;line-height:1.5;">'
+      +'Este socio figura debiendo <b>'+cv2Money(cv2Ctx.cv.deuda)+'</b>, pero los renglones de abajo suman <b>'+cv2Money(cv2Ctx.sumaRenglones)+'</b> ('
+      +(falta?'faltan':'sobran')+' '+cv2Money(Math.abs(cv2Ctx.descuadre))+').<br>'+causa
+      +'<br><b>No cobres por lo que sugieren los renglones sin revisar.</b> Avisá para corregir los datos del socio.</div></div>');
+  }
+  if(!items.length){ L.insertAdjacentHTML('beforeend','<div class="empty-state" style="padding:14px;"><p>Este socio está al día y no tiene meses para adelantar ni aranceles pendientes.</p></div>'); return; }
   var meses = []; items.forEach(function(i){ if(i.tipo==='mes' && meses.indexOf(i.mes)<0) meses.push(i.mes); }); meses.sort();
   var grupos = meses.map(function(m){
     var debe = items.some(function(i){ return i.tipo==='mes'&&i.mes===m&&i.estado==='debe'; });
@@ -11598,17 +11614,14 @@ function cv2BuildLedger(){
 function cv2PatchRow(it, keepInput){
   var row = document.querySelector('#cv2-ledger [data-row="'+it.id+'"]'); if(!row) return;
   var parcial = it.on && it.monto < it.falta - 0.5;
-  var exceso  = it.on && it.monto > it.falta + 0.5;
   row.classList.toggle('off', !it.on);
   row.querySelector('.cv2-pr').innerHTML = (parcial?'<s>'+cv2Money(it.falta)+'</s> ':'') + (it.on?cv2Money(it.monto):'—');
   var amt = row.querySelector('input.cv2-amt'); amt.disabled = !it.on; if(!keepInput && String(amt.value)!==String(it.monto)) amt.value = it.monto;
   var cb = row.querySelector('input[type=checkbox]'); if(cb.checked!==it.on) cb.checked=it.on;
   var bl = row.querySelector('.cv2-badge');
-  if(parcial||exceso){
+  if(parcial){
     if(!bl){ bl=document.createElement('div'); bl.className='cv2-badge'; row.appendChild(bl); }
-    bl.innerHTML = parcial
-      ? '<span class="cv2-pill warn">Parcial &middot; queda '+cv2Money(it.falta-it.monto)+'</span>'
-      : '<span class="cv2-pill okd">Paga '+cv2Money(it.monto-it.falta)+' m&aacute;s de lo que figura adeudado &rarr; queda a favor</span>';
+    bl.innerHTML = '<span class="cv2-pill warn">Parcial &middot; queda '+cv2Money(it.falta-it.monto)+'</span>';
   }
   else if(bl) bl.remove();
 }
@@ -11666,8 +11679,7 @@ function cv2Recalc(){
   st.sel.forEach(function(i){
     var parcial = i.monto < i.falta - 0.5;
     var lbl = i.tipo==='mes' ? periodoLabel(i.mes)+' · '+esc(i.plan)+(i.descHno>0?' <small>(c/desc. hno)</small>':'') : esc(i.plan)+' <small>(arancel único)</small>';
-    var excesoR = i.monto > i.falta + 0.5;
-    ul.insertAdjacentHTML('beforeend','<li><span>'+lbl+(parcial?' <small>· parcial, queda debiendo '+cv2Money(i.falta-i.monto)+'</small>':'')+(excesoR?' <small>· '+cv2Money(i.monto-i.falta)+' más de lo adeudado, queda a favor</small>':'')+'</span><span class="cv2-n">'+cv2Money(i.monto)+'</span></li>');
+    ul.insertAdjacentHTML('beforeend','<li><span>'+lbl+(parcial?' <small>· parcial, queda debiendo '+cv2Money(i.falta-i.monto)+'</small>':'')+'</span><span class="cv2-n">'+cv2Money(i.monto)+'</span></li>');
   });
   if(st.ex) ul.insertAdjacentHTML('beforeend','<li><span>'+esc(st.ex.desc)+' <small>(extraordinario)</small></span><span class="cv2-n">'+cv2Money(st.ex.monto)+'</span></li>');
   if(st.usaFavor>0) ul.insertAdjacentHTML('beforeend','<li class="usa"><span>Se usa saldo a favor que ya tenía</span><span class="cv2-n">−'+cv2Money(st.usaFavor)+'</span></li>');
@@ -11679,8 +11691,7 @@ function cv2Recalc(){
   var restaMes = pend.filter(function(i){ return i.tipo==='mes'; }).reduce(function(s,i){ return s + (i.on ? Math.max(0,i.falta-i.monto) : i.falta); },0);
   var cub = items.filter(function(i){ return i.tipo==='mes' && i.on && i.monto>=i.falta-0.5; }).map(function(i){ return i.mes; }).sort();
   var ult = cub.length ? cub[cub.length-1] : null;
-  var excesoTot = st.sel.reduce(function(s,i){ return s + Math.max(0, i.monto - i.falta); },0);  // sobrepagos por renglón → favor
-  var favFinal = (st.favDisp - st.usaFavor) + Math.max(0,st.diff) + excesoTot;
+  var favFinal = (st.favDisp - st.usaFavor) + Math.max(0,st.diff);
   var after;
   if(restaMes<=0.5){
     after = '<span class="cv2-pill ok">Al día</span> después de este pago'+(ult?' · cubierto hasta <b>'+periodoLabel(ult)+'</b>':'');
