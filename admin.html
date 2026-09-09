@@ -369,7 +369,14 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 .cv2-stats{display:flex;gap:18px;flex-wrap:wrap;}
 .cv2-stat{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
 .cv2-stat b{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--secondary);margin-right:6px;font-variant-numeric:tabular-nums;}
-.cv2-filters{display:grid;grid-template-columns:1fr 200px 200px;gap:10px;}
+.cv2-filters{display:grid;grid-template-columns:1fr 210px 160px 190px;gap:10px;}
+.cv2-selbar{display:none;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 14px;border-radius:10px;background:var(--secondary-dim);border:1px solid var(--secondary-border);}
+.cv2-selbar label{display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:13px;}
+.cv2-selbar input[type=checkbox]{width:16px;height:16px;accent-color:var(--primary);margin:0;cursor:pointer;}
+.cv2-selinfo{flex:1;font-size:12px;color:var(--muted);}
+.cv2-selinfo b{color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:16px;}
+.cv2-lista.sel .cv2-row{grid-template-columns:26px 1fr auto auto;}
+.cv2-chk{width:16px;height:16px;accent-color:var(--primary);margin:0;cursor:pointer;}
 .cv2-lista{display:flex;flex-direction:column;gap:6px;}
 .cv2-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:14px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;}
 .cv2-nom{font-weight:700;font-size:14px;}
@@ -586,9 +593,15 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
     <div class="cv2-filters">
       <input id="cv2-busq" class="edit-input" placeholder="Buscar por apellido, nombre o DNI" oninput="cv2Render()">
       <select id="cv2-filtro" class="edit-input" onchange="cv2Render()">
-        <option value="deben">Deben</option><option value="hoy">Pagaron hoy (para comprobantes)</option><option value="todos">Todos los activos</option><option value="favor">Con saldo a favor</option><option value="ok">Al d&iacute;a</option>
+        <option value="deben">Deben</option><option value="hoy">Pagaron el d&iacute;a&hellip; (comprobantes)</option><option value="todos">Todos los activos</option><option value="favor">Con saldo a favor</option><option value="ok">Al d&iacute;a</option>
       </select>
+      <input id="cv2-fecha-filtro" type="date" class="edit-input" onchange="cv2Render()" title="Qu&eacute; d&iacute;a de pagos mostrar" style="visibility:hidden;">
       <select id="cv2-cat" class="edit-input" onchange="cv2Render()"><option value="">Todas las categor&iacute;as</option></select>
+    </div>
+    <div id="cv2-selbar" class="cv2-selbar">
+      <label><input type="checkbox" id="cv2-selall" onchange="cv2SelTodos(this.checked)"> Seleccionar todos</label>
+      <span class="cv2-selinfo" id="cv2-selinfo"></span>
+      <button class="btn btn-gold" id="cv2-selenviar" onclick="cv2EnviarLote()" style="padding:9px 16px;font-size:13px;">&#x1F4E7; Enviar comprobantes</button>
     </div>
     <div id="cv2-lista" class="cv2-lista"></div>
   </div>
@@ -1960,7 +1973,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.43</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.44</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -11450,7 +11463,7 @@ function cv2MarcarEnviado(dni){
   window._cv2Enviados = window._cv2Enviados || {};
   window._cv2Enviados[String(dni).trim()] = new Date();
   var tab = document.getElementById('tab-cuotasv2');
-  if (tab && tab.style.display !== 'none') cv2Render();
+  if (tab && tab.style.display !== 'none' && !window._cv2Batch) cv2Render();
 }
 
 function cv2Render(){
@@ -11458,6 +11471,10 @@ function cv2Render(){
   var busq = (document.getElementById('cv2-busq').value||'').toLowerCase().trim();
   var filtro = document.getElementById('cv2-filtro').value;
   var fcat = document.getElementById('cv2-cat').value;
+  var _fechaFil = cv2FechaFiltro();
+  var _fEl = document.getElementById('cv2-fecha-filtro');
+  if(_fEl) _fEl.style.visibility = (filtro==='hoy') ? 'visible' : 'hidden';
+  window._cv2Sel = window._cv2Sel || {};
   var rows = [], tDeben=0, tFavor=0, sumDeuda=0;
   DB.jugadores.slice(1).forEach(function(f){
     var a = f[COL.ACTIVO]; if(!(a===true||String(a).toLowerCase()==='si')) return;
@@ -11471,7 +11488,7 @@ function cv2Render(){
     if(filtro==='deben' && deuda<=0.5) return;
     if(filtro==='favor' && favor<=0.5) return;
     if(filtro==='ok' && deuda>0.5) return;
-    if(filtro==='hoy' && !cv2PagoHoy(dni)) return;
+    if(filtro==='hoy' && !cv2PagoEnFecha(dni, _fechaFil)) return;
     if(fcat && cat!==fcat) return;
     if(busq && nom.toLowerCase().indexOf(busq)<0 && dni.indexOf(busq)<0) return;
     rows.push({f:f, dni:dni, nom:nom, cat:cat, cv:cv, deuda:deuda, favor:favor});
@@ -11491,7 +11508,9 @@ function cv2Render(){
     var envF = _env[r.dni];
     var envHora = envF ? envF.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}) : '';
     var envPill = envF ? '<span class="cv2-pill okd" title="Ya se envió el comprobante">&#x2705; Comprobante enviado '+envHora+'</span>' : '';
-    return '<div class="cv2-row"'+(envF?' style="opacity:.72;"':'')+'><div><div class="cv2-nom">'+esc(r.nom)+'</div><div class="cv2-meta">DNI '+esc(r.dni)+' &middot; '+esc(r.cat||'Sin categoría')+' &middot; '+esc(r.cv.planNom||'—')+'</div></div>'
+    return '<div class="cv2-row"'+(envF?' style="opacity:.72;"':'')+'>'
+      +(filtro==='hoy' ? '<div><input type="checkbox" class="cv2-chk" data-dni="'+esc(r.dni)+'"'+(window._cv2Sel[r.dni]?' checked':'')+'></div>' : '')
+      +'<div><div class="cv2-nom">'+esc(r.nom)+'</div><div class="cv2-meta">DNI '+esc(r.dni)+' &middot; '+esc(r.cat||'Sin categoría')+' &middot; '+esc(r.cv.planNom||'—')+'</div></div>'
       +'<div class="cv2-est">'+est+fav+envPill+(nMes?'<div class="cv2-meta">'+nMes+' mes'+(nMes===1?'':'es')+' vencido'+(nMes===1?'':'s')+'</div>':'')+'</div>'
       +'<div style="display:flex;gap:6px;align-items:center;justify-content:flex-end;">'
         +'<button class="btn btn-save cv2-cobrar" data-i="'+i+'">COBRAR</button>'
@@ -11504,14 +11523,132 @@ function cv2Render(){
     var be = e.target.closest('.cv2-comp');
     if(be){ cv2Comprobante(parseInt(be.getAttribute('data-i'),10)); }
   };
+  lista.onchange = function(e){
+    var chk = e.target.closest('.cv2-chk'); if(!chk) return;
+    var dni = chk.getAttribute('data-dni');
+    window._cv2Sel = window._cv2Sel || {};
+    if(chk.checked) window._cv2Sel[dni] = true; else delete window._cv2Sel[dni];
+    cv2SelInfo();   // no re-render: no perder el scroll ni el resto de los tildes
+  };
+  cv2SelInfo();
 }
 
-// ¿El socio registró algún pago con fechaPago = hoy? (filtro "Pagaron hoy", para mandar comprobantes)
-function cv2PagoHoy(dni){
-  var hoy = hoyISO();
+// ¿El socio registró algún pago en esa fecha? (filtro "Pagaron el día…", para mandar comprobantes)
+function cv2PagoEnFecha(dni, fecha){
+  if(!fecha) fecha = hoyISO();
   return (CUOTAS_DB.cuotas||[]).some(function(c){
-    return c && String(c[0]).trim()===String(dni) && normFecha(String(c[5]||'')).substring(0,10)===hoy;
+    return c && String(c[0]).trim()===String(dni) && normFecha(String(c[5]||'')).substring(0,10)===fecha;
   });
+}
+function cv2FechaFiltro(){
+  var el = document.getElementById('cv2-fecha-filtro');
+  if(el && !el.value) el.value = hoyISO();
+  return (el && el.value) ? el.value : hoyISO();
+}
+
+// Arma los datos del comprobante de un socio para una fecha de pago dada (o el último pago).
+// Agrupa todas las cuotas de ese día: suma montos, junta planes y arma el período real.
+function cv2DatosComprobante(dni, nombre, email, fecha){
+  var pagos = (CUOTAS_DB.cuotas||[]).filter(function(c){
+    if(!c || String(c[0]).trim()!==String(dni)) return false;
+    if(String(c[2]||'').indexOf('Historico')===0) return false;
+    if((Number(c[6])||0)<=0) return false;
+    if(fecha) return normFecha(String(c[5]||'')).substring(0,10)===fecha;
+    return true;
+  });
+  if(!pagos.length) return null;
+  if(!fecha){ // sin fecha: tomar el lote del último pago
+    pagos.sort(function(a,b){
+      var ta=(a._ts&&a._ts.toMillis)?a._ts.toMillis():(a._ts||0), tb=(b._ts&&b._ts.toMillis)?b._ts.toMillis():(b._ts||0);
+      return (tb-ta) || String(b[5]||'').localeCompare(String(a[5]||''));
+    });
+    var f0 = pagos[0][5];
+    pagos = pagos.filter(function(c){ return c[5]===f0; });
+  }
+  var planes=[], monto=0, metodo='', cobrador='', meses=[], vig=[];
+  pagos.forEach(function(c){
+    var pl=String(c[2]||''); if(pl && planes.indexOf(pl)<0) planes.push(pl);
+    monto += Number(c[6])||0;
+    if(!metodo) metodo=String(c[7]||''); if(!cobrador) cobrador=String(c[8]||'');
+    var m=normFecha(String(c[3]||'')).substring(0,7); if(m && meses.indexOf(m)<0) meses.push(m);
+    var v=normFecha(String(c[4]||'')); if(v) vig.push(v);
+  });
+  meses.sort(); vig.sort();
+  var periodo = meses.length ? (meses[0]===meses[meses.length-1] ? periodoLabel(meses[0])
+                : periodoLabel(meses[0])+' a '+periodoLabel(meses[meses.length-1])) : '';
+  return { nombre:nombre||'', dni:String(dni), email:email||'', planAct:planes.join(' + '), plSoc:'',
+           moTotal:monto, periodo:periodo, vigente:vig.length?vig[vig.length-1]:'',
+           metodo:metodo||'Efectivo', cobrador:cobrador||'' };
+}
+
+// ── Selección múltiple ──
+function cv2SelTodos(on){
+  window._cv2Sel = {};
+  if(on) (window._cv2Rows||[]).forEach(function(r){ window._cv2Sel[r.dni] = true; });
+  cv2Render();
+}
+function cv2SelInfo(){
+  var sel = window._cv2Sel || {};
+  var rows = window._cv2Rows || [];
+  var n = rows.filter(function(r){ return sel[r.dni]; }).length;
+  var bar = document.getElementById('cv2-selbar');
+  var esModoComprobante = document.getElementById('cv2-filtro').value === 'hoy';
+  if(bar) bar.style.display = esModoComprobante ? 'flex' : 'none';
+  var lista = document.getElementById('cv2-lista');
+  if(lista) lista.classList.toggle('sel', esModoComprobante);
+  if(!esModoComprobante) return;
+  var env = window._cv2Enviados || {};
+  var pend = rows.filter(function(r){ return sel[r.dni] && !env[r.dni]; }).length;
+  var yaEnv = n - pend;
+  var info = document.getElementById('cv2-selinfo');
+  if(info) info.innerHTML = n
+    ? '<b>'+n+'</b> seleccionado'+(n===1?'':'s')+(yaEnv?' <span style="color:var(--cv2-ok);">('+yaEnv+' ya ten'+(yaEnv===1?'ía':'ían')+' comprobante)</span>':'')
+    : 'Tildá socios para enviar comprobantes en lote.';
+  var btn = document.getElementById('cv2-selenviar');
+  if(btn){ btn.disabled = !n; btn.textContent = n ? '📧 Enviar ' + n + ' comprobante'+(n===1?'':'s') : '📧 Enviar comprobantes'; }
+  var all = document.getElementById('cv2-selall');
+  if(all) all.checked = rows.length>0 && n===rows.length;
+}
+
+// Envío en lote: uno por vez, con pausa entre mails para no chocar el límite de Gmail.
+function cv2EnviarLote(){
+  var sel = window._cv2Sel || {}, env = window._cv2Enviados || {};
+  var fecha = cv2FechaFiltro();
+  var lista = (window._cv2Rows||[]).filter(function(r){ return sel[r.dni]; });
+  if(!lista.length) return;
+  var sinMail = lista.filter(function(r){ return !((r.f[COL.EMAIL]||'').toString().trim()); });
+  var yaEnv   = lista.filter(function(r){ return env[r.dni]; });
+  var aEnviar = lista.filter(function(r){ return (r.f[COL.EMAIL]||'').toString().trim(); });
+  if(!aEnviar.length) return alert('Ninguno de los seleccionados tiene email cargado.');
+  var msg = 'Enviar <b>'+aEnviar.length+'</b> comprobante'+(aEnviar.length===1?'':'s')+' de los pagos del <b>'+fecha+'</b>.'
+    + (yaEnv.length ? '<br><br>&#9888; <b>'+yaEnv.length+'</b> ya recibieron el comprobante hoy — se les volvería a enviar.' : '')
+    + (sinMail.length ? '<br><br>&#9888; <b>'+sinMail.length+'</b> sin email: se saltean ('+sinMail.slice(0,3).map(function(r){return esc(r.nom);}).join(', ')+(sinMail.length>3?'…':'')+').' : '')
+    + '<br><br>Se mandan de a uno, con pausa entre cada uno. Puede tardar ~'+Math.ceil(aEnviar.length*2.2/60)+' min.';
+  sgdConfirm(msg, function(){ cv2CorrerLote(aEnviar, fecha); }, 'ENVIAR');
+}
+function cv2CorrerLote(lista, fecha){
+  var i=0, ok=0, errs=[];
+  window._cv2Batch = true;
+  mostrarLoader('Enviando comprobantes... 0 de '+lista.length);
+  function siguiente(){
+    if(i>=lista.length){
+      window._cv2Batch = false; ocultarLoader();
+      cv2Render();
+      if(errs.length) alert('Enviados: '+ok+' de '+lista.length+'.\n\nFallaron:\n'+errs.slice(0,15).join('\n')+(errs.length>15?'\n…y '+(errs.length-15)+' más':''));
+      else toast(ok+' comprobante'+(ok===1?'':'s')+' enviado'+(ok===1?'':'s')+' correctamente', 'ok');
+      return;
+    }
+    var r = lista[i++];
+    mostrarLoader('Enviando comprobantes... '+i+' de '+lista.length+'\n'+r.nom);
+    var email = (r.f[COL.EMAIL]||'').toString().trim();
+    var datos = cv2DatosComprobante(r.dni, r.nom, email, fecha);
+    if(!datos){ errs.push(r.nom+': sin pagos en esa fecha'); return setTimeout(siguiente, 60); }
+    _enviarComprobante(datos, email,
+      function(){ ok++; cv2MarcarEnviado(r.dni); setTimeout(siguiente, 1500); },
+      function(e){ errs.push(r.nom+': '+e); setTimeout(siguiente, 1500); }
+    );
+  }
+  siguiente();
 }
 
 // Enviar el comprobante del ÚLTIMO pago de un socio, sin tener que volver a cobrarlo.
@@ -11520,7 +11657,8 @@ function cv2PagoHoy(dni){
 function cv2Comprobante(idx){
   var r = (window._cv2Rows||[])[idx]; if(!r) return;
   var email = (r.f[COL.EMAIL]||'').toString().trim();
-  var datos = _reconstruirComprobante(r.dni, r.nom, email);
+  var fecha = (document.getElementById('cv2-filtro').value==='hoy') ? cv2FechaFiltro() : null;
+  var datos = cv2DatosComprobante(r.dni, r.nom, email, fecha) || cv2DatosComprobante(r.dni, r.nom, email, null);
   if(!datos) return alert('No encontré pagos registrados de este socio para armar el comprobante.');
   window._ultimoPago = datos;
   document.getElementById('comp-nombre').innerText   = datos.nombre||'';
