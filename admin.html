@@ -1960,7 +1960,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.41</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.42</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3157,7 +3157,7 @@ function renderAll() {
     return {mes:r[0], anioD:r[1], diaD:r[2], anioH:r[3], diaH:r[4], gracia:r[5], desc:r[6]};
   });
   renderPeriodosAdmin();
-  document.getElementById('asistFecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('asistFecha').value = hoyISO();
   revisarPendientesCategoria();
 }
 
@@ -3435,7 +3435,7 @@ function abrirModalInscripcion() {
         return '<option value="' + a.nombre + '" data-monto="' + monto + '">' + (_emA ? _emA + ' ' : '') + a.nombre + (monto ? ' ($' + Number(monto).toLocaleString('es-AR') + ')' : '') + '</option>';
       }).join('');
   document.getElementById('mi-monto').value = '';
-  document.getElementById('mi-desde').value = new Date().toISOString().split('T')[0];
+  document.getElementById('mi-desde').value = hoyISO();
   document.getElementById('mi-hasta').value = '';
   document.getElementById('mi-obs').value = '';
   document.getElementById('mi-hno-de').value = '';
@@ -3493,7 +3493,7 @@ function confirmarInscripcion() {
 
 function darDeBajaInscripcion(rowIndex, dni) {
   sgdConfirm('Dar de baja esta inscripcion desde hoy?', function() {
-  var hoy = new Date().toISOString().split('T')[0];
+  var hoy = hoyISO();
   mostrarLoader('Actualizando...');
   callScript({action:'updateInscripcion', rowIndex:rowIndex, hasta:hoy, pass:TOKEN, _noRetry:true}, function(){
     var insc = DB.inscripciones.find(function(i){ return i._row === rowIndex; });
@@ -4696,7 +4696,7 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
   document.getElementById('mp-sub').innerHTML = nom + (pl ? ' - ' + pl : '') + _saldoInfo;
   var _moSugerido = mo || (_cv && _cv.planMonto > 0 ? _cv.planMonto : '');
   var now = new Date();
-  document.getElementById('mp-fecha').value = now.toISOString().split('T')[0];
+  document.getElementById('mp-fecha').value = hoyISO();
   document.getElementById('mp-desde').value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
   document.getElementById('mp-hasta').value = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().split('T')[0];
   document.getElementById('mp-monto').value = _moSugerido || '';
@@ -4896,7 +4896,7 @@ function confirmarPago() {
   var _fecha = document.getElementById('mp-fecha').value;
   if(!_fecha || !desde || !hasta) { pagoCtx._enviando = false; return alert('Completá fecha y período'); }
   if(desde > hasta) { pagoCtx._enviando = false; return alert('La fecha "Desde" no puede ser posterior a "Hasta"'); }
-  var _hoy = new Date().toISOString().split('T')[0];
+  var _hoy = hoyISO();
   var _limite = new Date(new Date().setDate(new Date().getDate()+7)).toISOString().split('T')[0];
   if(_fecha > _limite) { pagoCtx._enviando = false; return alert('La fecha de pago no puede ser más de 7 días en el futuro'); }
 
@@ -5161,7 +5161,7 @@ function _marcarTodosMesConfirmado() {
   var done = 0;
   pend.forEach(function(f){
     var _cv = estadoCuotaV2(f);
-    var p = {doc:f[COL.DNI]||f[COL.TARJETA], nombre:f[COL.APELLIDO]+' '+f[COL.NOMBRE], plan:_cv.planNom||'', periodoDesde:desde, periodoHasta:hasta, fechaPago:new Date().toISOString().split('T')[0], monto:_cv.planMonto||0, metodo:'Efectivo', cobrador:'', obs:'Marcado masivo', hoja:f[f.length-2]};
+    var p = {doc:f[COL.DNI]||f[COL.TARJETA], nombre:f[COL.APELLIDO]+' '+f[COL.NOMBRE], plan:_cv.planNom||'', periodoDesde:desde, periodoHasta:hasta, fechaPago:hoyISO(), monto:_cv.planMonto||0, metodo:'Efectivo', cobrador:'', obs:'Marcado masivo', hoja:f[f.length-2]};
     callScript({action:'registrarPago', pago:p, pass:TOKEN}, function(res){
       var newRow = [p.doc, p.nombre, p.plan, p.periodoDesde, p.periodoHasta, p.fechaPago, p.monto, p.metodo, p.cobrador, p.obs];
       newRow._fsId = (res && res.id) || '';
@@ -5179,7 +5179,7 @@ function exportarCSV() {
   });
   var blob = new Blob(['\uFEFF'+rows.join('\n')], {type:'text/csv;charset=utf-8;'});
   var url = URL.createObjectURL(blob), a = document.createElement('a');
-  a.href = url; a.download = 'cuotas_' + new Date().toISOString().split('T')[0] + '.csv'; a.click(); URL.revokeObjectURL(url);
+  a.href = url; a.download = 'cuotas_' + hoyISO() + '.csv'; a.click(); URL.revokeObjectURL(url);
 }
 
 // -- PERIODOS -----------------------------------------------------
@@ -5943,7 +5943,7 @@ function guardarNuevoSocio() {
   if(!nombre) return _err('El nombre es obligatorio');
   if(!dni || dni.length < 4) return _err('Documento inválido');
   var _fnac = document.getElementById('ns-fnac').value;
-  if(_fnac && _fnac > new Date().toISOString().split('T')[0]) return _err('La fecha de nacimiento no puede ser futura');
+  if(_fnac && _fnac > hoyISO()) return _err('La fecha de nacimiento no puede ser futura');
   var _email = document.getElementById('ns-email').value.trim();
   if(_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(_email)) return _err('El email ingresado no es válido');
   var _cel = document.getElementById('ns-celular').value.trim();
@@ -7261,7 +7261,7 @@ function exportarPreciosCSV() {
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
-  a.download = 'precios_' + new Date().toISOString().split('T')[0] + '.csv';
+  a.download = 'precios_' + hoyISO() + '.csv';
   a.click();
   URL.revokeObjectURL(url);
   toast('CSV de precios descargado (' + (rows.length-1) + ' precios)', 'ok');
@@ -7745,7 +7745,7 @@ function ejecutarArancelMasivo(){
   if(!aCrear.length) return alert('Todos los socios activos de "' + cat + '" ya tienen "' + concepto + '".');
   sgdConfirm('Asignar <b>' + concepto + ' ($' + monto.toLocaleString('es-AR') + ')</b> a <b>' + aCrear.length + '</b> socio(s) activos de <b>' + cat + '</b>?<br><small style="color:var(--muted)">Cargo único (no mensual). Los que ya lo tienen se saltean.</small>', function(){
     mostrarLoader('Asignando arancel...');
-    var hoy = new Date().toISOString().split('T')[0];
+    var hoy = hoyISO();
     var batch = db.batch();
     var creados = [];
     aCrear.forEach(function(f){
@@ -8112,8 +8112,8 @@ function iniciarReportes() {
     rPlan.innerHTML = '<option value="">Todos</option>' + planes.map(function(p){ return '<option value="'+esc(p)+'">'+esc(p)+'</option>'; }).join('');
   }
   document.getElementById('rDesde').value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-  document.getElementById('rHasta').value = now.toISOString().split('T')[0];
-  document.getElementById('rCajaFecha').value = now.toISOString().split('T')[0];
+  document.getElementById('rHasta').value = hoyISO();
+  document.getElementById('rCajaFecha').value = hoyISO();
   selectRptCat('pagos');
 }
 
@@ -8346,6 +8346,24 @@ function esc(s) {
   return String(s).replace(/[&<>"']/g, function(ch) {
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
   });
+}
+
+// Fecha de HOY en horario LOCAL (Argentina), formato yyyy-MM-dd.
+// OJO: NO usar new Date().toISOString() para esto — devuelve UTC, y pasadas las 21hs de
+// Argentina ya es el día siguiente, con lo que los pagos quedaban con fecha de mañana y los
+// filtros "de hoy" no encontraban nada.
+function fechaLocalISO(d){
+  if(!d) return '';
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function hoyISO(){ return fechaLocalISO(new Date()); }
+function mananaISO(){
+  var d = new Date(); d.setDate(d.getDate()+1);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function mesHoyISO(){
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
 }
 
 function normFecha(f) {
@@ -9286,7 +9304,7 @@ function rptAjustesSaldo() {
         var fechaStr = fechaDate ? formatDateTime(fechaDate) : (d.fecha||'-');
         // Filtro fecha
         if (fechaDate) {
-          var diaIso = fechaDate.toISOString().substring(0,10);
+          var diaIso = fechaLocalISO(fechaDate);
           if (rango.desde && diaIso < rango.desde) return;
           if (rango.hasta && diaIso > rango.hasta) return;
         }
@@ -9457,7 +9475,7 @@ function exportarReporteCSV() {
   });
   var blob = new Blob(['\uFEFF'+rows.join('\n')], {type:'text/csv;charset=utf-8;'});
   var url = URL.createObjectURL(blob), a = document.createElement('a');
-  a.href = url; a.download = 'reporte_' + new Date().toISOString().split('T')[0] + '.csv'; a.click(); URL.revokeObjectURL(url);
+  a.href = url; a.download = 'reporte_' + hoyISO() + '.csv'; a.click(); URL.revokeObjectURL(url);
 }
 
 // -- TABS ---------------------------------------------------------
@@ -9484,7 +9502,7 @@ function lazyCargarCuotasEInscripciones(cb) {
   // Inscripciones: cargar una sola vez (son relativamente pocas ~450)
   // Cuotas: cargar por período — solo el período visible
   var periodoEl = document.getElementById('cPeriodo');
-  var periodo = periodoEl ? periodoEl.value : new Date().toISOString().substring(0,7);
+  var periodo = periodoEl ? periodoEl.value : mesHoyISO();
   var cacheKey = 'cuotas_' + periodo;
 
   var promesas = [];
@@ -9600,8 +9618,8 @@ function cambiarTab(ev, id) {
     // socios + inscripciones (que son listas chicas y cambian poco). Las cuotas
     // historicas ya en memoria no se tocan — _pushCuotaUnique dedupea por _fsId.
     mostrarLoader('Actualizando con datos de hoy...');
-    var _hoyISO = new Date().toISOString().substring(0, 10);
-    var _mananaISO = new Date(Date.now() + 86400000).toISOString().substring(0, 10);
+    var _hoyISO = hoyISO();
+    var _mananaISO = mananaISO();
     Promise.all([
       db.collection('socios').get(),
       db.collection('inscripciones').get(),
@@ -11304,7 +11322,7 @@ function _ejecutarConversionHistorico() {
       doc: ctx.dni, nombre: ctx.cuota[1]||'',
       plan: a.plan, concepto: a.plan,
       periodoDesde: desde, periodoHasta: hasta,
-      fechaPago: ctx.cuota[5] || new Date().toISOString().split('T')[0],
+      fechaPago: ctx.cuota[5] || hoyISO(),
       monto: a.monto, metodo: ctx.cuota[7] || 'Transferencia',
       cobrador: ctx.cuota[8] || '', obs: 'Conversión de pago anual con cobertura completa',
       coberturaCompleta: true, tipoCobertura: 'pago_anual'
@@ -11456,7 +11474,7 @@ function cv2Render(){
 
 // ¿El socio registró algún pago con fechaPago = hoy? (filtro "Pagaron hoy", para mandar comprobantes)
 function cv2PagoHoy(dni){
-  var hoy = new Date().toISOString().substring(0,10);
+  var hoy = hoyISO();
   return (CUOTAS_DB.cuotas||[]).some(function(c){
     return c && String(c[0]).trim()===String(dni) && normFecha(String(c[5]||'')).substring(0,10)===hoy;
   });
@@ -11589,7 +11607,7 @@ function cv2Abrir(f){
   var deudaTxt = (Number(cv.deuda)||0)>0.5 ? '<span class="cv2-pill debe">Debe '+cv2Money(cv.deuda)+'</span>' : '<span class="cv2-pill ok">Al d&iacute;a</span>';
   document.getElementById('cv2m-sub').innerHTML = '<strong style="color:var(--text)">'+esc(nombre)+'</strong> &middot; '+esc(cv.planNom||'')+' '+deudaTxt+hnoTxt;
 
-  document.getElementById('cv2-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('cv2-fecha').value = hoyISO();
   document.getElementById('cv2-obs').value='';
   document.getElementById('cv2-ex-on').checked=false; document.getElementById('cv2-ex-fields').style.display='none';
   document.getElementById('cv2-ex-desc').value=''; document.getElementById('cv2-ex-monto').value='';
