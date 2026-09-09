@@ -586,7 +586,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
     <div class="cv2-filters">
       <input id="cv2-busq" class="edit-input" placeholder="Buscar por apellido, nombre o DNI" oninput="cv2Render()">
       <select id="cv2-filtro" class="edit-input" onchange="cv2Render()">
-        <option value="deben">Deben</option><option value="todos">Todos los activos</option><option value="favor">Con saldo a favor</option><option value="ok">Al d&iacute;a</option>
+        <option value="deben">Deben</option><option value="hoy">Pagaron hoy (para comprobantes)</option><option value="todos">Todos los activos</option><option value="favor">Con saldo a favor</option><option value="ok">Al d&iacute;a</option>
       </select>
       <select id="cv2-cat" class="edit-input" onchange="cv2Render()"><option value="">Todas las categor&iacute;as</option></select>
     </div>
@@ -1960,7 +1960,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.40</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.41</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -11425,6 +11425,7 @@ function cv2Render(){
     if(filtro==='deben' && deuda<=0.5) return;
     if(filtro==='favor' && favor<=0.5) return;
     if(filtro==='ok' && deuda>0.5) return;
+    if(filtro==='hoy' && !cv2PagoHoy(dni)) return;
     if(fcat && cat!==fcat) return;
     if(busq && nom.toLowerCase().indexOf(busq)<0 && dni.indexOf(busq)<0) return;
     rows.push({f:f, dni:dni, nom:nom, cat:cat, cv:cv, deuda:deuda, favor:favor});
@@ -11440,9 +11441,45 @@ function cv2Render(){
     var nMes = 0; (r.cv.detalle||[]).forEach(function(d){ if(!d.unico) nMes = Math.max(nMes,(d.mesesAdeudados||[]).length); });
     return '<div class="cv2-row"><div><div class="cv2-nom">'+esc(r.nom)+'</div><div class="cv2-meta">DNI '+esc(r.dni)+' &middot; '+esc(r.cat||'Sin categoría')+' &middot; '+esc(r.cv.planNom||'—')+'</div></div>'
       +'<div class="cv2-est">'+est+fav+(nMes?'<div class="cv2-meta">'+nMes+' mes'+(nMes===1?'':'es')+' vencido'+(nMes===1?'':'s')+'</div>':'')+'</div>'
-      +'<div><button class="btn btn-save cv2-cobrar" data-i="'+i+'">COBRAR</button></div></div>';
+      +'<div style="display:flex;gap:6px;align-items:center;justify-content:flex-end;">'
+        +'<button class="btn btn-save cv2-cobrar" data-i="'+i+'">COBRAR</button>'
+        +'<button class="btn btn-secondary cv2-comp" data-i="'+i+'" style="padding:8px 12px;font-size:13px;" title="Enviar comprobante del &uacute;ltimo pago">&#x1F4E7;</button>'
+      +'</div></div>';
   }).join('');
-  lista.onclick = function(e){ var b = e.target.closest('.cv2-cobrar'); if(!b) return; var r = window._cv2Rows[parseInt(b.getAttribute('data-i'),10)]; if(r) cv2Abrir(r.f); };
+  lista.onclick = function(e){
+    var bc = e.target.closest('.cv2-cobrar');
+    if(bc){ var r = window._cv2Rows[parseInt(bc.getAttribute('data-i'),10)]; if(r) cv2Abrir(r.f); return; }
+    var be = e.target.closest('.cv2-comp');
+    if(be){ cv2Comprobante(parseInt(be.getAttribute('data-i'),10)); }
+  };
+}
+
+// ¿El socio registró algún pago con fechaPago = hoy? (filtro "Pagaron hoy", para mandar comprobantes)
+function cv2PagoHoy(dni){
+  var hoy = new Date().toISOString().substring(0,10);
+  return (CUOTAS_DB.cuotas||[]).some(function(c){
+    return c && String(c[0]).trim()===String(dni) && normFecha(String(c[5]||'')).substring(0,10)===hoy;
+  });
+}
+
+// Enviar el comprobante del ÚLTIMO pago de un socio, sin tener que volver a cobrarlo.
+// Reconstruye los datos desde las cuotas ya grabadas y abre el modal de comprobante
+// (siempre pide confirmación: no auto-envía, para que Juana pueda revisar el mail).
+function cv2Comprobante(idx){
+  var r = (window._cv2Rows||[])[idx]; if(!r) return;
+  var email = (r.f[COL.EMAIL]||'').toString().trim();
+  var datos = _reconstruirComprobante(r.dni, r.nom, email);
+  if(!datos) return alert('No encontré pagos registrados de este socio para armar el comprobante.');
+  window._ultimoPago = datos;
+  document.getElementById('comp-nombre').innerText   = datos.nombre||'';
+  document.getElementById('comp-email').value        = email;
+  document.getElementById('comp-plan').innerText     = datos.planAct||'';
+  document.getElementById('comp-monto').innerText    = '$' + Number(datos.moTotal||0).toLocaleString('es-AR');
+  document.getElementById('comp-periodo').innerText  = datos.periodo||'';
+  document.getElementById('comp-hasta').innerText    = datos.vigente||'';
+  document.getElementById('comp-cobrador').innerText = datos.cobrador||'';
+  document.getElementById('modalComprobante').classList.add('open');
+  if(!email) toast('Este socio no tiene email cargado: escribilo en el modal antes de enviar.', 'err');
 }
 
 // ¿Ese mes de ese plan ya está cubierto por alguna cuota grabada? (para no ofrecer adelantar un mes pago)
