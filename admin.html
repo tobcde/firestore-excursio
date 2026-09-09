@@ -1960,7 +1960,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.39</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.40</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3619,6 +3619,8 @@ function calcularEstadoTiempoReal(f) {
         mesesT: 1, totalPagado: _pagU, totalRequerido: _reqU, diff: _pagU - _reqU,
         deudaPorMes: _deudaU, favorPorMes: _favorU,
         mesesAdeudados: _deudaU > 0.5 ? [{ mes: mesHoy, falta: _deudaU, parcial: _pagU > 0, precio: _reqU }] : [],
+        // Copia intacta (la compensación de saldo a favor de más abajo modifica mesesAdeudados).
+        mesesBrutos:    _deudaU > 0.5 ? [{ mes: mesHoy, falta: _deudaU, parcial: _pagU > 0, precio: _reqU }] : [],
         estado: _estU, vigente: true, mesesCoberturaAnual: 0, coberturaHasta: ''
       });
       return; // no correr el cálculo mensual para un arancel
@@ -3764,6 +3766,9 @@ function calcularEstadoTiempoReal(f) {
       diff: (totalPagadoEnRango + pagadoFueraRango) - totalRequerido,
       deudaPorMes: deudaInsc, favorPorMes: favorInsc,
       mesesAdeudados: mesesAdeudados,
+      // Snapshot ANTES de la compensación de saldo a favor (que más abajo recorta mesesAdeudados).
+      // Lo usa el cobro V2 para armar los renglones y repartir contra la deuda real del socio.
+      mesesBrutos: mesesAdeudados.map(function(m){ return { mes:m.mes, falta:m.falta, parcial:m.parcial, precio:m.precio }; }),
       estado: estadoInsc,
       vigente: !insc.hasta || normFecha(insc.hasta).substring(0,7) >= mesHoy,
       // Cuántos meses están cubiertos por pago anual (cobertura completa) en esta insc
@@ -11478,16 +11483,41 @@ function cv2Abrir(f){
   // 1) Deuda: meses adeudados por plan. El precio viene del motor (historial + desc. hno ya aplicados).
   (cv.detalle||[]).forEach(function(d){
     var insc = inscVig.find(function(i){ return i.plan===d.plan; }) || todasInsc.find(function(i){ return i.plan===d.plan; }) || null;
+    // Fuente BRUTA: el motor recorta mesesAdeudados al compensar saldo a favor, y ese recorte
+    // no siempre refleja la deuda real (ej. cuando hay un ajusteSaldo negativo que la devuelve).
+    var fuente = (d.mesesBrutos && d.mesesBrutos.length) ? d.mesesBrutos : (d.mesesAdeudados||[]);
     if (d.unico){
-      var fu = Number(d.deudaPorMes)||0;
+      var fu = fuente.length ? (Number(fuente[0].falta)||0) : (Number(d.deudaPorMes)||0);
       if (fu>0.5) items.push({ id:'aran|'+d.plan, tipo:'arancel', plan:d.plan, precio:fu, falta:fu, on:false, monto:fu, insc:insc, descHno:0, base:fu });
       return;
     }
-    (d.mesesAdeudados||[]).forEach(function(m){
+    fuente.forEach(function(m){
       var pr = Number(m.precio)||0, fa = Number(m.falta)||0;
       items.push({ id:m.mes+'|'+d.plan, tipo:'mes', mes:m.mes, plan:d.plan, precio:pr, falta:fa, parcialPrevio:!!m.parcial, on:true, monto:fa, estado:'debe', insc:insc, descHno:cv2DescHno(insc), base:insc?getMontoHistorico(insc,m.mes):pr });
     });
   });
+  // 1b) Reconciliar contra cv.deuda — el "DEBE" del socio, que es el número bueno.
+  // Si el bruto supera la deuda real, la diferencia es saldo a favor genuino ya aplicado:
+  // se descuenta de los meses MÁS VIEJOS primero y los que quedan en cero se sacan.
+  // Resultado: los renglones SIEMPRE suman exactamente lo que el socio debe.
+  (function(){
+    var deudaReal = Number(cv.deuda)||0;
+    var bruto = items.reduce(function(s,i){ return s + i.falta; }, 0);
+    var sobra = Math.round((bruto - deudaReal) * 100) / 100;
+    if (sobra <= 0.5) return;
+    var ord = items.slice().sort(function(a,b){
+      var am = a.tipo==='mes' ? a.mes : '9999-99', bm = b.tipo==='mes' ? b.mes : '9999-99';
+      return am.localeCompare(bm);
+    });
+    for (var k=0; k<ord.length && sobra>0.5; k++){
+      var take = Math.min(ord[k].falta, sobra);
+      ord[k].falta = Math.round((ord[k].falta - take) * 100) / 100;
+      ord[k].monto = ord[k].falta;
+      ord[k].favorAplicado = Math.round(((ord[k].favorAplicado||0) + take) * 100) / 100;
+      sobra -= take;
+    }
+    items = items.filter(function(i){ return i.falta > 0.5; });
+  })();
   // 2) Adelantar: próximos 3 meses no cubiertos, por plan mensual vigente.
   inscVig.forEach(function(insc){
     if (insc.unico===true||insc.unico==='true') return;
@@ -11550,6 +11580,7 @@ function cv2RowHTML(it){
       sub = pre + cv2Money(it.precio)+'/mes' + ((cv2EsCS(it.plan) && hayHno) ? ' &middot; sin desc. hno' : '');
     }
     if (it.parcialPrevio && it.falta < it.precio - 0.5) sub += ' &middot; ya pagó '+cv2Money(it.precio-it.falta)+', falta '+cv2Money(it.falta);
+    if (it.favorAplicado > 0.5) sub += ' &middot; <span class="cv2-pill okd">'+cv2Money(it.favorAplicado)+' cubiertos con saldo a favor</span>';
   } else sub = 'arancel único &middot; se cobra una sola vez';
   return '<input type="checkbox" '+(it.on?'checked':'')+' data-cb="'+it.id+'">'
     +'<span class="cv2-ico">'+(it.tipo==='mes'?cv2Icono(it.plan):'&#x1F3AB;')+'</span>'
