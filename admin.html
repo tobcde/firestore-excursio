@@ -1435,6 +1435,31 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   </div>
 </div>
 
+<!-- MODAL EXIMIR MES (CUOTAS V2) -->
+<div class="modal-overlay" id="modalEximir">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div><div class="modal-title">Eximir mes</div><div class="modal-subtitle" id="cv2ex-sub"></div></div>
+      <button class="modal-close" onclick="cv2ExCerrar()">&#x2715;</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
+      <div style="font-size:12px;color:var(--muted);line-height:1.5;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;">
+        Para cuando el socio <b style="color:var(--text)">no tiene que abonar</b> ese mes (lesi&oacute;n, licencia, etc.).
+        El mes queda saldado, <b style="color:var(--text)">deja de figurar como deuda</b> y <b style="color:var(--text)">no se registra ning&uacute;n ingreso</b>.
+      </div>
+      <div class="filter-group"><label class="filter-label">Mes a eximir</label>
+        <select id="cv2ex-mes" class="edit-input" style="width:100%;" onchange="cv2ExResumen()"></select></div>
+      <div><label class="filter-label" style="display:block;margin-bottom:6px;">Qu&eacute; se exime</label>
+        <div id="cv2ex-planes"></div></div>
+      <div class="filter-group"><label class="filter-label">Motivo (obligatorio)</label>
+        <input id="cv2ex-motivo" class="edit-input" style="width:100%;" placeholder="ej: Lesi&oacute;n - no entren&oacute;" list="cv2ex-motivos" oninput="cv2ExResumen()">
+        <datalist id="cv2ex-motivos"><option value="Lesi&oacute;n"></option><option value="Licencia m&eacute;dica"></option><option value="Baja temporal"></option><option value="Viaje"></option></datalist></div>
+      <div id="cv2ex-resumen" style="font-size:12px;"></div>
+      <button class="btn btn-save" id="cv2ex-btn" onclick="cv2ExConfirmar()" style="width:100%;padding:14px;font-size:14px;">EXIMIR MES</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL NUEVO SOCIO -->
 <div class="modal-overlay" id="modalNuevoSocio">
   <div class="modal modal-sm">
@@ -1973,7 +1998,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.44</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.45</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3662,7 +3687,10 @@ function calcularEstadoTiempoReal(f) {
       if (docPago !== dni) return;
       if (concepto.indexOf('Historico') === 0) return;
       if (concepto !== insc.plan) return;
-      if (monto <= 0) return;
+      // Una EXENCION (lesion, licencia) se graba en $0 con coberturaCompleta: hay que
+      // procesarla igual, porque marca el mes como saldado sin sumar plata a la caja.
+      // Cualquier otro registro en $0 se sigue ignorando.
+      if (monto <= 0 && row._coberturaCompleta !== true) return;
 
       var pD = normFecha((row[3]||'').toString().trim()).substring(0,7); // periodoDesde
       var pH = normFecha((row[4]||'').toString().trim()).substring(0,7); // periodoHasta
@@ -4022,7 +4050,7 @@ window.diagnosticoSocio = function(query) {
         if ((row[2]||'').indexOf('Historico') === 0) return;
         if (row[2] !== insc.plan) return;
         var monto = Number(row[6])||0;
-        if (monto <= 0) return;
+        if (monto <= 0 && row._coberturaCompleta !== true) return;
         var pD = normFecha((row[3]||'').toString().trim()).substring(0,7);
         var pH = normFecha((row[4]||'').toString().trim()).substring(0,7);
         if (!pD || !pH) {
@@ -11515,13 +11543,16 @@ function cv2Render(){
       +'<div style="display:flex;gap:6px;align-items:center;justify-content:flex-end;">'
         +'<button class="btn btn-save cv2-cobrar" data-i="'+i+'">COBRAR</button>'
         +'<button class="btn '+(envF?'btn-secondary':'btn-gold')+' cv2-comp" data-i="'+i+'" style="padding:8px 12px;font-size:13px;" title="'+(envF?'Ya enviado — clic para reenviar':'Enviar comprobante del último pago')+'">'+(envF?'&#x2705;':'&#x1F4E7;')+'</button>'
+        +'<button class="btn btn-secondary cv2-exim" data-i="'+i+'" style="padding:8px 10px;font-size:11px;font-weight:700;" title="Eximir un mes (lesión, licencia): no lo debe y no se cobra">EXIMIR</button>'
       +'</div></div>';
   }).join('');
   lista.onclick = function(e){
     var bc = e.target.closest('.cv2-cobrar');
     if(bc){ var r = window._cv2Rows[parseInt(bc.getAttribute('data-i'),10)]; if(r) cv2Abrir(r.f); return; }
     var be = e.target.closest('.cv2-comp');
-    if(be){ cv2Comprobante(parseInt(be.getAttribute('data-i'),10)); }
+    if(be){ cv2Comprobante(parseInt(be.getAttribute('data-i'),10)); return; }
+    var bx = e.target.closest('.cv2-exim');
+    if(bx){ cv2Eximir(parseInt(bx.getAttribute('data-i'),10)); }
   };
   lista.onchange = function(e){
     var chk = e.target.closest('.cv2-chk'); if(!chk) return;
@@ -11677,7 +11708,7 @@ function cv2MesCubierto(dni, plan, mes){
   return (CUOTAS_DB.cuotas||[]).some(function(row){
     if ((row[0]||'').toString().trim()!==dni) return false;
     if ((row[2]||'').toString().trim()!==plan) return false;
-    if ((Number(row[6])||0)<=0) return false;
+    if ((Number(row[6])||0)<=0 && row._coberturaCompleta!==true) return false;  // una exencion tambien cubre el mes
     var pD = normFecha((row[3]||'').toString().trim()).substring(0,7), pH = normFecha((row[4]||'').toString().trim()).substring(0,7);
     if(!pD||!pH){ var fp = normFecha((row[5]||'').toString().trim()).substring(0,7); pD=pD||fp; pH=pH||fp; }
     if(!pD||!pH) return false; if(pD>pH){ var t=pD; pD=pH; pH=t; }
@@ -12037,6 +12068,115 @@ function cv2PostGrabar(txs, o, errs){
     batch.set(db.collection('auditoria_saldos').doc(), { dni:String(dni), nombreSocio:nombreSocio, montoAnterior:anterior, montoNuevo:nuevo, delta:delta, motivo:'Cobro V2: '+partes.join(' · '), modificadoPor:usuario, fecha:firebase.firestore.FieldValue.serverTimestamp() });
     batch.commit().then(function(){ f.ajusteSaldo=nuevo; fin(); }).catch(function(err){ alert('Pago grabado, pero falló el ajuste del saldo a favor: '+(err&&err.message?err.message:err)+'\nAjustalo desde "Editar saldo".'); fin(); });
   }catch(e){ alert('Pago grabado, pero falló el ajuste del saldo a favor: '+e.message); fin(); }
+}
+
+// EXIMIR MES (CUOTAS V2) ==============================================
+// Para cuando el socio no debe abonar un mes (lesion, licencia). Se graba una cuota
+// en $0 con coberturaCompleta=true + tipoCobertura='exencion': el motor la lee como
+// "mes saldado al precio del mes" (no suma deuda ni favor) y, al ser $0, no ensucia
+// la caja ni los reportes de recaudacion. El motivo queda en obs.
+var cv2ExCtx = null;
+
+function cv2Eximir(idx){
+  var r = (window._cv2Rows||[])[idx]; if(!r) return;
+  var dni = r.dni;
+  var vig = getInscripcionesVigentes(dni, null).filter(function(i){ return !(i.unico===true||i.unico==='true'); });
+  var todas = (DB.inscripciones||[]).filter(function(i){ return (i.dni||'').toString().trim()===dni && !(i.unico===true||i.unico==='true'); });
+  var planes = vig.length ? vig : todas;
+  if(!planes.length) return alert('Este socio no tiene planes mensuales para eximir.');
+  cv2ExCtx = { f:r.f, dni:dni, nombre:r.nom, cv:r.cv, planes:planes };
+  document.getElementById('cv2ex-sub').innerHTML = '<strong style="color:var(--text)">'+esc(r.nom)+'</strong>';
+
+  // Meses ofrecidos: desde la inscripcion mas vieja hasta 2 meses adelante.
+  var desde=null;
+  planes.forEach(function(i){ var d=i.desde?normFecha(i.desde).substring(0,7):''; if(d && (!desde||d<desde)) desde=d; });
+  if(!desde) desde = cv2MesHoy();
+  var adeudados = {};
+  (r.cv.detalle||[]).forEach(function(d){ (d.mesesAdeudados||[]).forEach(function(m){ adeudados[m.mes]=true; }); });
+  var lista=[], m=desde, tope=_mesSiguiente(_mesSiguiente(cv2MesHoy())), guard=0;
+  while(m<=tope && guard++<60){ lista.push(m); m=_mesSiguiente(m); }
+  document.getElementById('cv2ex-mes').innerHTML = lista.map(function(x){
+    return '<option value="'+x+'">'+periodoLabel(x)+(adeudados[x]?'  - adeuda':'')+'</option>';
+  }).join('');
+  var primero = Object.keys(adeudados).sort()[0];
+  if(primero) document.getElementById('cv2ex-mes').value = primero;
+
+  document.getElementById('cv2ex-planes').innerHTML = planes.map(function(i){
+    return '<label class="pago-plan-row"><input type="checkbox" class="cv2ex-chk" data-plan="'+esc(i.plan)+'" checked onchange="cv2ExResumen()">'
+      +'<span class="emoji" style="font-size:16px;">'+cv2Icono(i.plan)+'</span>'
+      +'<span class="pago-plan-nombre">'+esc(i.plan)+'</span>'
+      +'<span class="pago-plan-monto">'+cv2Money(cv2PrecioActual(i))+'/mes</span></label>';
+  }).join('');
+  document.getElementById('cv2ex-motivo').value = '';
+  var b=document.getElementById('cv2ex-btn'); b.disabled=false; b.textContent='EXIMIR MES';
+  document.getElementById('modalEximir').classList.add('open');
+  cv2ExResumen();
+}
+function cv2ExCerrar(){ document.getElementById('modalEximir').classList.remove('open'); cv2ExCtx=null; }
+
+function cv2ExPlanesTildados(){
+  return Array.prototype.slice.call(document.querySelectorAll('.cv2ex-chk'))
+    .filter(function(c){ return c.checked; })
+    .map(function(c){ return c.getAttribute('data-plan'); });
+}
+function cv2ExResumen(){
+  if(!cv2ExCtx) return;
+  var mes = document.getElementById('cv2ex-mes').value;
+  var planes = cv2ExPlanesTildados();
+  var total = 0;
+  planes.forEach(function(pl){
+    var i = cv2ExCtx.planes.find(function(x){ return x.plan===pl; });
+    if(i) total += cv2PrecioActual(i);
+  });
+  var el = document.getElementById('cv2ex-resumen');
+  el.innerHTML = planes.length
+    ? 'Se exime <b>'+periodoLabel(mes)+'</b> de <b>'+planes.map(esc).join(' + ')+'</b>.<br>'
+      +'<span style="color:var(--muted);">Son '+cv2Money(total)+' que el socio <b style="color:var(--text)">no va a deber</b>. No entra plata a la caja.</span>'
+    : '<span style="color:var(--red);">Tilda al menos un plan.</span>';
+}
+function cv2ExConfirmar(){
+  if(!cv2ExCtx) return;
+  var mes = document.getElementById('cv2ex-mes').value;
+  var motivo = (document.getElementById('cv2ex-motivo').value||'').trim();
+  var planes = cv2ExPlanesTildados();
+  if(!planes.length) return alert('Tilda al menos un plan para eximir.');
+  if(!motivo) return alert('El motivo es obligatorio (ej: Lesion).');
+  sgdConfirm('Eximir <b>'+periodoLabel(mes)+'</b> de <b>'+planes.map(esc).join(' + ')+'</b> para <b>'+esc(cv2ExCtx.nombre)+'</b>?'
+    +'<br><br>Motivo: <i>'+esc(motivo)+'</i>'
+    +'<br><br>Ese mes deja de figurar como deuda y <b>no se registra ningun ingreso</b>.',
+    function(){ cv2ExGrabar(mes, planes, motivo); }, 'EXIMIR');
+}
+function cv2ExGrabar(mes, planes, motivo){
+  var ctx = cv2ExCtx;
+  document.getElementById('cv2ex-btn').disabled = true;
+  mostrarLoader('Eximiendo '+periodoLabel(mes)+'...');
+  var i=0, errs=[];
+  var hoja = ctx.f[ctx.f.length-2];
+  var usuario = (window.ADMIN_USER || (typeof localStorage!=='undefined' && localStorage.getItem('admin_user')) || 'admin');
+  function next(){
+    if(i>=planes.length){
+      ocultarLoader(); cv2ExCerrar();
+      try{ renderCuotas(); }catch(_){ }
+      try{ renderPlayers(); }catch(_){ }
+      try{ cv2Render(); }catch(_){ }
+      if(errs.length) alert('No se pudieron eximir todos:\n'+errs.join('\n'));
+      else toast(periodoLabel(mes)+' eximido - '+planes.join(' + '), 'ok');
+      return;
+    }
+    var plan = planes[i++];
+    var p = { doc:ctx.dni, nombre:ctx.nombre, plan:plan, concepto:plan,
+              periodo:periodoLabel(mes), periodoDesde:mes+'-01', periodoHasta:cv2UltimoDia(mes),
+              fechaPago:hoyISO(), monto:0, metodo:'Exencion', cobrador:usuario,
+              obs:'EXENCION: '+motivo, hoja:hoja,
+              coberturaCompleta:true, tipoCobertura:'exencion' };
+    callScript({action:'registrarPago', pago:p, pass:TOKEN, _noRetry:true}, function(res){
+      var row=[p.doc,p.nombre,p.plan,p.periodoDesde,p.periodoHasta,p.fechaPago,0,p.metodo,p.cobrador,p.obs];
+      row._fsId=(res&&res.id)||''; row._ts=Date.now();
+      row._coberturaCompleta=true; row._tipoCobertura='exencion';
+      _pushCuotaUnique(row); next();
+    }, function(e){ errs.push(plan+': '+e); next(); });
+  }
+  next();
 }
 
 </script>
