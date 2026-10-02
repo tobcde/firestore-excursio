@@ -457,8 +457,11 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 <div class="tabs">
   <div class="tab active" onclick="cambiarTab(event,'jugadores')" id="tab-btn-jugadores">&#x1F465; SOCIOS</div>
   <div class="tab" onclick="cambiarTab(event,'asistencias')">&#x1F4CB; ASISTENCIAS</div>
-  <div class="tab" onclick="cambiarTab(event,'cuotas')">&#x1F4B0; CUOTAS</div>
-  <div class="tab" onclick="cambiarTab(event,'cuotasv2')" style="color:var(--secondary);">&#x1F4B3; CUOTAS V2</div>
+  <!-- CUOTAS (modal viejo de cobro): oculta desde 2026-10-02, se usa CUOTAS V2.
+       Para volver a mostrarla, sacar el display:none. El contenido y las funciones
+       (exportarCSV, marcarTodosMes, toggleFinanzas) siguen existiendo. -->
+  <div class="tab" onclick="cambiarTab(event,'cuotas')" style="display:none;">&#x1F4B0; CUOTAS (vieja)</div>
+  <div class="tab" onclick="cambiarTab(event,'cuotasv2')">&#x1F4B0; CUOTAS</div>
   <div class="tab" onclick="cambiarTab(event,'citaciones')">&#x1F4E3; CITACIONES</div>
   <div class="tab" onclick="cambiarTab(event,'admin')">&#x1F6E0;&#xFE0F; ADMINISTRACION</div>
   <div class="tab" onclick="cambiarTab(event,'reportes')">&#x1F4CA; REPORTES</div>
@@ -2005,7 +2008,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.48</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.49</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -9700,7 +9703,8 @@ function lazyCargarCuotasEInscripciones(cb) {
   // Inscripciones: cargar una sola vez (son relativamente pocas ~450)
   // Cuotas: cargar por período — solo el período visible
   var periodoEl = document.getElementById('cPeriodo');
-  var periodo = periodoEl ? periodoEl.value : mesHoyISO();
+  // Si la pestaña Cuotas vieja nunca se abrio, cPeriodo esta vacio: usar el mes actual.
+  var periodo = (periodoEl && periodoEl.value) ? periodoEl.value : mesHoyISO();
   var cacheKey = 'cuotas_' + periodo;
 
   var promesas = [];
