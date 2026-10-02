@@ -436,6 +436,8 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 .cv2-res .cv2-big{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;white-space:nowrap;}
 .cv2-res .cv2-msg{font-size:12px;color:var(--muted);flex:1;}
 .cv2-res.ok .cv2-big{color:var(--cv2-ok);} .cv2-res.bad .cv2-big{color:var(--red);} .cv2-res.bad .cv2-msg{color:var(--red);}
+.cv2-parcial{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:.5px;white-space:nowrap;cursor:pointer;padding:8px 14px;border-radius:8px;background:rgba(255,184,77,.16);border:1px solid #ffb84d;color:#ffb84d;}
+.cv2-parcial:hover{background:rgba(255,184,77,.28);}
 .cv2-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .cv2-sum{border:1px solid var(--border);border-radius:10px;background:var(--bg);padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
 .cv2-sum ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;}
@@ -2008,7 +2010,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.49</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.50</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -12075,6 +12077,27 @@ function cv2PatchRow(it, keepInput){
   }
   else if(bl) bl.remove();
 }
+// Pago parcial en un clic: baja los renglones tildados —del mes más nuevo al más viejo,
+// y dentro del mes primero la Cuota Social— hasta que lo tildado coincida con lo que el
+// socio entregó. La diferencia le queda debiendo, con su badge de "parcial".
+// El saldo a favor usado no se recalcula: cuando falta plata, usaFavor ya está topeado
+// por el saldo disponible (no por el total), así que bajar el total es lineal.
+function cv2AjustarAParcial(){
+  if(!cv2Ctx) return;
+  var st = cv2Estado();
+  var falta = -st.diff;
+  if(falta <= 0.5) return;
+  var sel = cv2Ctx.items.filter(function(i){ return i.on && i.monto > 0; });
+  for(var k = sel.length - 1; k >= 0 && falta > 0.5; k--){
+    var it = sel[k];
+    var baja = Math.min(it.monto, falta);
+    it.monto = Math.round((it.monto - baja) * 100) / 100;
+    falta -= baja;
+    if(it.monto <= 0.5){ it.monto = 0; it.on = false; }
+    cv2PatchRow(it);
+  }
+  cv2Recalc();
+}
 function cv2Marcar(modo){
   if(!cv2Ctx) return;
   cv2Ctx.items.forEach(function(i){ i.on = modo==='debe' ? (i.tipo==='mes' && i.estado==='debe') : false; if(i.on && i.monto<=0) i.monto=i.falta; cv2PatchRow(i); });
@@ -12122,7 +12145,7 @@ function cv2Recalc(){
   var R = document.getElementById('cv2-res'); R.className='cv2-res';
   if(st.total<=0) R.innerHTML='<span class="cv2-msg">Tildá al menos un renglón para cobrar.</span>';
   else if(st.diff>0.5){ R.classList.add('ok'); R.innerHTML='<span class="cv2-msg">El socio entregó de más. Queda como <b style="color:var(--cv2-ok)">saldo a favor</b> para la próxima.</span><span class="cv2-big">A FAVOR '+cv2Money(st.diff)+'</span>'; }
-  else if(st.diff<-0.5){ R.classList.add('bad'); R.innerHTML='<span class="cv2-msg">Recibiste <b>'+cv2Money(-st.diff)+' menos</b> que lo tildado. Bajá el importe de un renglón (pago parcial) o destildalo.</span><span class="cv2-big">FALTAN '+cv2Money(-st.diff)+'</span>'; }
+  else if(st.diff<-0.5){ R.classList.add('bad'); R.innerHTML='<span class="cv2-msg">Recibiste <b>'+cv2Money(-st.diff)+' menos</b> que lo tildado. Pod&eacute;s registrarlo como <b>pago parcial</b>: el resto le queda debiendo.</span><span class="cv2-big">FALTAN '+cv2Money(-st.diff)+'</span><button type="button" class="cv2-parcial" onclick="cv2AjustarAParcial()">AJUSTAR A LO RECIBIDO</button>'; }
   else R.innerHTML='<span class="cv2-msg">Recibido justo. Sin saldo a favor.</span>';
   // Resumen: exactamente lo que se va a grabar
   var ul=document.getElementById('cv2-sum-list'); ul.innerHTML='';
