@@ -794,6 +794,13 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
           </label>
         </div>
         <div id="csv-precios-preview" style="margin-top:10px;display:none;font-size:11px;"></div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);">
+          <button class="btn" style="width:100%;background:rgba(109,180,224,.14);color:#6db4e0;border:1px solid rgba(109,180,224,.4);font-family:'Barlow Condensed',sans-serif;font-weight:700;padding:8px;" onclick="sincronizarInscripcionesConPrecios()">&#x1F501; Aplicar precios a los socios</button>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px;">
+            Pasa los precios de esta lista a las inscripciones de los socios (eleg&iacute;s desde qu&eacute; mes rigen).
+            Las inscripciones marcadas como <b>manual/beca</b> no se tocan.
+          </div>
+        </div>
       </div>
 
       <div class="item-list" id="listPrecios" style="margin-top:10px;"></div>
@@ -1998,7 +2005,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.47</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.48</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -7554,6 +7561,14 @@ function aplicarCambiosPreciosCSV() {
       poblarSelectsPrecios();
       if (errores) toast('Aplicado con ' + errores + ' errores. Revisá la lista.', 'err');
       else toast('Cambios aplicados (' + done + '/' + cambios.length + ')', 'ok');
+      // Los precios quedaron guardados, pero eso NO cambia lo que paga cada socio:
+      // hay que bajarlos a las inscripciones. Antes este paso faltaba y el aumento
+      // "no impactaba". Se ofrece ahora, con un solo selector de mes para todo.
+      var _paresCsv = cambios.filter(function(c){ return c.accion !== 'borrar'; })
+        .map(function(c){ return { actividad: c.actividad, categoria: c.categoria, monto: Number(c.montoNuevo)||0 }; });
+      if (_paresCsv.length) setTimeout(function(){
+        ofrecerCascadaMasiva(_paresCsv, 'Los precios quedaron guardados. Ahora hay que pasarlos a los socios');
+      }, 400);
       return;
     }
     var x = cambios[i];
@@ -7710,6 +7725,7 @@ function _aplicarCascadaPrecio(afectadas, montoNuevo, vigenteDesde, actividad, c
       historial: hist,
       monto: Number(montoNuevo) // sigue siendo el "precio actual" para UI legacy
     });
+    var _montoAnterior = Number(insc.monto)||0;   // leerlo ANTES de pisarlo
     insc.historial = hist;
     insc.monto = Number(montoNuevo);
 
@@ -7719,7 +7735,7 @@ function _aplicarCascadaPrecio(afectadas, montoNuevo, vigenteDesde, actividad, c
       batch.set(auditRef, {
         inscripcionId: insc._row, dni: insc.dni||'', plan: insc.plan||'',
         actividad: actividad, categoria: categoria,
-        montoAnterior: Number(insc.monto)||0, montoNuevo: Number(montoNuevo),
+        montoAnterior: _montoAnterior, montoNuevo: Number(montoNuevo),
         vigenteDesde: vigenteDesde,
         origen: 'cascada',
         modificadoPor: _user, fecha: _ts
@@ -7734,6 +7750,138 @@ function _aplicarCascadaPrecio(afectadas, montoNuevo, vigenteDesde, actividad, c
     ocultarLoader();
     alert('Error al actualizar inscripciones: ' + (e && e.message ? e.message : e));
   });
+}
+
+// ── CASCADA MASIVA ───────────────────────────────────────────────
+// Pasa varios precios (actividad x categoria) a las inscripciones de una sola vez,
+// con UN solo selector de mes. La usa la importacion CSV (que antes guardaba los
+// precios y NO los bajaba a los socios) y el boton "Aplicar precios a los socios".
+function _cascadaCandidatos(pares) {
+  var out = [];
+  (pares||[]).forEach(function(par){
+    var monto = Number(par.monto)||0;
+    if (!par.actividad || !par.categoria || !monto) return;
+    (DB.inscripciones||[]).forEach(function(insc){
+      if ((insc.plan||'') !== par.actividad) return;
+      if (insc.manual === true) return;                      // becas/excepciones: no se tocan
+      if (Number(insc.monto) === monto) return;              // ya esta en ese precio
+      var socio = DB.jugadores.slice(1).find(function(f){
+        return (f[COL.DNI]||'').toString().trim() === (insc.dni||'').toString().trim();
+      });
+      if (!socio) return;
+      if ((socio[COL.CATEGORIA_APP]||'') !== par.categoria) return;
+      out.push({ insc: insc, monto: monto, actividad: par.actividad, categoria: par.categoria });
+    });
+  });
+  return out;
+}
+
+function ofrecerCascadaMasiva(pares, titulo) {
+  var items = _cascadaCandidatos(pares);
+  if (!items.length) { toast('Las inscripciones ya estan con esos precios. No hay nada que actualizar.', 'ok'); return; }
+  var manuales = (DB.inscripciones||[]).filter(function(i){ return i.manual === true; }).length;
+  // Resumen agrupado por plan x categoria
+  var grupos = {};
+  items.forEach(function(it){
+    var k = it.actividad + ' | ' + it.categoria + ' | ' + it.monto;
+    if (!grupos[k]) grupos[k] = { actividad: it.actividad, categoria: it.categoria, monto: it.monto, n: 0, desde: {} };
+    grupos[k].n++;
+    var ma = Number(it.insc.monto)||0;
+    grupos[k].desde[ma] = (grupos[k].desde[ma]||0) + 1;
+  });
+  var filas = Object.keys(grupos).sort().map(function(k){
+    var g = grupos[k];
+    var antes = Object.keys(g.desde).map(function(x){ return '$'+Number(x).toLocaleString('es-AR'); }).join(' / ');
+    return '<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 8px;border-bottom:1px solid var(--border);font-size:12px;">'
+      + '<span>' + esc(g.actividad) + ' <span style="color:var(--muted);">' + esc(g.categoria) + '</span></span>'
+      + '<span style="white-space:nowrap;color:var(--muted);">' + antes + ' &rarr; <b style="color:#6de097;">$' + Number(g.monto).toLocaleString('es-AR') + '</b>'
+      + ' <span style="color:var(--secondary);">(' + g.n + ')</span></span></div>';
+  }).join('');
+
+  var hoy = new Date();
+  var opcionesMes = [];
+  var nombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var mesActual = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0');
+  for (var off = -3; off <= 12; off++) {
+    var d = new Date(hoy.getFullYear(), hoy.getMonth() + off, 1);
+    var yyyymm = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    var lbl = nombres[d.getMonth()] + ' ' + d.getFullYear();
+    if (off === 0) lbl += ' (mes actual)';
+    if (off === 1) lbl += ' (proximo mes)';
+    opcionesMes.push('<option value="'+yyyymm+'"'+(off===0?' selected':'')+'>'+lbl+'</option>');
+  }
+  var msg = '<div style="font-size:14px;color:var(--text);margin-bottom:12px;">'
+    + (titulo || 'Se van a actualizar las inscripciones de los socios') + ':<br>'
+    + '<b style="color:var(--secondary);font-size:18px;">' + items.length + '</b> inscripcion' + (items.length>1?'es':'') + '.</div>'
+    + '<div style="margin:12px 0;padding:12px;background:var(--surface);border:1px solid var(--primary-border);border-radius:8px;">'
+    + '<label style="display:block;font-size:11px;color:var(--secondary);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:6px;">&#x1F4C5; Vigente desde</label>'
+    + '<select id="cascMasivaDesde" class="edit-input" style="width:100%;">' + opcionesMes.join('') + '</select>'
+    + '<div style="font-size:11px;color:var(--muted);margin-top:6px;">Los meses ya pagados al precio viejo <b>no se reabren</b>. Las cuotas impagas de ese mes en adelante pasan al precio nuevo.</div>'
+    + '</div>'
+    + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:260px;overflow-y:auto;">' + filas + '</div>'
+    + (manuales ? '<div style="margin-top:12px;padding:10px 12px;background:rgba(255,184,77,.1);border:1px solid rgba(255,184,77,.3);border-radius:8px;color:#ffb84d;font-size:12px;"><b>&#x270B; ' + manuales + ' inscripcion' + (manuales>1?'es':'') + ' marcada' + (manuales>1?'s':'') + ' como manual/beca</b> &mdash; no se toca' + (manuales>1?'n':'') + '.</div>' : '');
+
+  sgdConfirm(msg, function(){
+    var desde = (document.getElementById('cascMasivaDesde')||{value:mesActual}).value || mesActual;
+    _aplicarCascadaMasiva(items, desde);
+  }, 'APLICAR');
+}
+
+// Aplica en tandas: cada inscripcion son 2 escrituras (update + audit) y Firestore
+// limita cada batch a 500, asi que vamos de a 100 inscripciones por tanda.
+function _aplicarCascadaMasiva(items, vigenteDesde) {
+  var _user = (window.ADMIN_USER || (typeof localStorage!=='undefined' && localStorage.getItem('admin_user')) || 'admin');
+  var TANDA = 100, i = 0, hechas = 0;
+  function tanda() {
+    if (i >= items.length) {
+      ocultarLoader();
+      toast(hechas + ' inscripcion' + (hechas>1?'es':'') + ' actualizada' + (hechas>1?'s':'') + ' (vigente desde ' + vigenteDesde + ')', 'ok');
+      try { renderPlayers(); } catch(_){}
+      try { renderCuotas(); } catch(_){}
+      try { if (document.getElementById('tab-cuotasv2').style.display !== 'none') cv2Render(); } catch(_){}
+      return;
+    }
+    var lote = items.slice(i, i + TANDA); i += TANDA;
+    mostrarLoader('Actualizando ' + Math.min(i, items.length) + '/' + items.length + ' inscripciones...');
+    var batch = db.batch();
+    var ts = firebase.firestore.FieldValue.serverTimestamp();
+    lote.forEach(function(it){
+      var insc = it.insc, montoNuevo = it.monto;
+      var hist = Array.isArray(insc.historial) ? insc.historial.slice() : [];
+      if (!hist.length) {
+        var mesIni = insc.desde ? normFecha(insc.desde).substring(0,7) : '';
+        if (mesIni) hist.push({ desde: mesIni, monto: Number(insc.monto)||0 });
+      }
+      var idx = hist.findIndex(function(h){ return h.desde === vigenteDesde; });
+      if (idx >= 0) hist[idx] = { desde: vigenteDesde, monto: montoNuevo };
+      else hist.push({ desde: vigenteDesde, monto: montoNuevo });
+      hist.sort(function(a,b){ return (a.desde||'').localeCompare(b.desde||''); });
+      var montoAnterior = Number(insc.monto)||0;
+      batch.update(db.collection('inscripciones').doc(insc._row), { historial: hist, monto: montoNuevo });
+      batch.set(db.collection('auditoria_precios').doc(), {
+        inscripcionId: insc._row, dni: insc.dni||'', plan: insc.plan||'',
+        actividad: it.actividad, categoria: it.categoria,
+        montoAnterior: montoAnterior, montoNuevo: montoNuevo,
+        vigenteDesde: vigenteDesde, origen: 'cascada_masiva',
+        modificadoPor: _user, fecha: ts
+      });
+      insc.historial = hist; insc.monto = montoNuevo;
+      hechas++;
+    });
+    batch.commit().then(tanda).catch(function(e){
+      ocultarLoader();
+      alert('Error al actualizar inscripciones (se guardaron ' + hechas + '): ' + (e && e.message ? e.message : e));
+    });
+  }
+  tanda();
+}
+
+// Boton: pasar TODA la lista de precios a las inscripciones.
+function sincronizarInscripcionesConPrecios() {
+  var pares = (DB.precios||[]).map(function(p){
+    return { actividad: p.actividad, categoria: p.categoria, monto: Number(p.monto)||0 };
+  });
+  ofrecerCascadaMasiva(pares, 'Se van a pasar los precios de la lista a las inscripciones');
 }
 
 function getPrecio(actividad, categoria) {
